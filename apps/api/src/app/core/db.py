@@ -83,7 +83,9 @@ def get_engine():
     
     # Handle PostgreSQL async vs sync if needed, but here we use sync psycopg
     if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
         
     connect_args = {}
     if db_url.startswith("sqlite"):
