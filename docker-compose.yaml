@@ -7,8 +7,6 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     restart: unless-stopped
-    ports:
-      - "3080:80"
     depends_on:
       - api
 
@@ -18,8 +16,6 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     volumes:
       - api-data:/app/data
       - ./templates:/app/templates:ro
@@ -39,8 +35,6 @@ services:
       context: ./apps/docgen
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "4001:4001"
     environment:
       TEMPLATES_ROOT: /app/templates/system
     volumes:
@@ -50,8 +44,6 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8
     restart: unless-stopped
-    ports:
-      - "3000:3000"
 
 volumes:
   api-data:
