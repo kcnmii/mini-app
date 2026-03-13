@@ -1,0 +1,11 @@
+{
+  "name": "doc-mini-app",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.6.1",
+  "scripts": {
+    "dev:miniapp": "pnpm --filter @doc-mini/miniapp dev",
+    "dev:docgen": "pnpm --filter @doc-mini/docgen dev",
+    "build": "pnpm -r build"
+  }
+}

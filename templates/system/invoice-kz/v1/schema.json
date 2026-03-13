@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Invoice KZ Render Payload",
+  "type": "object",
+  "required": ["document", "seller", "buyer", "items", "totals"],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": ["number", "date", "currency"],
+      "properties": {
+        "number": { "type": "string" },
+        "date": { "type": "string" },
+        "currency": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "seller": {
+      "type": "object",
+      "required": ["company_name"],
+      "properties": {
+        "company_name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "buyer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "contact_name": { "type": "string" }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "qty", "price", "amount"],
+        "properties": {
+          "name": { "type": "string" },
+          "qty": { "type": "number" },
+          "unit": { "type": "string" },
+          "price": { "type": "number" },
+          "amount": { "type": "number" }
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": ["grand_total"],
+      "properties": {
+        "grand_total": { "type": "number" },
+        "vat_total": { "type": "number" }
+      }
+    }
+  }
+}

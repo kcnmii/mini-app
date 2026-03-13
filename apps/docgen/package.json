@@ -1,0 +1,25 @@
+{
+  "name": "@doc-mini/docgen",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "docxtemplater": ">=3 <4",
+    "docxtemplater-image-module-free": "^1.1.1",
+    "express": ">=5 <6",
+    "lodash": ">=4 <5",
+    "pizzip": ">=3 <4",
+    "zod": ">=3 <4"
+  },
+  "devDependencies": {
+    "@types/express": ">=5 <6",
+    "@types/lodash": ">=4 <5",
+    "@types/node": ">=22 <23",
+    "tsx": ">=4 <5",
+    "typescript": ">=5 <6"
+  }
+}

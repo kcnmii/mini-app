@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Simple Proposal Render Payload",
+  "type": "object",
+  "required": ["document", "buyer", "goal", "items"],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "buyer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "contact_name": { "type": "string" }
+      }
+    },
+    "goal": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "qty": { "type": "number" },
+          "unit": { "type": "string" },
+          "price": { "type": "number" },
+          "amount": { "type": "number" },
+          "comment": { "type": "string" }
+        }
+      }
+    }
+  }
+}

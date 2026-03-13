@@ -1,0 +1,16 @@
+{
+  "key": "proposal-simple",
+  "version": "v1",
+  "type": "proposal",
+  "title": "Simple Proposal",
+  "country": "KZ",
+  "output_formats": ["docx", "pdf"],
+  "required_fields": [
+    "document.title",
+    "buyer.name",
+    "goal",
+    "items"
+  ],
+  "docxtemplater_modules": [],
+  "notes": "Built-in proposal template placeholder contract."
+}

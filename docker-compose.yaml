@@ -1,0 +1,57 @@
+services:
+  # ── Frontend (Telegram Mini App) ──
+  miniapp:
+    build:
+      context: ./apps/miniapp
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    depends_on:
+      - api
+
+  # ── API (FastAPI) ──
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - api-data:/app/data
+      - ./templates:/app/templates:ro
+    env_file:
+      - .env
+    environment:
+      SQLITE_PATH: /app/data/docmini.sqlite3
+      DOCGEN_URL: http://docgen:4001
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+    depends_on:
+      - docgen
+      - gotenberg
+
+  # ── Document Generator (docx templating) ──
+  docgen:
+    build:
+      context: ./apps/docgen
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      TEMPLATES_ROOT: /app/templates/system
+    volumes:
+      - ./templates:/app/templates:ro
+
+  # ── Gotenberg (PDF conversion) ──
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+volumes:
+  api-data:

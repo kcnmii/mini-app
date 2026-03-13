@@ -1,0 +1,18 @@
+{
+  "key": "invoice-kz",
+  "version": "v1",
+  "type": "invoice",
+  "title": "Invoice KZ",
+  "country": "KZ",
+  "output_formats": ["docx", "pdf"],
+  "required_fields": [
+    "document.number",
+    "document.date",
+    "seller.company_name",
+    "buyer.name",
+    "items",
+    "totals.grand_total"
+  ],
+  "docxtemplater_modules": [],
+  "notes": "Built-in invoice template placeholder contract."
+}
