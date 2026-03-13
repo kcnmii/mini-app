@@ -1,57 +1,53 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 
-from app.core.db import get_db
+from app.core.db import get_db, Client
 from app.schemas.client import ClientCreate, ClientRead
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
 @router.get("", response_model=list[ClientRead])
-async def list_clients() -> list[ClientRead]:
-    with get_db() as connection:
-        rows = connection.execute(
-            "SELECT id, name, bin_iin, contact_name, phone, created_at FROM clients ORDER BY id DESC"
-        ).fetchall()
-    return [ClientRead.model_validate(dict(row)) for row in rows]
+async def list_clients(db: Session = Depends(get_db)) -> list[ClientRead]:
+    clients = db.query(Client).order_by(Client.id.desc()).all()
+    return clients
 
 
 @router.post("", response_model=ClientRead)
-async def create_client(payload: ClientCreate) -> ClientRead:
-    with get_db() as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO clients (name, bin_iin, contact_name, phone)
-            VALUES (?, ?, ?, ?)
-            """,
-            (payload.name, payload.bin_iin, payload.contact_name, payload.phone),
-        )
-        row = connection.execute(
-            "SELECT id, name, bin_iin, contact_name, phone, created_at FROM clients WHERE id = ?",
-            (cursor.lastrowid,),
-        ).fetchone()
-    return ClientRead.model_validate(dict(row))
+async def create_client(payload: ClientCreate, db: Session = Depends(get_db)) -> ClientRead:
+    new_client = Client(
+        name=payload.name,
+        bin_iin=payload.bin_iin,
+        contact_name=payload.contact_name,
+        phone=payload.phone
+    )
+    db.add(new_client)
+    db.commit()
+    db.refresh(new_client)
+    return new_client
+
+
 @router.put("/{client_id}", response_model=ClientRead)
-async def update_client(client_id: int, payload: ClientCreate) -> ClientRead:
-    with get_db() as connection:
-        connection.execute(
-            """
-            UPDATE clients 
-            SET name = ?, bin_iin = ?, contact_name = ?, phone = ?
-            WHERE id = ?
-            """,
-            (payload.name, payload.bin_iin, payload.contact_name, payload.phone, client_id),
-        )
-        row = connection.execute(
-            "SELECT id, name, bin_iin, contact_name, phone, created_at FROM clients WHERE id = ?",
-            (client_id,),
-        ).fetchone()
-    return ClientRead.model_validate(dict(row))
+async def update_client(client_id: int, payload: ClientCreate, db: Session = Depends(get_db)) -> ClientRead:
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+    
+    client.name = payload.name
+    client.bin_iin = payload.bin_iin
+    client.contact_name = payload.contact_name
+    client.phone = payload.phone
+    
+    db.commit()
+    db.refresh(client)
+    return client
 
 
 @router.delete("/{client_id}")
-async def delete_client(client_id: int):
-    with get_db() as connection:
-        cursor = connection.execute("DELETE FROM clients WHERE id = ?", (client_id,))
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Клиент не найден")
+async def delete_client(client_id: int, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+    db.delete(client)
+    db.commit()
     return {"status": "ok"}

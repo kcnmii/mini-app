@@ -86,26 +86,25 @@ class InvoiceRenderPayload(BaseModel):
 
 def _load_image_b64(image_type: str) -> str:
     """Read uploaded image file and return raw base64 (no data-uri prefix)."""
-    from app.core.db import get_db
-
+    from app.core.db import SessionLocal, SupplierProfile
+    
     path_column = f"{image_type}_path"
+    db = SessionLocal()
     try:
-        with get_db() as conn:
-            row = conn.execute(
-                f"SELECT {path_column} FROM supplier_profile WHERE id = 1"
-            ).fetchone()
-            if not row:
-                return ""
-            file_path = dict(row).get(path_column, "")
-            if not file_path:
-                return ""
-            p = Path(file_path)
-            if not p.exists():
-                return ""
-            return base64.b64encode(p.read_bytes()).decode("ascii")
+        profile = db.query(SupplierProfile).filter(SupplierProfile.id == 1).first()
+        if not profile:
+            return ""
+        file_path = getattr(profile, path_column)
+        if not file_path:
+            return ""
+        p = Path(file_path)
+        if not p.exists():
+            return ""
+        return base64.b64encode(p.read_bytes()).decode("ascii")
     except Exception:
         return ""
-
+    finally:
+        db.close()
 
 class RenderInfoResponse(BaseModel):
     template_key: str
