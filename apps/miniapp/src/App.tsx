@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData } from "./types";
-import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, parseMoney, formatMoney, buildInvoicePatch } from "./utils";
+import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 
 /* ─── Icon helper ─── */
 function Icon({ name, filled, className }: { name: string; filled?: boolean; className?: string }) {
@@ -391,11 +391,11 @@ export function App() {
     <>
       <div className="nav-bar">
         <div className="nav-bar-inner" style={{ justifyContent: "flex-start", gap: "12px" }}>
-          <div className="user-avatar">
+          <div className="user-avatar" style={{ background: tgUser?.photo_url ? "transparent" : getAvatarColor(tgName), color: "white", fontSize: "18px", fontWeight: 700 }}>
             {tgUser?.photo_url ? (
               <img src={tgUser.photo_url} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
             ) : (
-              <Icon name="person" />
+              tgName.charAt(0).toUpperCase()
             )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>

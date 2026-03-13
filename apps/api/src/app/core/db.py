@@ -1,100 +1,106 @@
 from __future__ import annotations
 
-import sqlite3
-from contextlib import contextmanager
-from pathlib import Path
 from typing import Iterator
-
+from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, String, func
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from app.core.config import settings
 
+# Base class for SQLAlchemy models
+Base = declarative_base()
 
-def _database_path() -> Path:
-    path = Path(settings.sqlite_path)
-    if not path.is_absolute():
-      path = Path.cwd() / path
-    return path
+# ── Models ──
 
+class Client(Base):
+    __tablename__ = "clients"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False)
+    bin_iin = Column(Text, default="")
+    contact_name = Column(Text, default="")
+    phone = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now())
+
+class CatalogItem(Base):
+    __tablename__ = "catalog_items"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False)
+    unit = Column(Text, default="шт.")
+    price = Column(Float, nullable=False, default=0.0)
+    sku = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now())
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(Text, nullable=False)
+    client_name = Column(Text, nullable=False)
+    total_sum = Column(Text, nullable=False)
+    total_sum_in_words = Column(Text, nullable=False)
+    pdf_path = Column(Text, nullable=False)
+    payload_json = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now())
+
+class DocumentItem(Base):
+    __tablename__ = "document_items"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    name = Column(Text, nullable=False)
+    quantity = Column(Text, nullable=False)
+    unit = Column(Text, nullable=False)
+    price = Column(Text, nullable=False)
+    total = Column(Text, nullable=False)
+    code = Column(Text, default="")
+
+class SupplierProfile(Base):
+    __tablename__ = "supplier_profile"
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(Text, default="")
+    company_iin = Column(Text, default="")
+    company_iic = Column(Text, default="")
+    company_bic = Column(Text, default="")
+    company_kbe = Column(Text, default="")
+    beneficiary_bank = Column(Text, default="")
+    payment_code = Column(Text, default="")
+    supplier_name = Column(Text, default="")
+    supplier_iin = Column(Text, default="")
+    supplier_address = Column(Text, default="")
+    executor_name = Column(Text, default="")
+    position = Column(Text, default="")
+    phone = Column(Text, default="")
+    email = Column(Text, default="")
+    logo_path = Column(Text, default="")
+    signature_path = Column(Text, default="")
+    stamp_path = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+# ── Database Initialization ──
+
+def get_engine():
+    db_url = settings.database_url
+    if not db_url:
+        # Fallback to SQLite
+        db_url = f"sqlite:///{settings.sqlite_path}"
+    
+    # Handle PostgreSQL async vs sync if needed, but here we use sync psycopg
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+    connect_args = {}
+    if db_url.startswith("sqlite"):
+        connect_args = {"check_same_thread": False}
+        
+    return create_engine(db_url, connect_args=connect_args)
+
+engine = get_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db() -> None:
-    db_path = _database_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True)
+    # Create tables if they don't exist
+    Base.metadata.create_all(bind=engine)
 
-    with sqlite3.connect(db_path) as connection:
-        connection.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS clients (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                bin_iin TEXT DEFAULT '',
-                contact_name TEXT DEFAULT '',
-                phone TEXT DEFAULT '',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS catalog_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                unit TEXT DEFAULT 'шт.',
-                price REAL NOT NULL DEFAULT 0,
-                sku TEXT DEFAULT '',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                client_name TEXT NOT NULL,
-                total_sum TEXT NOT NULL,
-                total_sum_in_words TEXT NOT NULL,
-                pdf_path TEXT NOT NULL,
-                payload_json TEXT DEFAULT '',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS document_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                document_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                quantity TEXT NOT NULL,
-                unit TEXT NOT NULL,
-                price TEXT NOT NULL,
-                total TEXT NOT NULL,
-                code TEXT DEFAULT '',
-                FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS supplier_profile (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                company_name TEXT DEFAULT '',
-                company_iin TEXT DEFAULT '',
-                company_iic TEXT DEFAULT '',
-                company_bic TEXT DEFAULT '',
-                company_kbe TEXT DEFAULT '',
-                beneficiary_bank TEXT DEFAULT '',
-                payment_code TEXT DEFAULT '',
-                supplier_name TEXT DEFAULT '',
-                supplier_iin TEXT DEFAULT '',
-                supplier_address TEXT DEFAULT '',
-                executor_name TEXT DEFAULT '',
-                position TEXT DEFAULT '',
-                phone TEXT DEFAULT '',
-                email TEXT DEFAULT '',
-                logo_path TEXT DEFAULT '',
-                signature_path TEXT DEFAULT '',
-                stamp_path TEXT DEFAULT '',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-            """
-        )
-
-
-@contextmanager
-def get_db() -> Iterator[sqlite3.Connection]:
-    connection = sqlite3.connect(_database_path())
-    connection.row_factory = sqlite3.Row
+def get_db() -> Iterator[Session]:
+    db = SessionLocal()
     try:
-        yield connection
-        connection.commit()
+        yield db
     finally:
-        connection.close()
+        db.close()

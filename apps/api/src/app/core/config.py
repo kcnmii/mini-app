@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     service_user_gotenberg: str = ""
     service_password_gotenberg: str = ""
     sqlite_path: str = "./data/docmini.sqlite3"
+    database_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

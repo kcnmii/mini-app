@@ -22,12 +22,16 @@ services:
     env_file:
       - .env
     environment:
-      SQLITE_PATH: /app/data/docmini.sqlite3
+      DATABASE_URL: ${DATABASE_URL}
       DOCGEN_URL: http://docgen:4001
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
     depends_on:
-      - docgen
-      - gotenberg
+      postgres:
+        condition: service_healthy
+      docgen:
+        condition: service_started
+      gotenberg:
+        condition: service_started
 
   # ── Telegram Polling Bot ──
   bot:
@@ -41,10 +45,26 @@ services:
     env_file:
       - .env
     environment:
-      SQLITE_PATH: /app/data/docmini.sqlite3
+      DATABASE_URL: ${DATABASE_URL}
       TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
     depends_on:
       - api
+
+  # ── Database (PostgreSQL) ──
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-docmini}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-docmini}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ── Document Generator (docx templating) ──
   docgen:
@@ -64,3 +84,4 @@ services:
 
 volumes:
   api-data:
+  postgres-data:

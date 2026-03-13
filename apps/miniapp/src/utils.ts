@@ -10,6 +10,18 @@ export const emptyProfile: SupplierProfileData = {
     logo_path: "", signature_path: "", stamp_path: "",
 };
 
+export const AVATAR_COLORS = [
+    "#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#5856D6", "#AF52DE",
+];
+
+export function getAvatarColor(name: string) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 export function makeInitialInvoice(profile?: SupplierProfileData): InvoiceForm {
     const p = profile ?? emptyProfile;
     return {
