@@ -29,6 +29,23 @@ services:
       - docgen
       - gotenberg
 
+  # ── Telegram Polling Bot ──
+  bot:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: [ "uv", "run", "python", "-m", "app.telegram_bot_runner" ]
+    restart: unless-stopped
+    volumes:
+      - api-data:/app/data
+    env_file:
+      - .env
+    environment:
+      SQLITE_PATH: /app/data/docmini.sqlite3
+      TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
+    depends_on:
+      - api
+
   # ── Document Generator (docx templating) ──
   docgen:
     build:
