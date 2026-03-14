@@ -160,12 +160,30 @@ export function App() {
     }
   }
 
+  // Telegram Login Widget callback — exposed globally for the widget script
+  useEffect(() => {
+    (window as any).onTelegramAuth = async (user: any) => {
+      try {
+        const authData = await authRequest<{ access_token: string; user: { id: number } }>("/auth/telegram/widget", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+        setAuthToken(authData.access_token);
+        setChatId(String(authData.user.id));
+        await loadData();
+      } catch {
+        setStatus("Ошибка авторизации");
+        setIsAppReady(true);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     webApp?.ready?.();
     webApp?.expand?.();
 
     async function initAuth() {
-      // Step 1: Authenticate with Telegram
+      // Path 1: Telegram Mini App — initData is available
       if (webApp?.initData) {
         try {
           const authData = await authRequest<{ access_token: string; user: { id: number } }>("/auth/telegram/init", {
@@ -179,9 +197,13 @@ export function App() {
           setIsAppReady(true);
           return;
         }
+        await loadData();
+        return;
       }
-      // Step 2: Load data (now with token attached)
-      await loadData();
+
+      // Path 2: Browser — no initData, show login widget
+      // We just mark app as ready without loading data (user needs to login first)
+      setIsAppReady(true);
     }
 
     initAuth();
@@ -1193,6 +1215,7 @@ export function App() {
 
 
   /* ═══ MAIN RENDER ═══ */
+  const isAuthenticated = !!getAuthToken();
   const tabIcons: Record<TabKey, string> = { home: "description", invoices: "description", clients: "group", items: "inventory_2", profile: "person" };
   const tabLabels: Record<TabKey, string> = { home: "Документы", invoices: "Документы", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
@@ -1207,6 +1230,18 @@ export function App() {
                 : subView === "addClientContact" ? addClientContactView
                   : null;
 
+  /* ── Login screen (shown in browser when no Telegram context) ── */
+  const loginView = (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "24px", padding: "32px" }}>
+      <div style={{ fontSize: "48px" }}><Icon name="description" /></div>
+      <h1 style={{ fontSize: "22px", fontWeight: 700, textAlign: "center", margin: 0 }}>Doc Mini App</h1>
+      <p style={{ color: "var(--text-secondary)", textAlign: "center", fontSize: "15px", margin: 0, maxWidth: "280px" }}>
+        Войдите через Telegram, чтобы управлять документами, клиентами и каталогом.
+      </p>
+      <TelegramLoginButton />
+    </div>
+  );
+
   return (
     <main className="app-shell">
       <div className={`status-banner${status ? " visible" : ""}`}>{status}</div>
@@ -1216,6 +1251,8 @@ export function App() {
           <div style={{ color: "var(--text-secondary)", fontSize: "15px" }}>Загрузка...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
+      ) : !isAuthenticated ? (
+        loginView
       ) : subViewContent ? (
         subViewContent
       ) : (
@@ -1227,7 +1264,7 @@ export function App() {
           {tab === "profile" && profileView}
         </>
       )}
-      {!subViewContent && (
+      {isAuthenticated && !subViewContent && (
         <nav className="tab-bar">
           <div className="tab-bar-inner">
             {(["home", "clients", "items", "profile"] as TabKey[]).map((t) => (
@@ -1241,5 +1278,25 @@ export function App() {
       )}
     </main>
   );
+}
+
+/* ─── Telegram Login Widget Component ─── */
+function TelegramLoginButton() {
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const botName = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME || "DocOnlinkBot";
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.async = true;
+    script.setAttribute("data-telegram-login", botName);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "12");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    script.setAttribute("data-request-access", "write");
+    node.innerHTML = "";
+    node.appendChild(script);
+  }, []);
+
+  return <div ref={containerRef} />;
 }
 

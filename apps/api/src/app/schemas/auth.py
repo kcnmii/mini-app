@@ -1,8 +1,20 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class TelegramInitRequest(BaseModel):
     init_data: str
+
+
+class TelegramWidgetRequest(BaseModel):
+    """Data from Telegram Login Widget callback."""
+    id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    photo_url: Optional[str] = None
+    auth_date: int
+    hash: str
 
 
 class TelegramUserPayload(BaseModel):
