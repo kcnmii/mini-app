@@ -120,6 +120,16 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db() -> None:
     # Create tables if they don't exist
     Base.metadata.create_all(bind=engine)
+    
+    # Manual migration for existing tables (SQLAlchemy create_all doesn't add columns)
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for col_name in ["address", "director"]:
+            try:
+                conn.execute(text(f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col_name} TEXT DEFAULT ''"))
+                conn.commit()
+            except Exception:
+                pass
 
 def get_db() -> Iterator[Session]:
     db = SessionLocal()
