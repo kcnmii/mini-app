@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
+import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, DocumentStats, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 
 /* ─── Icon helper ─── */
@@ -71,6 +71,7 @@ export function App() {
   const [profileDraft, setProfileDraft] = useState<SupplierProfileData>(emptyProfile);
   const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
+  const [stats, setStats] = useState<DocumentStats | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
   const [clientSearch, setClientSearch] = useState("");
@@ -87,11 +88,18 @@ export function App() {
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
 
-  function openNewInvoice() {
-    setInvoice(makeInitialInvoice(profile));
+  async function openNewInvoice() {
+    const fresh = makeInitialInvoice(profile);
+    setInvoice(fresh);
     setInvoiceClientSearch("");
     setSubView("invoiceForm");
     setSelectedDocId(null);
+    try {
+      const { next_number } = await request<{ next_number: string }>("/documents/next-number");
+      setInvoice(c => ({ ...c, INVOICE_NUMBER: next_number }));
+    } catch (e) {
+      console.error("Failed to fetch next number", e);
+    }
   }
 
   async function loadAndPreviewInvoice(id: number) {
@@ -148,11 +156,13 @@ export function App() {
 
   async function loadData() {
     try {
-      const [c, i, d, p] = await Promise.all([
+      const [c, i, d, p, st] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
+        request<DocumentStats>("/documents/stats"),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
+      setStats(st);
       setInvoice(makeInitialInvoice(p));
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
@@ -391,10 +401,11 @@ export function App() {
     setStatus("Сохранение...");
     try {
       const s = await request<DocumentRecord>("/documents/invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payload: invoice }) });
-      setDocuments((c) => [s, ...c].slice(0, 10));
+      setDocuments((c) => [s, ...c].slice(0, 50));
       setStatus("Счет сохранен");
       setSubView(null);
       setSelectedDocId(null);
+      loadData(); // Refresh stats and other lists
     } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
   }
   async function deleteInvoice() {
@@ -407,6 +418,7 @@ export function App() {
       setStatus("Документ удален");
       setSubView(null);
       setSelectedDocId(null);
+      loadData(); // Refresh stats
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Ошибка при удалении");
     } finally { setBusy("idle"); }
@@ -516,6 +528,23 @@ export function App() {
             </button>
           </div>
         </div>
+
+        {stats && (
+          <div className="stats-row" style={{ padding: "8px 16px 0", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Счета</div>
+              <div style={{ fontSize: "18px", fontWeight: 700 }}>{stats.count}</div>
+            </div>
+            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Сумма</div>
+              <div style={{ fontSize: "15px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{formatMoney(stats.total_sum)} ₸</div>
+            </div>
+            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Клиенты</div>
+              <div style={{ fontSize: "18px", fontWeight: 700 }}>{stats.client_count}</div>
+            </div>
+          </div>
+        )}
         {documents.length > 0 ? (
           <>
             <div className="section-header-row" style={{ padding: "24px 32px 12px", marginBottom: "8px" }}>

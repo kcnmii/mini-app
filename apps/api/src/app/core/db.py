@@ -58,8 +58,10 @@ class Document(Base):
     title = Column(Text, nullable=False)
     client_name = Column(Text, nullable=False)
     total_sum = Column(Text, nullable=False)
+    total_amount = Column(Float, default=0.0)
     total_sum_in_words = Column(Text, nullable=False)
     pdf_path = Column(Text, nullable=False)
+    docx_path = Column(Text, default="")
     payload_json = Column(Text, default="")
     created_at = Column(DateTime, server_default=func.now())
 
@@ -143,6 +145,14 @@ def init_db() -> None:
                 conn.commit()
             except Exception:
                 pass
+        
+        # Add docx_path and total_amount to documents
+        try:
+            conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS docx_path TEXT DEFAULT ''"))
+            conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS total_amount DOUBLE PRECISION DEFAULT 0.0"))
+            conn.commit()
+        except Exception:
+            pass
 
 def get_db() -> Iterator[Session]:
     db = SessionLocal()

@@ -31,10 +31,12 @@ async def send_invoice_to_telegram(
 
     bot = TelegramBotClient()
     try:
-        message_id = await bot.send_invoice_pdf(
+        filename_prefix = filename.replace(".pdf", "")
+        message_id = await bot.send_invoice_documents(
             chat_id=payload.chat_id,
-            filename=filename,
+            filename_prefix=filename_prefix,
             pdf_bytes=pdf_bytes,
+            docx_bytes=docx_bytes,
             caption=payload.caption,
         )
     except Exception as exc:

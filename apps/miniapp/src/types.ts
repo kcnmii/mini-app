@@ -64,7 +64,13 @@ export type InvoiceForm = {
 
 export type DocumentRecord = {
     id: number; title: string; client_name: string; total_sum: string;
-    total_sum_in_words: string; pdf_path: string; created_at: string;
+    total_sum_in_words: string; pdf_path: string; docx_path: string; created_at: string;
+};
+
+export type DocumentStats = {
+    count: number;
+    total_sum: number;
+    client_count: number;
 };
 
 export type ClientDraft = {

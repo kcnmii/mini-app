@@ -1,13 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import httpx
 import os
+import re
 
-from app.core.db import get_db, Document, DocumentItem
+from app.core.db import get_db, Document, DocumentItem, Client
 from app.core.auth import get_current_user_id
 from app.modules.render.service import RenderService
-from app.schemas.document import DocumentRead, SaveInvoiceRequest
+from app.schemas.document import DocumentRead, SaveInvoiceRequest, DocumentStats
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 render_service = RenderService()
@@ -20,6 +22,39 @@ async def list_recent_documents(
 ) -> list[DocumentRead]:
     docs = db.query(Document).filter(Document.user_id == user_id).order_by(Document.id.desc()).limit(50).all()
     return docs
+
+
+@router.get("/stats", response_model=DocumentStats)
+async def get_document_stats(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> DocumentStats:
+    count = db.query(Document).filter(Document.user_id == user_id).count()
+    total_sum = db.query(func.sum(Document.total_amount)).filter(Document.user_id == user_id).scalar() or 0.0
+    client_count = db.query(Client).filter(Client.user_id == user_id).count()
+    return DocumentStats(count=count, total_sum=total_sum, client_count=client_count)
+
+
+@router.get("/next-number")
+async def get_next_invoice_number(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    last_doc = db.query(Document).filter(Document.user_id == user_id).order_by(Document.id.desc()).first()
+    if not last_doc:
+        return {"next_number": "СФ-001"}
+    
+    # Try to extract number from title "Счет № 001" or "invoice-001"
+    match = re.search(r'(\d+)', last_doc.title)
+    if match:
+        num = int(match.group(1))
+        # Preserving padding if possible
+        padding = len(match.group(1))
+        next_num = str(num + 1).zfill(padding)
+        # Prefix "СФ-" is common in KZ
+        return {"next_number": f"СФ-{next_num}"}
+    
+    return {"next_number": "СФ-001"}
 
 
 @router.get("/{document_id}")
@@ -90,14 +125,23 @@ async def save_invoice_document(
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
 
     pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
+    docx_path = render_service.persist_debug_output(filename, docx_bytes)
+
+    # Parse total amount from string
+    try:
+        total_amount = float(invoice.total_sum.replace(" ", "").replace(",", "."))
+    except (ValueError, AttributeError):
+        total_amount = 0.0
 
     new_doc = Document(
         user_id=user_id,
         title=f"Счет № {invoice.invoice_number}",
         client_name=invoice.client_name,
         total_sum=invoice.total_sum,
+        total_amount=total_amount,
         total_sum_in_words=invoice.total_sum_in_words,
         pdf_path=pdf_path,
+        docx_path=docx_path,
         payload_json=invoice.model_dump_json(by_alias=True),
     )
     db.add(new_doc)

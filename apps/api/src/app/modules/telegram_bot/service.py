@@ -50,5 +50,31 @@ class TelegramBotClient:
         )
         return message.message_id
 
+    async def send_invoice_documents(
+        self,
+        *,
+        chat_id: int,
+        filename_prefix: str,
+        pdf_bytes: bytes,
+        docx_bytes: bytes,
+        caption: str | None,
+    ) -> int:
+        # Send PDF first
+        pdf_doc = BufferedInputFile(pdf_bytes, filename=f"{filename_prefix}.pdf")
+        msg = await self.bot.send_document(
+            chat_id=chat_id,
+            document=pdf_doc,
+            caption=caption,
+        )
+        
+        # Send DOCX second with the launch keyboard
+        docx_doc = BufferedInputFile(docx_bytes, filename=f"{filename_prefix}.docx")
+        await self.bot.send_document(
+            chat_id=chat_id,
+            document=docx_doc,
+            reply_markup=build_launch_keyboard(),
+        )
+        return msg.message_id
+
     async def close(self) -> None:
         await self.bot.session.close()
