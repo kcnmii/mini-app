@@ -80,6 +80,7 @@ export type ClientDraft = {
     director: string;
     accounts: ClientBankAccount[];
     contacts: ClientContact[];
+    kbe?: string;
 };
 export type ItemDraft = { name: string; unit: string; price: string; sku: string };
 

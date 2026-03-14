@@ -71,7 +71,7 @@ export function App() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [profile, setProfile] = useState<SupplierProfileData>(emptyProfile);
   const [profileDraft, setProfileDraft] = useState<SupplierProfileData>(emptyProfile);
-  const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
+  const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
@@ -255,7 +255,7 @@ export function App() {
       setClientBaDraft(clientDraft.accounts[index]);
       setEditingBaIndex(index);
     } else {
-      setClientBaDraft({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
+      setClientBaDraft({ iic: "", bank_name: "", bic: "", kbe: clientDraft.kbe || "", is_main: false });
       setEditingBaIndex(null);
     }
     setSubView("addClientBankAccount");
@@ -953,7 +953,8 @@ export function App() {
                         ...c,
                         name: info.name || c.name,
                         address: info.address || c.address,
-                        director: info.director || c.director
+                        director: info.director || c.director,
+                        kbe: info.type === 'ИП' ? '19' : '17'
                       }));
                       setStatus("Данные организации получены");
                     }
@@ -964,7 +965,8 @@ export function App() {
 
                 const found = clients.find(cl => cl.bin_iin === val.trim() && val.trim() !== "");
                 if (found) {
-                  setClientDraft({ ...found });
+                  const firstKbe = found.accounts.length > 0 ? found.accounts[0].kbe : "";
+                  setClientDraft({ ...found, kbe: firstKbe });
                   setSelectedCatalogClient(found);
                 }
               }}
@@ -1205,7 +1207,8 @@ export function App() {
                         ...c,
                         company_name: info.name || c.company_name,
                         supplier_address: info.address || c.supplier_address,
-                        executor_name: info.director || c.executor_name
+                        executor_name: info.director || c.executor_name,
+                        company_kbe: info.type === 'ИП' ? '19' : '17'
                       }));
                       setStatus("Данные организации получены");
                     }
@@ -1277,6 +1280,7 @@ export function App() {
           </div>
           <div className="form-field"><input placeholder="БИК банка" value={profileDraft.company_bic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_bic: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Название банка" value={profileDraft.beneficiary_bank} onChange={(e) => setProfileDraft((c) => ({ ...c, beneficiary_bank: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Кбе" value={profileDraft.company_kbe} onChange={(e) => setProfileDraft((c) => ({ ...c, company_kbe: e.target.value }))} /></div>
         </div>
         <div className="section-title">Состояние</div>
         <div className="ios-group">
