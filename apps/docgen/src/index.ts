@@ -139,9 +139,9 @@ app.post("/render/docx", (req, res) => {
       `attachment; filename="${templateKey}-${templateVersion}.docx"`,
     );
     return res.send(output);
-  } catch (error) {
+  } catch (error: any) {
+    console.error("render error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
     const detail = error instanceof Error ? error.message : "unknown_error";
-    console.error("render error:", error);
     return res.status(500).json({ error: "render_failed", detail });
   }
 });
