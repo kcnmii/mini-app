@@ -16,6 +16,8 @@ class TelegramWidgetRequest(BaseModel):
     auth_date: int
     hash: str
 
+    model_config = {"extra": "allow"}
+
 
 class TelegramUserPayload(BaseModel):
     id: int

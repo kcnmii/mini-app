@@ -16,7 +16,7 @@ async def auth_telegram_init(payload: TelegramInitRequest) -> TelegramAuthRespon
 @router.post("/widget", response_model=TelegramAuthResponse)
 async def auth_telegram_widget(payload: TelegramWidgetRequest) -> TelegramAuthResponse:
     """Authenticate via Telegram Login Widget data."""
-    return service.build_widget_auth_response(payload.model_dump())
+    return service.build_widget_auth_response(payload.model_dump(exclude_unset=True, exclude_none=True))
 
 
 @router.get("/bot-name")
