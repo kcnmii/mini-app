@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db, SupplierProfile as SupplierProfileModel
+from app.core.auth import get_current_user_id
 from app.schemas.profile import SupplierProfile, SupplierProfileUpdate
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -19,16 +20,18 @@ MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 IMAGE_FIELDS = {"logo", "signature", "stamp"}
 
 
-def _ensure_uploads_dir() -> None:
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+def _ensure_uploads_dir(user_id: int) -> Path:
+    user_dir = UPLOADS_DIR / str(user_id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir
 
 
-def _get_or_create_profile(db: Session) -> SupplierProfileModel:
-    profile = db.query(SupplierProfileModel).filter(SupplierProfileModel.id == 1).first()
+def _get_or_create_profile(db: Session, user_id: int) -> SupplierProfileModel:
+    profile = db.query(SupplierProfileModel).filter(SupplierProfileModel.user_id == user_id).first()
     if profile:
         return profile
-    
-    new_profile = SupplierProfileModel(id=1)
+
+    new_profile = SupplierProfileModel(user_id=user_id)
     db.add(new_profile)
     db.commit()
     db.refresh(new_profile)
@@ -36,30 +39,41 @@ def _get_or_create_profile(db: Session) -> SupplierProfileModel:
 
 
 @router.get("", response_model=SupplierProfile)
-async def get_profile(db: Session = Depends(get_db)) -> SupplierProfile:
-    profile_model = _get_or_create_profile(db)
-    # Convert model to dict for Pydantic
+async def get_profile(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> SupplierProfile:
+    profile_model = _get_or_create_profile(db, user_id)
     data = {c.name: getattr(profile_model, c.name) for c in profile_model.__table__.columns}
     return SupplierProfile(**data)
 
 
 @router.put("", response_model=SupplierProfile)
-async def update_profile(payload: SupplierProfileUpdate, db: Session = Depends(get_db)) -> SupplierProfile:
-    profile_model = _get_or_create_profile(db)
+async def update_profile(
+    payload: SupplierProfileUpdate,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> SupplierProfile:
+    profile_model = _get_or_create_profile(db, user_id)
     fields = payload.model_dump(exclude_unset=True)
-    
+
     for key, value in fields.items():
         setattr(profile_model, key, value)
-        
+
     db.commit()
     db.refresh(profile_model)
-    
+
     data = {c.name: getattr(profile_model, c.name) for c in profile_model.__table__.columns}
     return SupplierProfile(**data)
 
 
 @router.post("/{image_type}")
-async def upload_image(image_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)) -> JSONResponse:
+async def upload_image(
+    image_type: str,
+    file: UploadFile = File(...),
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
     if image_type not in IMAGE_FIELDS:
         raise HTTPException(status_code=400, detail=f"Invalid image type: {image_type}. Must be one of {IMAGE_FIELDS}")
 
@@ -74,14 +88,14 @@ async def upload_image(image_type: str, file: UploadFile = File(...), db: Sessio
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail=f"File too large. Max {MAX_FILE_SIZE // 1024 // 1024}MB")
 
-    _ensure_uploads_dir()
+    user_dir = _ensure_uploads_dir(user_id)
     filename = f"{image_type}{ext}"
-    file_path = UPLOADS_DIR / filename
+    file_path = user_dir / filename
     file_path.write_bytes(content)
 
     path_column = f"{image_type}_path"
-    profile_model = _get_or_create_profile(db)
-    
+    profile_model = _get_or_create_profile(db, user_id)
+
     setattr(profile_model, path_column, str(file_path))
     db.commit()
 
@@ -89,12 +103,16 @@ async def upload_image(image_type: str, file: UploadFile = File(...), db: Sessio
 
 
 @router.delete("/{image_type}")
-async def delete_image(image_type: str, db: Session = Depends(get_db)) -> JSONResponse:
+async def delete_image(
+    image_type: str,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
     if image_type not in IMAGE_FIELDS:
         raise HTTPException(status_code=400, detail=f"Invalid image type: {image_type}")
 
     path_column = f"{image_type}_path"
-    profile_model = _get_or_create_profile(db)
+    profile_model = _get_or_create_profile(db, user_id)
     current_path = getattr(profile_model, path_column)
 
     if current_path:
@@ -109,13 +127,17 @@ async def delete_image(image_type: str, db: Session = Depends(get_db)) -> JSONRe
 
 
 @router.get("/{image_type}/preview")
-async def get_image_preview(image_type: str, db: Session = Depends(get_db)) -> JSONResponse:
+async def get_image_preview(
+    image_type: str,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
     """Return base64-encoded image for preview in the frontend."""
     if image_type not in IMAGE_FIELDS:
         raise HTTPException(status_code=400, detail=f"Invalid image type: {image_type}")
 
     path_column = f"{image_type}_path"
-    profile_model = _get_or_create_profile(db)
+    profile_model = _get_or_create_profile(db, user_id)
     current_path = getattr(profile_model, path_column)
 
     if not current_path:

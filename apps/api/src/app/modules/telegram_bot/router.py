@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 import httpx
 
 from app.core.cors import cors_preflight_response
+from app.core.auth import get_current_user_id
 from app.modules.render.router import _sample_invoice_payload
 from app.modules.render.service import RenderService
 from app.modules.telegram_bot.service import TelegramBotClient
@@ -14,6 +15,7 @@ render_service = RenderService()
 @router.post("/send-invoice", response_model=TelegramSendInvoiceResponse)
 async def send_invoice_to_telegram(
     payload: TelegramSendInvoiceRequest,
+    user_id: int = Depends(get_current_user_id),
 ) -> TelegramSendInvoiceResponse:
     invoice_payload = payload.payload or _sample_invoice_payload()
     filename = f"invoice-{''.join(char if char.isascii() and char.isalnum() else '-' for char in invoice_payload.invoice_number).strip('-') or 'document'}.pdf"

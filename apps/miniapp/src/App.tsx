@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
-import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
+import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 
 /* ─── Icon helper ─── */
 function Icon({ name, filled, className }: { name: string; filled?: boolean; className?: string }) {
@@ -30,7 +30,10 @@ function ImageUploadRow({ label, hint, imageType, onStatusChange }: { label: str
   async function handleUpload(file: File) {
     try {
       const fd = new FormData(); fd.append("file", file);
-      await fetch(`${API_BASE_URL}/profile/${imageType}`, { method: "POST", body: fd });
+      const headers: Record<string, string> = {};
+      const token = getAuthToken();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      await fetch(`${API_BASE_URL}/profile/${imageType}`, { method: "POST", body: fd, headers });
       await loadPreview();
       onStatusChange(`${label} загружен`);
     } catch { onStatusChange(`Ошибка загрузки: ${label}`); }
@@ -160,15 +163,28 @@ export function App() {
   useEffect(() => {
     webApp?.ready?.();
     webApp?.expand?.();
-    loadData();
-  }, [webApp]);
 
-  useEffect(() => {
-    if (!webApp?.initData) return;
-    request<{ user: { id: number; first_name?: string } }>("/auth/telegram/init", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init_data: webApp.initData }),
-    }).then((data) => setChatId(String(data.user.id))).catch(() => { });
+    async function initAuth() {
+      // Step 1: Authenticate with Telegram
+      if (webApp?.initData) {
+        try {
+          const authData = await authRequest<{ access_token: string; user: { id: number } }>("/auth/telegram/init", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ init_data: webApp.initData }),
+          });
+          setAuthToken(authData.access_token);
+          setChatId(String(authData.user.id));
+        } catch {
+          setStatus("Ошибка авторизации");
+          setIsAppReady(true);
+          return;
+        }
+      }
+      // Step 2: Load data (now with token attached)
+      await loadData();
+    }
+
+    initAuth();
   }, [webApp]);
 
   function updateItem(index: number, key: keyof DocumentItem, value: string) {

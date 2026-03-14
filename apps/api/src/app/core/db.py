@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Iterator
-from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, String, func
+from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, BigInteger, String, func
 from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from app.core.config import settings
 
@@ -13,6 +13,7 @@ Base = declarative_base()
 class Client(Base):
     __tablename__ = "clients"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
     name = Column(Text, nullable=False)
     bin_iin = Column(Text, default="")
     address = Column(Text, default="")
@@ -43,6 +44,7 @@ class ClientContact(Base):
 class CatalogItem(Base):
     __tablename__ = "catalog_items"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
     name = Column(Text, nullable=False)
     unit = Column(Text, default="шт.")
     price = Column(Float, nullable=False, default=0.0)
@@ -52,6 +54,7 @@ class CatalogItem(Base):
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
     title = Column(Text, nullable=False)
     client_name = Column(Text, nullable=False)
     total_sum = Column(Text, nullable=False)
@@ -74,6 +77,7 @@ class DocumentItem(Base):
 class SupplierProfile(Base):
     __tablename__ = "supplier_profile"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, unique=True, index=True)
     company_name = Column(Text, default="")
     company_iin = Column(Text, default="")
     company_iic = Column(Text, default="")
@@ -124,9 +128,18 @@ def init_db() -> None:
     # Manual migration for existing tables (SQLAlchemy create_all doesn't add columns)
     from sqlalchemy import text
     with engine.connect() as conn:
-        for col_name in ["address", "director"]:
+        # Add missing columns to clients
+        for col_name in ["address", "director", "user_id"]:
             try:
-                conn.execute(text(f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col_name} TEXT DEFAULT ''"))
+                col_type = "BIGINT DEFAULT 0" if col_name == "user_id" else "TEXT DEFAULT ''"
+                conn.execute(text(f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+        # Add user_id to other tables
+        for table_name in ["catalog_items", "documents", "supplier_profile"]:
+            try:
+                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS user_id BIGINT DEFAULT 0"))
                 conn.commit()
             except Exception:
                 pass

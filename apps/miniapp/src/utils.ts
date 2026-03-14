@@ -49,7 +49,24 @@ export function makeInitialInvoice(profile?: SupplierProfileData): InvoiceForm {
 
 export function getTelegramWebApp() { return window.Telegram?.WebApp; }
 
+/* ─── Auth token management ─── */
+let _authToken: string | null = null;
+export function setAuthToken(token: string) { _authToken = token; }
+export function getAuthToken() { return _authToken; }
+
+/** Authenticated request — automatically attaches Bearer token */
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
+    const headers = new Headers(options?.headers);
+    if (_authToken) {
+        headers.set("Authorization", `Bearer ${_authToken}`);
+    }
+    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json() as Promise<T>;
+}
+
+/** Unauthenticated request — for the /auth/telegram/init call itself */
+export async function authRequest<T>(path: string, options?: RequestInit): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, options);
     if (!response.ok) throw new Error(await response.text());
     return response.json() as Promise<T>;
