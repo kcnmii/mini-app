@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -31,7 +32,7 @@ class ClientRead(BaseModel):
     bin_iin: str = ""
     address: str = ""
     director: str = ""
-    created_at: str
+    created_at: Optional[datetime.datetime] = None
     accounts: List[ClientBankAccountSchema] = []
     contacts: List[ClientContactSchema] = []
 
