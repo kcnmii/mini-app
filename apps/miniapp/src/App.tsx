@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
+import { getBankByIIK } from "./utils/bankAutofill";
+import { fetchCompanyByBin } from "./utils/binAutofill";
 
 /* ─── Icon helper ─── */
 function Icon({ name, filled, className }: { name: string; filled?: boolean; className?: string }) {
@@ -86,6 +88,7 @@ export function App() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
+  const [isBinLoading, setIsBinLoading] = useState(false);
 
   async function openNewInvoice() {
     const fresh = makeInitialInvoice(profile);
@@ -933,13 +936,32 @@ export function App() {
       <div className="content-area">
         <div className="section-title">Реквизиты</div>
         <div className="ios-group">
-          <div className="form-field">
+          <div className="form-field" style={{ position: "relative" }}>
             <input
-              placeholder="БИН/ИИН"
+              placeholder="БИН/ИИН (12 цифр)"
               value={clientDraft.bin_iin}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const val = e.target.value;
                 setClientDraft((c) => ({ ...c, bin_iin: val }));
+
+                if (val.length === 12) {
+                  setIsBinLoading(true);
+                  try {
+                    const info = await fetchCompanyByBin(val);
+                    if (info) {
+                      setClientDraft(c => ({
+                        ...c,
+                        name: info.name || c.name,
+                        address: info.address || c.address,
+                        director: info.director || c.director
+                      }));
+                      setStatus("Данные организации получены");
+                    }
+                  } finally {
+                    setIsBinLoading(false);
+                  }
+                }
+
                 const found = clients.find(cl => cl.bin_iin === val.trim() && val.trim() !== "");
                 if (found) {
                   setClientDraft({ ...found });
@@ -947,6 +969,11 @@ export function App() {
                 }
               }}
             />
+            {isBinLoading && (
+              <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
+                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+              </div>
+            )}
           </div>
           <div className="form-field">
             <input placeholder="Наименование" value={clientDraft.name} onChange={(e) => setClientDraft((c) => ({ ...c, name: e.target.value }))} />
@@ -1025,7 +1052,22 @@ export function App() {
       </header>
       <div className="content-area">
         <div className="ios-group" style={{ marginTop: 16 }}>
-          <div className="form-field"><input placeholder="ИИК" value={clientBaDraft.iic} onChange={(e) => setClientBaDraft(c => ({ ...c, iic: e.target.value }))} /></div>
+          <div className="form-field">
+            <input
+              placeholder="ИИК (Напр. KZ...)"
+              value={clientBaDraft.iic}
+              onChange={(e) => {
+                const val = e.target.value;
+                const info = getBankByIIK(val);
+                setClientBaDraft(c => ({
+                  ...c,
+                  iic: val,
+                  bank_name: info ? info.name : c.bank_name,
+                  bic: info ? info.bik : c.bic
+                }));
+              }}
+            />
+          </div>
           <div className="form-field"><input placeholder="Наименование банка" value={clientBaDraft.bank_name} onChange={(e) => setClientBaDraft(c => ({ ...c, bank_name: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="БИК" value={clientBaDraft.bic} onChange={(e) => setClientBaDraft(c => ({ ...c, bic: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Кбе" value={clientBaDraft.kbe} onChange={(e) => setClientBaDraft(c => ({ ...c, kbe: e.target.value }))} /></div>
@@ -1147,7 +1189,38 @@ export function App() {
       <div className="content-area">
         <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты организации</div>
         <div className="ios-group">
-          <div className="form-field"><input placeholder="БИН (12-значный номер)" value={profileDraft.company_iin} onChange={(e) => setProfileDraft((c) => ({ ...c, company_iin: e.target.value }))} /></div>
+          <div className="form-field" style={{ position: "relative" }}>
+            <input
+              placeholder="БИН (12-значный номер)"
+              value={profileDraft.company_iin}
+              onChange={async (e) => {
+                const val = e.target.value;
+                setProfileDraft((c) => ({ ...c, company_iin: val }));
+                if (val.length === 12) {
+                  setIsBinLoading(true);
+                  try {
+                    const info = await fetchCompanyByBin(val);
+                    if (info) {
+                      setProfileDraft(c => ({
+                        ...c,
+                        company_name: info.name || c.company_name,
+                        supplier_address: info.address || c.supplier_address,
+                        executor_name: info.director || c.executor_name
+                      }));
+                      setStatus("Данные организации получены");
+                    }
+                  } finally {
+                    setIsBinLoading(false);
+                  }
+                }
+              }}
+            />
+            {isBinLoading && (
+              <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
+                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+              </div>
+            )}
+          </div>
           <div className="form-field"><input placeholder="Название организации" value={profileDraft.company_name} onChange={(e) => setProfileDraft((c) => ({ ...c, company_name: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Адрес (Юридический адрес)" value={profileDraft.supplier_address} onChange={(e) => setProfileDraft((c) => ({ ...c, supplier_address: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="ФИО (например, Иванов И.И.)" value={profileDraft.executor_name} onChange={(e) => setProfileDraft((c) => ({ ...c, executor_name: e.target.value }))} /></div>
@@ -1186,7 +1259,22 @@ export function App() {
       <div className="content-area">
         <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты счета</div>
         <div className="ios-group">
-          <div className="form-field"><input placeholder="IBAN (Например, KZ...)" value={profileDraft.company_iic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_iic: e.target.value }))} /></div>
+          <div className="form-field">
+            <input
+              placeholder="IBAN (Например, KZ...)"
+              value={profileDraft.company_iic}
+              onChange={(e) => {
+                const val = e.target.value;
+                const info = getBankByIIK(val);
+                setProfileDraft(c => ({
+                  ...c,
+                  company_iic: val,
+                  company_bic: info ? info.bik : c.company_bic,
+                  beneficiary_bank: info ? info.name : c.beneficiary_bank
+                }));
+              }}
+            />
+          </div>
           <div className="form-field"><input placeholder="БИК банка" value={profileDraft.company_bic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_bic: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Название банка" value={profileDraft.beneficiary_bank} onChange={(e) => setProfileDraft((c) => ({ ...c, beneficiary_bank: e.target.value }))} /></div>
         </div>

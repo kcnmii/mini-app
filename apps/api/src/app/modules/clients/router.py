@@ -8,6 +8,20 @@ from app.schemas.client import ClientCreate, ClientRead
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
+@router.get("/search-bin/{bin_number}")
+async def search_bin(bin_number: str):
+    """
+    Search BIN/IIN details via eGov service (kyc.kz wrapper).
+    """
+    from app.services.egov import search_bin_details
+    
+    result = await search_bin_details(bin_number)
+    if not result:
+        raise HTTPException(status_code=404, detail="Организация не найдена")
+    
+    return result
+
+
 @router.get("", response_model=list[ClientRead])
 async def list_clients(
     user_id: int = Depends(get_current_user_id),
