@@ -15,8 +15,31 @@ declare global {
     }
 }
 
+export type ClientBankAccount = {
+    id?: number;
+    iic: string;
+    bank_name: string;
+    bic: string;
+    kbe: string;
+    is_main: boolean;
+};
+
+export type ClientContact = {
+    id?: number;
+    name: string;
+    phone: string;
+    email: string;
+};
+
 export type Client = {
-    id: number; name: string; bin_iin: string; contact_name: string; phone: string; created_at: string;
+    id: number;
+    name: string;
+    bin_iin: string;
+    address: string;
+    director: string;
+    accounts: ClientBankAccount[];
+    contacts: ClientContact[];
+    created_at: string;
 };
 
 export type CatalogItem = {
@@ -44,7 +67,14 @@ export type DocumentRecord = {
     total_sum_in_words: string; pdf_path: string; created_at: string;
 };
 
-export type ClientDraft = { name: string; bin_iin: string; contact_name: string; phone: string };
+export type ClientDraft = {
+    name: string;
+    bin_iin: string;
+    address: string;
+    director: string;
+    accounts: ClientBankAccount[];
+    contacts: ClientContact[];
+};
 export type ItemDraft = { name: string; unit: string; price: string; sku: string };
 
 export type SupplierProfileData = {

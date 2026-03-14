@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterator
 from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, String, func
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from app.core.config import settings
 
 # Base class for SQLAlchemy models
@@ -15,9 +15,30 @@ class Client(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(Text, nullable=False)
     bin_iin = Column(Text, default="")
-    contact_name = Column(Text, default="")
-    phone = Column(Text, default="")
+    address = Column(Text, default="")
+    director = Column(Text, default="")
     created_at = Column(DateTime, server_default=func.now())
+
+    accounts = relationship("ClientBankAccount", backref="client", cascade="all, delete-orphan")
+    contacts = relationship("ClientContact", backref="client", cascade="all, delete-orphan")
+
+class ClientBankAccount(Base):
+    __tablename__ = "client_bank_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    iic = Column(Text, default="")
+    bank_name = Column(Text, default="")
+    bic = Column(Text, default="")
+    kbe = Column(Text, default="")
+    is_main = Column(Integer, default=0) # 0 or 1
+
+class ClientContact(Base):
+    __tablename__ = "client_contacts"
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    name = Column(Text, default="")
+    phone = Column(Text, default="")
+    email = Column(Text, default="")
 
 class CatalogItem(Base):
     __tablename__ = "catalog_items"

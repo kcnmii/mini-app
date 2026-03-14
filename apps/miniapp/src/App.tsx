@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData } from "./types";
+import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 
 /* ─── Icon helper ─── */
@@ -66,7 +66,7 @@ export function App() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [profile, setProfile] = useState<SupplierProfileData>(emptyProfile);
   const [profileDraft, setProfileDraft] = useState<SupplierProfileData>(emptyProfile);
-  const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", contact_name: "", phone: "" });
+  const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
@@ -75,7 +75,11 @@ export function App() {
   const [invoiceClientSearch, setInvoiceClientSearch] = useState("");
   const [docSearch, setDocSearch] = useState("");
   // subView: null = show tab content, others = full-page sub-views
-  const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument">(null);
+  const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument" | "addClientBankAccount" | "addClientContact">(null);
+  const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
+  const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
+  const [editingBaIndex, setEditingBaIndex] = useState<number | null>(null);
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
@@ -195,8 +199,56 @@ export function App() {
       return { ...c, ...buildInvoicePatch(ni) };
     });
   }
+  function openAddClientBa(index?: number) {
+    if (index !== undefined) {
+      setClientBaDraft(clientDraft.accounts[index]);
+      setEditingBaIndex(index);
+    } else {
+      setClientBaDraft({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
+      setEditingBaIndex(null);
+    }
+    setSubView("addClientBankAccount");
+  }
+
+  function saveClientBa() {
+    setClientDraft((c) => {
+      const na = [...c.accounts];
+      if (editingBaIndex !== null) {
+        na[editingBaIndex] = clientBaDraft;
+      } else {
+        na.push(clientBaDraft);
+      }
+      return { ...c, accounts: na };
+    });
+    setSubView("addClient");
+  }
+
+  function openAddClientContact(index?: number) {
+    if (index !== undefined) {
+      setClientContactDraft(clientDraft.contacts[index]);
+      setEditingContactIndex(index);
+    } else {
+      setClientContactDraft({ name: "", phone: "", email: "" });
+      setEditingContactIndex(null);
+    }
+    setSubView("addClientContact");
+  }
+
+  function saveClientContact() {
+    setClientDraft((c) => {
+      const nc = [...c.contacts];
+      if (editingContactIndex !== null) {
+        nc[editingContactIndex] = clientContactDraft;
+      } else {
+        nc.push(clientContactDraft);
+      }
+      return { ...c, contacts: nc };
+    });
+    setSubView("addClient");
+  }
+
   function selectClient(client: Client) {
-    setInvoice((c) => ({ ...c, CLIENT_NAME: client.name, CLIENT_IIN: client.bin_iin, CLIENT_ADDRESS: client.phone }));
+    setInvoice((c) => ({ ...c, CLIENT_NAME: client.name, CLIENT_IIN: client.bin_iin, CLIENT_ADDRESS: client.address || "" }));
     setInvoiceClientSearch(client.name);
     setStatus(`Клиент: ${client.name}`);
   }
@@ -205,13 +257,7 @@ export function App() {
     if (!clientDraft.name.trim()) return;
     setBusy("save");
     try {
-      const isModified = selectedCatalogClient && (
-        selectedCatalogClient.name !== clientDraft.name ||
-        selectedCatalogClient.bin_iin !== clientDraft.bin_iin ||
-        (selectedCatalogClient.phone || "") !== (clientDraft.phone || "")
-      );
-
-      if (isModified && selectedCatalogClient) {
+      if (selectedCatalogClient) {
         const updated = await request<Client>(`/clients/${selectedCatalogClient.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -235,7 +281,7 @@ export function App() {
         setStatus("Клиент добавлен");
       }
 
-      setClientDraft({ name: "", bin_iin: "", contact_name: "", phone: "" });
+      setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
       setSelectedCatalogClient(null);
 
       if (tab === "home") {
@@ -244,8 +290,10 @@ export function App() {
 
       setSubView(tab === "home" ? "invoiceForm" : null);
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка");
-    } finally { setBusy("idle"); }
+      setStatus("Ошибка сохранения");
+    } finally {
+      setBusy("idle");
+    }
   }
   async function createItem() {
     if (!itemDraft.name.trim()) return;
@@ -332,7 +380,7 @@ export function App() {
       setStatus("Клиент удален");
       setSubView(null);
       setSelectedCatalogClient(null);
-      setClientDraft({ name: "", bin_iin: "", contact_name: "", phone: "" });
+      setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Ошибка при удалении");
     } finally { setBusy("idle"); }
@@ -663,7 +711,7 @@ export function App() {
             <div className="ios-group">
               {filteredClientsList.map((cl) => (
                 <div className="ios-row clickable" key={cl.id} onClick={() => {
-                  setClientDraft({ name: cl.name, bin_iin: cl.bin_iin, phone: cl.phone || "", contact_name: cl.contact_name || "" });
+                  setClientDraft({ ...cl });
                   setSelectedCatalogClient(cl);
                   setSubView("addClient");
                 }}>
@@ -812,7 +860,6 @@ export function App() {
 
   /* ═══ FULL-PAGE SUB-VIEWS (replace modals) ═══ */
 
-  /* Add Client — full page (like ux/code.html pattern) */
   const addClientView = (
     <>
       <header className="nav-bar">
@@ -827,7 +874,8 @@ export function App() {
         </div>
       </header>
       <div className="content-area">
-        <div className="ios-group" style={{ marginTop: 16 }}>
+        <div className="section-title">Реквизиты</div>
+        <div className="ios-group">
           <div className="form-field">
             <input
               placeholder="БИН/ИИН"
@@ -837,35 +885,127 @@ export function App() {
                 setClientDraft((c) => ({ ...c, bin_iin: val }));
                 const found = clients.find(cl => cl.bin_iin === val.trim() && val.trim() !== "");
                 if (found) {
-                  setClientDraft({ name: found.name, bin_iin: found.bin_iin, phone: found.phone || "", contact_name: found.contact_name || "" });
+                  setClientDraft({ ...found });
                   setSelectedCatalogClient(found);
                 }
               }}
             />
           </div>
-          {clientDraft.bin_iin && !clients.find(cl => cl.bin_iin === clientDraft.bin_iin.trim()) && clients.filter(cl => cl.bin_iin.includes(clientDraft.bin_iin)).length > 0 && (
-            <>
-              {clients.filter(cl => cl.bin_iin.includes(clientDraft.bin_iin)).slice(0, 4).map(found => (
-                <div className="ios-row" key={found.id} onClick={() => {
-                  setClientDraft({ name: found.name, bin_iin: found.bin_iin, phone: found.phone || "", contact_name: found.contact_name || "" });
-                  setSelectedCatalogClient(found);
-                }} style={{ cursor: "pointer", background: "rgba(0,123,255,0.05)" }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{found.name}</div>
-                    <div className="ios-row-subtitle">{found.bin_iin}</div>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-          <div className="form-field"><input placeholder="Название (ТОО / ИП)" value={clientDraft.name} onChange={(e) => setClientDraft((c) => ({ ...c, name: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Телефон (+7...)" value={clientDraft.phone} onChange={(e) => setClientDraft((c) => ({ ...c, phone: e.target.value }))} /></div>
+          <div className="form-field">
+            <input placeholder="Наименование" value={clientDraft.name} onChange={(e) => setClientDraft((c) => ({ ...c, name: e.target.value }))} />
+          </div>
+          <div className="form-field">
+            <input placeholder="Адрес" value={clientDraft.address} onChange={(e) => setClientDraft((c) => ({ ...c, address: e.target.value }))} />
+          </div>
+          <div className="form-field">
+            <input placeholder="Руководитель" value={clientDraft.director} onChange={(e) => setClientDraft((c) => ({ ...c, director: e.target.value }))} />
+          </div>
         </div>
+
+        <div className="section-title">Счета</div>
+        {clientDraft.accounts.map((acc, idx) => (
+          <div className="ios-row clickable" key={idx} onClick={() => openAddClientBa(idx)}>
+            <div className="ios-row-content">
+              <div className="ios-row-title">{acc.bank_name}</div>
+              <div className="ios-row-subtitle">{acc.iic}{acc.is_main ? " (Основной)" : ""}</div>
+            </div>
+            <Icon name="chevron_right" className="ios-row-chevron" />
+          </div>
+        ))}
+        <div style={{ padding: "8px 16px 16px" }}>
+          <button className="dashed-add-btn" onClick={() => openAddClientBa()}>
+            <Icon name="add_circle" /> Добавить счет
+          </button>
+        </div>
+
+        <div className="section-title">Контакты</div>
+        {clientDraft.contacts.map((con, idx) => (
+          <div className="ios-row clickable" key={idx} onClick={() => openAddClientContact(idx)}>
+            <div className="ios-row-content">
+              <div className="ios-row-title">{con.name}</div>
+              <div className="ios-row-subtitle">{con.phone}</div>
+            </div>
+            <Icon name="chevron_right" className="ios-row-chevron" />
+          </div>
+        ))}
+        <div style={{ padding: "8px 16px 16px" }}>
+          <button className="dashed-add-btn" onClick={() => openAddClientContact()}>
+            <Icon name="add_circle" /> Добавить контакт
+          </button>
+        </div>
+
         {selectedCatalogClient && (
-          <div style={{ padding: "24px 16px 8px" }}>
+          <div style={{ padding: "24px 16px 32px" }}>
             <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteClient}>
               Удалить клиента
             </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  const addClientBankAccountView = (
+    <>
+      <header className="nav-bar">
+        <div className="nav-bar-detail">
+          <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
+            <Icon name="close" />
+          </button>
+          <span className="nav-bar-title-center">Банковский счет</span>
+          <button className="nav-bar-btn-circle" onClick={saveClientBa}>
+            <Icon name="check" />
+          </button>
+        </div>
+      </header>
+      <div className="content-area">
+        <div className="ios-group" style={{ marginTop: 16 }}>
+          <div className="form-field"><input placeholder="ИИК" value={clientBaDraft.iic} onChange={(e) => setClientBaDraft(c => ({ ...c, iic: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Наименование банка" value={clientBaDraft.bank_name} onChange={(e) => setClientBaDraft(c => ({ ...c, bank_name: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="БИК" value={clientBaDraft.bic} onChange={(e) => setClientBaDraft(c => ({ ...c, bic: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Кбе" value={clientBaDraft.kbe} onChange={(e) => setClientBaDraft(c => ({ ...c, kbe: e.target.value }))} /></div>
+          <div className="settings-row">
+            <span className="settings-row-label">Основной счет</span>
+            <Toggle checked={clientBaDraft.is_main} onChange={(v) => setClientBaDraft(c => ({ ...c, is_main: v }))} />
+          </div>
+        </div>
+        {editingBaIndex !== null && (
+          <div style={{ padding: "16px" }}>
+            <button className="destructive-btn" onClick={() => {
+              setClientDraft(c => ({ ...c, accounts: c.accounts.filter((_, i) => i !== editingBaIndex) }));
+              setSubView("addClient");
+            }}>Удалить счет</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  const addClientContactView = (
+    <>
+      <header className="nav-bar">
+        <div className="nav-bar-detail">
+          <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
+            <Icon name="close" />
+          </button>
+          <span className="nav-bar-title-center">Контакт</span>
+          <button className="nav-bar-btn-circle" onClick={saveClientContact}>
+            <Icon name="check" />
+          </button>
+        </div>
+      </header>
+      <div className="content-area">
+        <div className="ios-group" style={{ marginTop: 16 }}>
+          <div className="form-field"><input placeholder="Имя" value={clientContactDraft.name} onChange={(e) => setClientContactDraft(c => ({ ...c, name: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Телефон" value={clientContactDraft.phone} onChange={(e) => setClientContactDraft(c => ({ ...c, phone: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Email" value={clientContactDraft.email} onChange={(e) => setClientContactDraft(c => ({ ...c, email: e.target.value }))} /></div>
+        </div>
+        {editingContactIndex !== null && (
+          <div style={{ padding: "16px" }}>
+            <button className="destructive-btn" onClick={() => {
+              setClientDraft(c => ({ ...c, contacts: c.contacts.filter((_, i) => i !== editingContactIndex) }));
+              setSubView("addClient");
+            }}>Удалить контакт</button>
           </div>
         )}
       </div>
@@ -1047,7 +1187,9 @@ export function App() {
         : subView === "editRequisites" ? editRequisitesView
           : subView === "addBankAccount" ? addBankAccountView
             : subView === "viewDocument" ? viewDocumentView
-              : null;
+              : subView === "addClientBankAccount" ? addClientBankAccountView
+                : subView === "addClientContact" ? addClientContactView
+                  : null;
 
   return (
     <main className="app-shell">

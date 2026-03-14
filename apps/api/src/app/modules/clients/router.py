@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.core.db import get_db, Client
+from app.core.db import get_db, Client, ClientBankAccount, ClientContact
 from app.schemas.client import ClientCreate, ClientRead
 
 router = APIRouter(prefix="/clients", tags=["clients"])
@@ -9,7 +9,11 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 
 @router.get("", response_model=list[ClientRead])
 async def list_clients(db: Session = Depends(get_db)) -> list[ClientRead]:
-    clients = db.query(Client).order_by(Client.id.desc()).all()
+    # We use joinedload to prevent N+1 queries for nested data
+    clients = db.query(Client).options(
+        joinedload(Client.accounts),
+        joinedload(Client.contacts)
+    ).order_by(Client.id.desc()).all()
     return clients
 
 
@@ -18,10 +22,35 @@ async def create_client(payload: ClientCreate, db: Session = Depends(get_db)) ->
     new_client = Client(
         name=payload.name,
         bin_iin=payload.bin_iin,
-        contact_name=payload.contact_name,
-        phone=payload.phone
+        address=payload.address,
+        director=payload.director
     )
     db.add(new_client)
+    db.commit()
+    db.refresh(new_client)
+
+    # Add accounts
+    for acc in payload.accounts:
+        new_acc = ClientBankAccount(
+            client_id=new_client.id,
+            iic=acc.iic,
+            bank_name=acc.bank_name,
+            bic=acc.bic,
+            kbe=acc.kbe,
+            is_main=1 if acc.is_main else 0
+        )
+        db.add(new_acc)
+
+    # Add contacts
+    for con in payload.contacts:
+        new_con = ClientContact(
+            client_id=new_client.id,
+            name=con.name,
+            phone=con.phone,
+            email=con.email
+        )
+        db.add(new_con)
+
     db.commit()
     db.refresh(new_client)
     return new_client
@@ -35,9 +64,34 @@ async def update_client(client_id: int, payload: ClientCreate, db: Session = Dep
     
     client.name = payload.name
     client.bin_iin = payload.bin_iin
-    client.contact_name = payload.contact_name
-    client.phone = payload.phone
+    client.address = payload.address
+    client.director = payload.director
     
+    # Simple strategy: clear and recreate accounts/contacts
+    # For more production-level, we would differentiate by ID
+    db.query(ClientBankAccount).filter(ClientBankAccount.client_id == client_id).delete()
+    db.query(ClientContact).filter(ClientContact.client_id == client_id).delete()
+
+    for acc in payload.accounts:
+        new_acc = ClientBankAccount(
+            client_id=client_id,
+            iic=acc.iic,
+            bank_name=acc.bank_name,
+            bic=acc.bic,
+            kbe=acc.kbe,
+            is_main=1 if acc.is_main else 0
+        )
+        db.add(new_acc)
+
+    for con in payload.contacts:
+        new_con = ClientContact(
+            client_id=client_id,
+            name=con.name,
+            phone=con.phone,
+            email=con.email
+        )
+        db.add(new_con)
+
     db.commit()
     db.refresh(client)
     return client
