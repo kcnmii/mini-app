@@ -1,6 +1,6 @@
 import type { SupplierProfileData, InvoiceForm, DocumentItem } from "./types";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 export const DEFAULT_TEST_CHAT_ID = import.meta.env.VITE_TELEGRAM_TEST_CHAT_ID ?? "8134372922";
 
 export const emptyProfile: SupplierProfileData = {
