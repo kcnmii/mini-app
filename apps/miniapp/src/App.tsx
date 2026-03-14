@@ -144,6 +144,7 @@ export function App() {
   }, [status]);
 
   const [isAppReady, setIsAppReady] = useState(false);
+  const [authUser, setAuthUser] = useState<any>(null);
 
   async function loadData() {
     try {
@@ -164,10 +165,11 @@ export function App() {
   useEffect(() => {
     (window as any).onTelegramAuth = async (user: any) => {
       try {
-        const authData = await authRequest<{ access_token: string; user: { id: number } }>("/auth/telegram/widget", {
+        const authData = await authRequest<{ access_token: string; user: any }>("/auth/telegram/widget", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(user),
         });
+        setAuthUser(authData.user);
         setAuthToken(authData.access_token);
         setChatId(String(authData.user.id));
         await loadData();
@@ -186,10 +188,11 @@ export function App() {
       // Path 1: Telegram Mini App — initData is available
       if (webApp?.initData) {
         try {
-          const authData = await authRequest<{ access_token: string; user: { id: number } }>("/auth/telegram/init", {
+          const authData = await authRequest<{ access_token: string; user: any }>("/auth/telegram/init", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ init_data: webApp.initData }),
           });
+          setAuthUser(authData.user);
           setAuthToken(authData.access_token);
           setChatId(String(authData.user.id));
         } catch {
@@ -482,7 +485,7 @@ export function App() {
   }
 
   /* ═══ RENDER: HOME TAB ═══ */
-  const tgUser = webApp?.initDataUnsafe?.user;
+  const tgUser = authUser || webApp?.initDataUnsafe?.user;
   const tgName = [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(" ") || "Пользователь";
 
   const homeView = (
@@ -891,6 +894,11 @@ export function App() {
             <div className="settings-row-right"><span>Системное</span><Icon name="chevron_right" /></div>
           </div>
         </div>
+        {!webApp?.initData && (
+          <div style={{ marginTop: "16px", padding: "0 16px" }}>
+            <button onClick={() => { setAuthToken(""); setAuthUser(null); window.location.reload(); }} style={{ background: "var(--tg-theme-destructive-text-color, #ff3b30)", color: "white", width: "100%", padding: "14px", borderRadius: "12px", fontSize: "16px", fontWeight: 600, border: "none" }}>Выйти</button>
+          </div>
+        )}
         <div className="version-text">Версия приложения 1.0.0</div>
       </div>
     </>

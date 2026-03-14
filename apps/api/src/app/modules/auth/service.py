@@ -115,6 +115,7 @@ class TelegramAuthService:
             first_name=data.get("first_name"),
             last_name=data.get("last_name"),
             username=data.get("username"),
+            photo_url=data.get("photo_url"),
         )
 
         token = jwt.encode(
