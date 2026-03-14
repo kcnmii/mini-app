@@ -23,6 +23,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DOCGEN_URL: http://docgen:4001
+      SERVICE_URL_GOTENBERG: http://gotenberg:3000
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
     depends_on:
       postgres:
@@ -46,6 +47,8 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
+      DOCGEN_URL: http://docgen:4001
+      SERVICE_URL_GOTENBERG: http://gotenberg:3000
     depends_on:
       - api
 
