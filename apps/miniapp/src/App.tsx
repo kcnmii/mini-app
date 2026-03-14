@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, DocumentStats, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
+import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 
 /* ─── Icon helper ─── */
@@ -71,7 +71,6 @@ export function App() {
   const [profileDraft, setProfileDraft] = useState<SupplierProfileData>(emptyProfile);
   const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
-  const [stats, setStats] = useState<DocumentStats | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
   const [clientSearch, setClientSearch] = useState("");
@@ -156,13 +155,11 @@ export function App() {
 
   async function loadData() {
     try {
-      const [c, i, d, p, st] = await Promise.all([
+      const [c, i, d, p] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
-        request<DocumentStats>("/documents/stats"),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
-      setStats(st);
       setInvoice(makeInitialInvoice(p));
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
@@ -529,22 +526,7 @@ export function App() {
           </div>
         </div>
 
-        {stats && (
-          <div className="stats-row" style={{ padding: "8px 16px 0", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Счета</div>
-              <div style={{ fontSize: "18px", fontWeight: 700 }}>{stats.count}</div>
-            </div>
-            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Сумма</div>
-              <div style={{ fontSize: "15px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{formatMoney(stats.total_sum)} ₸</div>
-            </div>
-            <div className="ios-card-mini" style={{ padding: "12px", textAlign: "center", background: "var(--tg-theme-bg-color, #fff)", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Клиенты</div>
-              <div style={{ fontSize: "18px", fontWeight: 700 }}>{stats.client_count}</div>
-            </div>
-          </div>
-        )}
+
         {documents.length > 0 ? (
           <>
             <div className="section-header-row" style={{ padding: "24px 32px 12px", marginBottom: "8px" }}>
