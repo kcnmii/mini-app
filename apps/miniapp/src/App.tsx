@@ -19,7 +19,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
 }
 
 /* ─── Image Upload ─── */
-function ImageUploadRow({ label, hint, imageType, onStatusChange }: { label: string; hint: string; imageType: "logo" | "signature" | "stamp"; onStatusChange: (msg: string) => void }) {
+function ImageUploadRow({ label, hint, imageType, onStatusChange, onSuccess }: { label: string; hint: string; imageType: "logo" | "signature" | "stamp"; onStatusChange: (msg: string) => void; onSuccess?: () => void; }) {
   const [preview, setPreview] = useState<string>("");
   const loadPreview = useCallback(async () => {
     try {
@@ -38,6 +38,7 @@ function ImageUploadRow({ label, hint, imageType, onStatusChange }: { label: str
       await fetch(`${API_BASE_URL}/profile/${imageType}`, { method: "POST", body: fd, headers });
       await loadPreview();
       onStatusChange(`${label} загружен`);
+      if (onSuccess) onSuccess();
     } catch { onStatusChange(`Ошибка загрузки: ${label}`); }
   }
 
@@ -83,6 +84,20 @@ export function App() {
   const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument" | "addClientBankAccount" | "addClientContact">(null);
   const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
   const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
+
+  const refreshProfileImages = useCallback(async () => {
+    try {
+      const p = await request<SupplierProfileData>("/profile");
+      setProfile(p);
+      setProfileDraft(p);
+      setInvoice(c => ({
+        ...c,
+        INCLUDE_LOGO: c.INCLUDE_LOGO || !!p.logo_path,
+        INCLUDE_SIGNATURE: c.INCLUDE_SIGNATURE || !!p.signature_path,
+        INCLUDE_STAMP: c.INCLUDE_STAMP || !!p.stamp_path,
+      }));
+    } catch { }
+  }, []);
   const [editingBaIndex, setEditingBaIndex] = useState<number | null>(null);
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
@@ -890,9 +905,9 @@ export function App() {
         )}
         <div className="section-title">Оформление документов</div>
         <div className="ios-group">
-          <ImageUploadRow label="Логотип" hint="PNG или JPG, макс. 2МБ" imageType="logo" onStatusChange={setStatus} />
-          <ImageUploadRow label="Подпись" hint="На прозрачном фоне" imageType="signature" onStatusChange={setStatus} />
-          <ImageUploadRow label="Печать" hint="Круглая печать организации" imageType="stamp" onStatusChange={setStatus} />
+          <ImageUploadRow label="Логотип" hint="PNG или JPG, макс. 2МБ" imageType="logo" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
+          <ImageUploadRow label="Подпись" hint="На прозрачном фоне" imageType="signature" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
+          <ImageUploadRow label="Печать" hint="Круглая печать организации" imageType="stamp" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
         </div>
         <div className="section-title">Общие настройки</div>
         <div className="ios-group">
