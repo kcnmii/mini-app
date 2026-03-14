@@ -307,44 +307,55 @@ export function App() {
   async function createClient() {
     if (!clientDraft.name.trim()) return;
     setBusy("save");
-    try {
-      if (selectedCatalogClient) {
-        const updated = await request<Client>(`/clients/${selectedCatalogClient.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(clientDraft)
-        });
-        setClients((c) => c.map(cl => cl.id === updated.id ? updated : cl));
-        setSelectedCatalogClient(updated);
-        setStatus("Клиент обновлен");
-        return;
-      }
 
-      const existingByBin = clients.find(cl => cl.bin_iin === clientDraft.bin_iin && cl.bin_iin !== "");
-      let finalClient: Client;
-
-      if (!existingByBin) {
-        finalClient = await request<Client>("/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientDraft) });
-        setClients((c) => [finalClient, ...c]);
-        setStatus("Клиент сохранен");
-      } else {
-        finalClient = existingByBin;
-        setStatus("Клиент добавлен");
-      }
-
-      setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
-      setSelectedCatalogClient(null);
-
-      if (tab === "home") {
-        selectClient(finalClient);
-      }
-
+    if (selectedCatalogClient) {
+      // Optimistic update
+      const optimisticClient = { ...selectedCatalogClient, ...clientDraft } as Client;
+      setClients((c) => c.map(cl => cl.id === optimisticClient.id ? optimisticClient : cl));
+      setStatus("Клиент обновлен");
       setSubView(tab === "home" ? "invoiceForm" : null);
-    } catch (e) {
-      setStatus("Ошибка сохранения");
-    } finally {
       setBusy("idle");
+      // sync in background
+      request<Client>(`/clients/${selectedCatalogClient.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(clientDraft)
+      }).then(updated => {
+        setClients((c) => c.map(cl => cl.id === updated.id ? updated : cl));
+      }).catch(() => setStatus("Ошибка синхронизации"));
+      return;
     }
+
+    const existingByBin = clients.find(cl => cl.bin_iin === clientDraft.bin_iin && cl.bin_iin !== "");
+    let finalClient: Client;
+
+    if (!existingByBin) {
+      // Optimistic: add with temp id, then replace
+      const tempClient: Client = { id: -Date.now(), ...clientDraft, created_at: new Date().toISOString() };
+      setClients((c) => [tempClient, ...c]);
+      finalClient = tempClient;
+      setStatus("Клиент сохранен");
+      // sync in background
+      request<Client>("/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientDraft) })
+        .then(real => setClients((c) => c.map(cl => cl.id === tempClient.id ? real : cl)))
+        .catch(() => {
+          setClients((c) => c.filter(cl => cl.id !== tempClient.id));
+          setStatus("Ошибка сохранения клиента");
+        });
+    } else {
+      finalClient = existingByBin;
+      setStatus("Клиент добавлен");
+    }
+
+    setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
+    setSelectedCatalogClient(null);
+
+    if (tab === "home") {
+      selectClient(finalClient);
+    }
+
+    setSubView(tab === "home" ? "invoiceForm" : null);
+    setBusy("idle");
   }
   async function createItem() {
     if (!itemDraft.name.trim()) return;
@@ -411,47 +422,46 @@ export function App() {
   async function deleteInvoice() {
     if (!selectedDocId) return;
     if (!confirm("Вы уверены, что хотите удалить этот документ?")) return;
-    setBusy("save");
-    try {
-      await request(`/documents/${selectedDocId}`, { method: "DELETE" });
-      setDocuments((c) => c.filter(d => d.id !== selectedDocId));
-      setStatus("Документ удален");
-      setSubView(null);
-      setSelectedDocId(null);
-      loadData(); // Refresh stats
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка при удалении");
-    } finally { setBusy("idle"); }
+    const deletedId = selectedDocId;
+    const backup = documents;
+    // Optimistic: remove immediately
+    setDocuments((c) => c.filter(d => d.id !== deletedId));
+    setStatus("Документ удален");
+    setSubView(null);
+    setSelectedDocId(null);
+    // Sync in background
+    request(`/documents/${deletedId}`, { method: "DELETE" })
+      .catch(() => { setDocuments(backup); setStatus("Ошибка: не удалось удалить документ"); });
   }
   async function deleteClient() {
     if (!selectedCatalogClient) return;
     if (!confirm("Вы уверены, что хотите удалить этого клиента?")) return;
-    setBusy("save");
-    try {
-      await request(`/clients/${selectedCatalogClient.id}`, { method: "DELETE" });
-      setClients((c) => c.filter(cl => cl.id !== selectedCatalogClient.id));
-      setStatus("Клиент удален");
-      setSubView(null);
-      setSelectedCatalogClient(null);
-      setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] });
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка при удалении");
-    } finally { setBusy("idle"); }
+    const deletedId = selectedCatalogClient.id;
+    const backup = clients;
+    // Optimistic: remove immediately
+    setClients((c) => c.filter(cl => cl.id !== deletedId));
+    setStatus("Клиент удален");
+    setSubView(null);
+    setSelectedCatalogClient(null);
+    setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
+    // Sync in background
+    request(`/clients/${deletedId}`, { method: "DELETE" })
+      .catch(() => { setClients(backup); setStatus("Ошибка: не удалось удалить клиента"); });
   }
   async function deleteItem() {
     if (!selectedCatalogItem) return;
     if (!confirm("Вы уверены, что хотите удалить этот товар/услугу?")) return;
-    setBusy("save");
-    try {
-      await request(`/catalog/items/${selectedCatalogItem.id}`, { method: "DELETE" });
-      setItems((c) => c.filter(i => i.id !== selectedCatalogItem.id));
-      setStatus("Товар удален");
-      setSubView(null);
-      setSelectedCatalogItem(null);
-      setItemDraft({ name: "", unit: "шт.", price: "", sku: "" });
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка при удалении");
-    } finally { setBusy("idle"); }
+    const deletedId = selectedCatalogItem.id;
+    const backup = items;
+    // Optimistic: remove immediately
+    setItems((c) => c.filter(i => i.id !== deletedId));
+    setStatus("Товар удален");
+    setSubView(null);
+    setSelectedCatalogItem(null);
+    setItemDraft({ name: "", unit: "шт.", price: "", sku: "" });
+    // Sync in background
+    request(`/catalog/items/${deletedId}`, { method: "DELETE" })
+      .catch(() => { setItems(backup); setStatus("Ошибка: не удалось удалить товар"); });
   }
   async function generatePdf() {
     setBusy("pdf");

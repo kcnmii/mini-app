@@ -102,12 +102,25 @@ async def search_bin_details(bin_number: str, client: httpx.AsyncClient = None):
                 
                 name = normalize_org_name(name)
                 
+                # Determine type by name: ИП starts with "ИП " or contains individual keywords
+                is_ip = (
+                    name.upper().startswith("ИП ") or
+                    "ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ" in name.upper() or
+                    "ИНДИВИДУАЛЬНЫЙ" in name.upper() or
+                    # If name looks like a person's full name (no org prefix like ТОО, АО, etc.)
+                    (not any(name.upper().startswith(prefix) for prefix in [
+                        "ТОО", "АО", "ОАО", "ЗАО", "НАО", "КТ ", "ПТ ", "ГКП", "РГП",
+                        "ТОВАРИЩЕСТВО", "АКЦИОНЕРНОЕ", "ГОСУДАРСТВЕННОЕ", "ОБЩЕСТВО"
+                    ]) and not director and len(name.split()) <= 4)
+                )
+                org_type = "IP" if is_ip else "UL"
+                
                 return {
                     "name": name,
                     "bin": clean_bin,
                     "address": address,
                     "director": director,
-                    "type": "IP" if not director else "UL",
+                    "type": org_type,
                     "found": True
                 }
         except Exception as e:

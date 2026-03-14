@@ -115,10 +115,19 @@ def get_engine():
         db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
         
     connect_args = {}
+    pool_kwargs = {}
     if db_url.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
+    else:
+        # PostgreSQL: enable connection pooling for faster responses
+        pool_kwargs = {
+            "pool_size": 5,
+            "max_overflow": 10,
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+        }
         
-    return create_engine(db_url, connect_args=connect_args)
+    return create_engine(db_url, connect_args=connect_args, **pool_kwargs)
 
 engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
