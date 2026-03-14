@@ -949,15 +949,19 @@ export function App() {
         </div>
 
         <div className="section-title">Счета</div>
-        {clientDraft.accounts.map((acc, idx) => (
-          <div className="ios-row clickable" key={idx} onClick={() => openAddClientBa(idx)}>
-            <div className="ios-row-content">
-              <div className="ios-row-title">{acc.bank_name}</div>
-              <div className="ios-row-subtitle">{acc.iic}{acc.is_main ? " (Основной)" : ""}</div>
-            </div>
-            <Icon name="chevron_right" className="ios-row-chevron" />
+        {clientDraft.accounts.length > 0 && (
+          <div className="ios-group">
+            {clientDraft.accounts.map((acc, idx) => (
+              <div className="ios-row clickable" key={idx} onClick={() => openAddClientBa(idx)}>
+                <div className="ios-row-content">
+                  <div className="ios-row-title">{acc.bank_name || "Новый счет"}</div>
+                  <div className="ios-row-subtitle">{acc.iic || "Без номера"}{acc.is_main ? " (Основной)" : ""}</div>
+                </div>
+                <Icon name="chevron_right" className="ios-row-chevron" />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
         <div style={{ padding: "8px 16px 16px" }}>
           <button className="dashed-add-btn" onClick={() => openAddClientBa()}>
             <Icon name="add_circle" /> Добавить счет
@@ -965,15 +969,19 @@ export function App() {
         </div>
 
         <div className="section-title">Контакты</div>
-        {clientDraft.contacts.map((con, idx) => (
-          <div className="ios-row clickable" key={idx} onClick={() => openAddClientContact(idx)}>
-            <div className="ios-row-content">
-              <div className="ios-row-title">{con.name}</div>
-              <div className="ios-row-subtitle">{con.phone}</div>
-            </div>
-            <Icon name="chevron_right" className="ios-row-chevron" />
+        {clientDraft.contacts.length > 0 && (
+          <div className="ios-group">
+            {clientDraft.contacts.map((con, idx) => (
+              <div className="ios-row clickable" key={idx} onClick={() => openAddClientContact(idx)}>
+                <div className="ios-row-content">
+                  <div className="ios-row-title">{con.name || "Новый контакт"}</div>
+                  <div className="ios-row-subtitle">{con.phone || "Без телефона"}</div>
+                </div>
+                <Icon name="chevron_right" className="ios-row-chevron" />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
         <div style={{ padding: "8px 16px 16px" }}>
           <button className="dashed-add-btn" onClick={() => openAddClientContact()}>
             <Icon name="add_circle" /> Добавить контакт
