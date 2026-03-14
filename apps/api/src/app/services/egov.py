@@ -18,6 +18,49 @@ def normalize_org_name(name: str) -> str:
     # Remove extra spaces
     return " ".join(name.split())
 
+def _detect_entity_type(number: str, name: str = "") -> str:
+    """
+    Determine if a 12-digit number is IIN (individual/ИП) or BIN (business/ТОО).
+    Uses a hybrid approach: checks strong name signals first, then analyzes
+    Kazakhstan's IIN/BIN structure.
+    """
+    upper_name = name.upper().strip()
+    
+    # Step 1: Very strong name signals
+    if upper_name.startswith("ИП ") or "ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ" in upper_name:
+        return "IP"
+        
+    org_prefixes = [
+        "ТОО", "АО ", "АО\"", "ОАО", "ЗАО", "НАО", "КТ ", "ПТ ", "ГКП", "РГП",
+        "ТОВАРИЩЕСТВО", "АКЦИОНЕРНОЕ", "ГОСУДАРСТВЕННОЕ", "ОБЩЕСТВО"
+    ]
+    if any(upper_name.startswith(p) for p in org_prefixes):
+        return "UL"
+
+    # Step 2: Structural detection
+    if len(number) == 12 and number.isdigit():
+        mm = int(number[2:4])   # month (positions 3-4)
+        dd = int(number[4:6])   # day (pos 5-6) for IIN, or entity type for BIN
+        d7 = int(number[6])     # gender/century for IIN (1-6)
+        
+        # If dd > 31 or dd == 0, it can't be a birth day → it's a BIN
+        # If mm > 12 or mm == 0, it can't be a birth month → it's a BIN
+        if dd > 31 or dd == 0 or mm > 12 or mm == 0:
+            # It's a BIN. Check 5th digit: 6 = ИП registered as business
+            d5 = int(number[4])
+            return "IP" if d5 == 6 else "UL"
+        
+        # Valid date range + gender code 1-6 → mostly IIN (individual = ИП)
+        if 1 <= d7 <= 6:
+            return "IP"
+            
+        # Fallback for BINs with type < 4 and 7th digit > 6
+        return "UL"
+    
+    # Default to UL if can't determine
+    return "UL"
+
+
 async def search_bin_details(bin_number: str, client: httpx.AsyncClient = None):
     """
     Service to search BIN/IIN details from kyc.kz.
@@ -101,25 +144,21 @@ async def search_bin_details(bin_number: str, client: httpx.AsyncClient = None):
                     address = address.strip(',')
                 
                 name = normalize_org_name(name)
+                if name.lower() == "undefined" or not name:
+                    return None
                 
-                # Determine type by name: ИП starts with "ИП " or contains individual keywords
-                is_ip = (
-                    name.upper().startswith("ИП ") or
-                    "ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ" in name.upper() or
-                    "ИНДИВИДУАЛЬНЫЙ" in name.upper() or
-                    # If name looks like a person's full name (no org prefix like ТОО, АО, etc.)
-                    (not any(name.upper().startswith(prefix) for prefix in [
-                        "ТОО", "АО", "ОАО", "ЗАО", "НАО", "КТ ", "ПТ ", "ГКП", "РГП",
-                        "ТОВАРИЩЕСТВО", "АКЦИОНЕРНОЕ", "ГОСУДАРСТВЕННОЕ", "ОБЩЕСТВО"
-                    ]) and not director and len(name.split()) <= 4)
-                )
-                org_type = "IP" if is_ip else "UL"
+                # Determine type using the BIN/IIN number structure
+                org_type = _detect_entity_type(clean_bin, name)
+                
+                # Automatically add "ИП" prefix if missing for individual entrepreneurs
+                if org_type == "IP" and not name.upper().startswith("ИП "):
+                    name = f"ИП {name}"
                 
                 return {
                     "name": name,
                     "bin": clean_bin,
-                    "address": address,
-                    "director": director,
+                    "address": address if address.lower() != "undefined" else "",
+                    "director": director if director.lower() != "undefined" else "",
                     "type": org_type,
                     "found": True
                 }
