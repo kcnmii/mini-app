@@ -136,16 +136,28 @@ export function App() {
     return () => clearTimeout(t);
   }, [status]);
 
+  const [isAppReady, setIsAppReady] = useState(false);
+
   async function loadData() {
-    const [c, i, d, p] = await Promise.all([
-      request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
-      request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
-    ]);
-    setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
-    setInvoice(makeInitialInvoice(p));
+    try {
+      const [c, i, d, p] = await Promise.all([
+        request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
+        request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
+      ]);
+      setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
+      setInvoice(makeInitialInvoice(p));
+    } catch (e) {
+      setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
+    } finally {
+      setIsAppReady(true);
+    }
   }
 
-  useEffect(() => { webApp?.ready?.(); webApp?.expand?.(); loadData().catch(() => setStatus("Не удалось загрузить данные")); }, [webApp]);
+  useEffect(() => {
+    webApp?.ready?.();
+    webApp?.expand?.();
+    loadData();
+  }, [webApp]);
 
   useEffect(() => {
     if (!webApp?.initData) return;
@@ -1040,7 +1052,13 @@ export function App() {
   return (
     <main className="app-shell">
       <div className={`status-banner${status ? " visible" : ""}`}>{status}</div>
-      {subViewContent ? (
+      {!isAppReady ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "16px" }}>
+          <div style={{ width: 40, height: 40, border: "3px solid var(--tg-theme-button-color, #007AFF)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ color: "var(--text-secondary)", fontSize: "15px" }}>Загрузка...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : subViewContent ? (
         subViewContent
       ) : (
         <>
