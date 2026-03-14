@@ -17,3 +17,10 @@ async def auth_telegram_init(payload: TelegramInitRequest) -> TelegramAuthRespon
 async def auth_telegram_widget(payload: TelegramWidgetRequest) -> TelegramAuthResponse:
     """Authenticate via Telegram Login Widget data."""
     return service.build_widget_auth_response(payload.model_dump())
+
+
+@router.get("/bot-name")
+async def get_bot_name():
+    """Return the configured Telegram bot username for the login widget."""
+    from app.core.config import settings
+    return {"bot_name": settings.telegram_bot_username}

@@ -1282,9 +1282,16 @@ export function App() {
 
 /* ─── Telegram Login Widget Component ─── */
 function TelegramLoginButton() {
+  const [botName, setBotName] = useState<string>("");
+
+  useEffect(() => {
+    authRequest<{ bot_name: string }>("/auth/telegram/bot-name")
+      .then(res => setBotName(res.bot_name))
+      .catch(() => setBotName("docminiapp_bot")); // fallback just in case
+  }, []);
+
   const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    const botName = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME || "DocOnlinkBot";
+    if (!node || !botName) return;
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
@@ -1295,7 +1302,9 @@ function TelegramLoginButton() {
     script.setAttribute("data-request-access", "write");
     node.innerHTML = "";
     node.appendChild(script);
-  }, []);
+  }, [botName]);
+
+  if (!botName) return <div style={{ height: "40px", color: "var(--text-secondary)" }}>Загрузка виджета...</div>;
 
   return <div ref={containerRef} />;
 }
