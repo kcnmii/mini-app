@@ -84,7 +84,7 @@ async def save_invoice_document(
     filename = f"invoice-{''.join(char if char.isascii() and char.isalnum() else '-' for char in invoice.invoice_number).strip('-') or 'document'}.docx"
 
     try:
-        docx_bytes = await render_service.render_invoice_docx(invoice)
+        docx_bytes = await render_service.render_invoice_docx(invoice, user_id)
         pdf_bytes = await render_service.convert_docx_to_pdf(filename, docx_bytes)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc

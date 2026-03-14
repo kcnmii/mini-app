@@ -21,7 +21,7 @@ async def send_invoice_to_telegram(
     filename = f"invoice-{''.join(char if char.isascii() and char.isalnum() else '-' for char in invoice_payload.invoice_number).strip('-') or 'document'}.pdf"
 
     try:
-        docx_bytes = await render_service.render_invoice_docx(invoice_payload)
+        docx_bytes = await render_service.render_invoice_docx(invoice_payload, user_id)
         pdf_bytes = await render_service.convert_docx_to_pdf(
             filename.replace(".pdf", ".docx"),
             docx_bytes,

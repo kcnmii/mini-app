@@ -9,14 +9,14 @@ from app.schemas.render import InvoiceRenderPayload
 
 
 class RenderService:
-    async def render_invoice_docx(self, payload: InvoiceRenderPayload) -> bytes:
+    async def render_invoice_docx(self, payload: InvoiceRenderPayload, user_id: int) -> bytes:
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
                 f"{settings.docgen_url}/render/docx",
                 json={
                     "templateKey": "invoice-kz",
                     "templateVersion": "v1",
-                    "data": payload.to_template_data(),
+                    "data": payload.to_template_data(user_id=user_id),
                 },
             )
             response.raise_for_status()

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -10,4 +11,4 @@ class CatalogItemCreate(BaseModel):
 
 class CatalogItemRead(CatalogItemCreate):
     id: int
-    created_at: str
+    created_at: datetime

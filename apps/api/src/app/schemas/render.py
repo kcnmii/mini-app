@@ -49,7 +49,7 @@ class InvoiceRenderPayload(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    def to_template_data(self) -> dict[str, Any]:
+    def to_template_data(self, user_id: int) -> dict[str, Any]:
         data: dict[str, Any] = {
             "INVOICE_NUMBER": self.invoice_number,
             "INVOICE_DATE": self.invoice_date,
@@ -77,21 +77,21 @@ class InvoiceRenderPayload(BaseModel):
         }
 
         # Load images from profile uploads if toggles are on
-        data["LOGO"] = _load_image_b64("logo") if self.include_logo else ""
-        data["SIG"] = _load_image_b64("signature") if self.include_signature else ""
-        data["STAMP"] = _load_image_b64("stamp") if self.include_stamp else ""
+        data["LOGO"] = _load_image_b64("logo", user_id) if self.include_logo else ""
+        data["SIG"] = _load_image_b64("signature", user_id) if self.include_signature else ""
+        data["STAMP"] = _load_image_b64("stamp", user_id) if self.include_stamp else ""
 
         return data
 
 
-def _load_image_b64(image_type: str) -> str:
+def _load_image_b64(image_type: str, user_id: int) -> str:
     """Read uploaded image file and return raw base64 (no data-uri prefix)."""
     from app.core.db import SessionLocal, SupplierProfile
     
     path_column = f"{image_type}_path"
     db = SessionLocal()
     try:
-        profile = db.query(SupplierProfile).filter(SupplierProfile.id == 1).first()
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
         if not profile:
             return ""
         file_path = getattr(profile, path_column)

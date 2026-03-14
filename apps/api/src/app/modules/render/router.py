@@ -67,7 +67,7 @@ async def render_invoice_docx(
 ) -> Response:
     payload = payload or _sample_invoice_payload()
     try:
-        docx_bytes = await service.render_invoice_docx(payload)
+        docx_bytes = await service.render_invoice_docx(payload, user_id=0)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"docgen_error: {exc}") from exc
 
@@ -93,7 +93,7 @@ async def render_invoice_pdf(
     filename = _safe_filename("invoice", payload.invoice_number, "docx")
 
     try:
-        docx_bytes = await service.render_invoice_docx(payload)
+        docx_bytes = await service.render_invoice_docx(payload, user_id=0)
         pdf_bytes = await service.convert_docx_to_pdf(filename, docx_bytes)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
@@ -124,7 +124,7 @@ async def render_invoice_debug(
     filename = _safe_filename("invoice", payload.invoice_number, "docx")
 
     try:
-        docx_bytes = await service.render_invoice_docx(payload)
+        docx_bytes = await service.render_invoice_docx(payload, user_id=0)
         pdf_bytes = await service.convert_docx_to_pdf(filename, docx_bytes)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
