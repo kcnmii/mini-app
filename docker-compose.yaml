@@ -18,7 +18,6 @@ services:
     restart: unless-stopped
     volumes:
       - api-data:/app/data
-      - ./templates:/app/templates:ro
     env_file:
       - .env
     environment:
@@ -74,8 +73,6 @@ services:
     restart: unless-stopped
     environment:
       TEMPLATES_ROOT: /app/templates/system
-    volumes:
-      - ./templates:/app/templates:ro
 
   # ── Gotenberg (PDF conversion) ──
   gotenberg:
