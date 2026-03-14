@@ -24,22 +24,27 @@ export function getAvatarColor(name: string) {
 
 export function makeInitialInvoice(profile?: SupplierProfileData): InvoiceForm {
     const p = profile ?? emptyProfile;
+    // Supplier data should be identical to the Company data in the profile
+    const compName = p.company_name || p.supplier_name || "";
+    const compIin = p.company_iin || p.supplier_iin || "";
+    const compAddr = p.supplier_address || "";
+
     return {
         INVOICE_NUMBER: "СФ-001", INVOICE_DATE: new Date().toLocaleDateString("ru-RU"),
         CONTRACT: "Договор без номера",
-        SUPPLIER_NAME: p.supplier_name || "ТОО Demo Supplier",
-        SUPPLIER_IIN: p.supplier_iin || "123456789012",
-        SUPPLIER_ADDRESS: p.supplier_address || "г. Алматы, ул. Абая, 10",
-        COMPANY_NAME: p.company_name || "ТОО Demo Supplier",
-        COMPANY_IIN: p.company_iin || "123456789012",
-        COMPANY_IIC: p.company_iic || "KZ123456789012345678",
-        COMPANY_BIC: p.company_bic || "KCJBKZKX",
-        COMPANY_KBE: p.company_kbe || "17",
-        BENEFICIARY_BANK: p.beneficiary_bank || "АО Банк Demo",
+        SUPPLIER_NAME: compName,
+        SUPPLIER_IIN: compIin,
+        SUPPLIER_ADDRESS: compAddr,
+        COMPANY_NAME: compName,
+        COMPANY_IIN: compIin,
+        COMPANY_IIC: p.company_iic || "",
+        COMPANY_BIC: p.company_bic || "",
+        COMPANY_KBE: p.company_kbe || "19",
+        BENEFICIARY_BANK: p.beneficiary_bank || "",
         PAYMENT_CODE: p.payment_code || "710",
         CLIENT_NAME: "", CLIENT_IIN: "", CLIENT_ADDRESS: "",
-        EXECUTOR_NAME: p.executor_name || "Иван Иванов",
-        POSITION: p.position || "Директор",
+        EXECUTOR_NAME: p.executor_name || "",
+        POSITION: p.position || "",
         VAT: "Без НДС", ITEMS_TOTAL_LINE: "1", TOTAL_SUM: "0",
         TOTAL_SUM_IN_WORDS: "Ноль тенге 00 тиын",
         items: [],

@@ -1222,7 +1222,7 @@ export function App() {
               value={profileDraft.company_iin}
               onChange={async (e) => {
                 const val = e.target.value;
-                setProfileDraft((c) => ({ ...c, company_iin: val }));
+                setProfileDraft((c) => ({ ...c, company_iin: val, supplier_iin: val }));
                 if (val.length === 12) {
                   setIsBinLoading(true);
                   try {
@@ -1231,6 +1231,8 @@ export function App() {
                       setProfileDraft(c => ({
                         ...c,
                         company_name: info.name || c.company_name,
+                        supplier_name: info.name || c.supplier_name,
+                        supplier_iin: val,
                         supplier_address: info.address || c.supplier_address,
                         executor_name: info.director || c.executor_name,
                         company_kbe: info.type === 'ИП' ? '19' : '17'
@@ -1249,7 +1251,7 @@ export function App() {
               </div>
             )}
           </div>
-          <div className="form-field"><input placeholder="Название организации" value={profileDraft.company_name} onChange={(e) => setProfileDraft((c) => ({ ...c, company_name: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Название организации" value={profileDraft.company_name} onChange={(e) => setProfileDraft((c) => ({ ...c, company_name: e.target.value, supplier_name: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Адрес (Юридический адрес)" value={profileDraft.supplier_address} onChange={(e) => setProfileDraft((c) => ({ ...c, supplier_address: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="ФИО (например, Иванов И.И.)" value={profileDraft.executor_name} onChange={(e) => setProfileDraft((c) => ({ ...c, executor_name: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Должность (например, Директор)" value={profileDraft.position} onChange={(e) => setProfileDraft((c) => ({ ...c, position: e.target.value }))} /></div>
