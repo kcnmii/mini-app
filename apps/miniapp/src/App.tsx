@@ -501,6 +501,32 @@ export function App() {
       setStatus("Отправлено в Telegram");
     } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка отправки"); } finally { setBusy("idle"); }
   }
+
+  // Phase 3: Status management
+  async function markInvoicePaid(invoiceId: number) {
+    try {
+      await request(`/invoices/${invoiceId}/pay`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      setStatus("Счёт отмечен как оплаченный ✅");
+      // Refresh invoices + dashboard
+      const [summary, invRecords] = await Promise.all([
+        request<DashboardSummary>("/dashboard/summary").catch(() => dashboardSummary),
+        request<InvoiceRecord[]>("/invoices").catch(() => invoiceRecords),
+      ]);
+      setDashboardSummary(summary); setInvoiceRecords(invRecords);
+    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); }
+  }
+
+  async function markInvoiceSent(invoiceId: number) {
+    try {
+      await request(`/invoices/${invoiceId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "sent" }) });
+      setStatus("Счёт отмечен как отправленный");
+      const [summary, invRecords] = await Promise.all([
+        request<DashboardSummary>("/dashboard/summary").catch(() => dashboardSummary),
+        request<InvoiceRecord[]>("/invoices").catch(() => invoiceRecords),
+      ]);
+      setDashboardSummary(summary); setInvoiceRecords(invRecords);
+    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); }
+  }
   async function saveProfile() {
     setBusy("save");
     try {
@@ -1427,12 +1453,13 @@ export function App() {
 
   /* View Document — full page with PDF preview */
   const selectedDoc = documents.find(d => d.id === selectedDocId);
+  const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedDocId);
   const viewDocumentView = (
     <>
       <header className="nav-bar">
         <div className="nav-bar-detail">
           <button className="nav-bar-back" onClick={() => setSubView(null)}><Icon name="chevron_left" /><span>Назад</span></button>
-          <span className="nav-bar-title-center">{selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр счета"}</span>
+          <span className="nav-bar-title-center">{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр счета"}</span>
           <div className="nav-bar-right">
             <button className="nav-bar-btn" title="Редактировать" onClick={() => setSubView("invoiceForm")}>
               <Icon name="edit" />
@@ -1443,11 +1470,55 @@ export function App() {
           </div>
         </div>
       </header>
-      <div className="content-area" style={{ paddingBottom: 0, height: "calc(100vh - 64px)", overflow: "hidden" }}>
+      <div className="content-area" style={{ paddingBottom: 0, height: selectedInvoice ? "auto" : "calc(100vh - 64px)", overflow: selectedInvoice ? "auto" : "hidden" }}>
+        {/* Invoice status + info bar */}
+        {selectedInvoice && (
+          <div style={{ padding: "12px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93" }}>
+                {statusLabels[selectedInvoice.status] || selectedInvoice.status}
+              </span>
+              <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>{selectedInvoice.client_name}</span>
+            </div>
+            <div style={{ fontSize: "28px", fontWeight: 700, marginBottom: "4px" }}>{formatMoney(selectedInvoice.total_amount)} ₸</div>
+            {selectedInvoice.due_date && (
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Срок оплаты: {new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU")}</div>
+            )}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {selectedInvoice && selectedInvoice.status !== "paid" && (
+          <div style={{ display: "flex", gap: "8px", padding: "0 16px 12px" }}>
+            <button
+              onClick={() => markInvoicePaid(selectedInvoice.id)}
+              style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+            >
+              <Icon name="check_circle" /> Оплачен
+            </button>
+            {selectedInvoice.status === "draft" && (
+              <button
+                onClick={() => markInvoiceSent(selectedInvoice.id)}
+                style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              >
+                <Icon name="send" /> Отправлен
+              </button>
+            )}
+          </div>
+        )}
+        {selectedInvoice && selectedInvoice.status === "paid" && (
+          <div style={{ padding: "0 16px 12px" }}>
+            <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", fontSize: "15px", fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              <Icon name="check_circle" /> Счёт оплачен
+            </div>
+          </div>
+        )}
+
+        {/* PDF preview */}
         {selectedDocId && (
           <iframe
             src={`${API_BASE_URL}/documents/${selectedDocId}/pdf#toolbar=0&navpanes=0`}
-            style={{ width: "100%", height: "100%", border: "none" }}
+            style={{ width: "100%", height: selectedInvoice ? "60vh" : "100%", border: "none" }}
             title="PDF Preview"
           />
         )}
