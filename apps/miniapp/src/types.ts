@@ -73,6 +73,32 @@ export type DocumentStats = {
     client_count: number;
 };
 
+export type InvoiceRecord = {
+    id: number;
+    number: string;
+    date: string;
+    due_date: string | null;
+    client_id: number | null;
+    client_name: string;
+    client_bin: string;
+    deal_reference: string;
+    status: "draft" | "sent" | "paid" | "overdue";
+    total_amount: number;
+    pdf_path: string;
+    docx_path: string;
+    created_at: string;
+    updated_at: string | null;
+    line_items: { id: number; name: string; quantity: number; unit: string; price: number; total: number; code: string }[];
+};
+
+export type DashboardSummary = {
+    awaiting: number;
+    overdue: number;
+    paid_this_month: number;
+    invoices_count: number;
+    overdue_count: number;
+};
+
 export type ClientDraft = {
     name: string;
     bin_iin: string;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact } from "./types";
+import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact, InvoiceRecord, DashboardSummary } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 import { getBankByIIK } from "./utils/bankAutofill";
 import { fetchCompanyByBin } from "./utils/binAutofill";
@@ -75,6 +75,10 @@ export function App() {
   const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
   const [status, setStatus] = useState("");
+  // Phase 2: Dashboard + Invoice records
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary>({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 });
+  const [invoiceRecords, setInvoiceRecords] = useState<InvoiceRecord[]>([]);
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
   const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
   const [clientSearch, setClientSearch] = useState("");
   const [itemSearch, setItemSearch] = useState("");
@@ -173,12 +177,16 @@ export function App() {
 
   async function loadData() {
     try {
-      const [c, i, d, p] = await Promise.all([
+      const [c, i, d, p, summary, invRecords] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
+        request<DashboardSummary>("/dashboard/summary").catch(() => ({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 })),
+        request<InvoiceRecord[]>("/invoices").catch(() => []),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
       setInvoice(makeInitialInvoice(p));
+      setDashboardSummary(summary);
+      setInvoiceRecords(invRecords);
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
     } finally {
@@ -521,9 +529,11 @@ export function App() {
     } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
   }
 
-  /* ═══ RENDER: HOME TAB ═══ */
+  /* ═══ RENDER: HOME TAB — MONEY DASHBOARD ═══ */
   const tgUser = authUser || webApp?.initDataUnsafe?.user;
   const tgName = [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(" ") || "Пользователь";
+  const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
+  const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
   const homeView = (
     <>
@@ -543,47 +553,81 @@ export function App() {
         </div>
       </div>
       <div className="content-area">
-        <div className="glass-dashboard">
-          <div className="glass-content">
-            <div className="glass-hero-icon"><Icon name="description" /></div>
-            <h3>Создайте новый документ</h3>
-            <p>Оформление счета для ваших клиентов в пару кликов</p>
-            <button className="glass-hero-btn" onClick={openNewInvoice}>
-              <Icon name="add" /> Новый документ
-            </button>
+        {/* ── Money Dashboard Cards ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px 16px 0" }}>
+          <div style={{ background: "linear-gradient(135deg, #FF9500 0%, #FF6B00 100%)", borderRadius: "16px", padding: "16px", color: "#fff", gridColumn: dashboardSummary.overdue > 0 ? "1" : "1 / -1" }}>
+            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Ожидается</div>
+            <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.awaiting)} ₸</div>
+          </div>
+          {dashboardSummary.overdue > 0 && (
+            <div style={{ background: "linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%)", borderRadius: "16px", padding: "16px", color: "#fff" }}>
+              <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Просрочено{dashboardSummary.overdue_count > 0 && ` (${dashboardSummary.overdue_count})`}</div>
+              <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.overdue)} ₸</div>
+            </div>
+          )}
+          <div style={{ background: "linear-gradient(135deg, #34C759 0%, #28A745 100%)", borderRadius: "16px", padding: "16px", color: "#fff", gridColumn: "1 / -1" }}>
+            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Оплачено в этом месяце</div>
+            <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.paid_this_month)} ₸</div>
           </div>
         </div>
 
+        {/* ── Create invoice button ── */}
+        <div style={{ padding: "16px 16px 0" }}>
+          <button className="glass-hero-btn" onClick={openNewInvoice} style={{ width: "100%" }}>
+            <Icon name="add" /> Создать счёт
+          </button>
+        </div>
 
-        {documents.length > 0 ? (
+        {/* ── Recent invoices from new API (with status badges) ── */}
+        {invoiceRecords.length > 0 ? (
           <>
-            <div className="section-header-row" style={{ padding: "24px 32px 12px", marginBottom: "8px" }}>
-              <h2 style={{ textTransform: "none", fontSize: "20px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal" }}>Последние</h2>
+            <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
+              <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние счета</h2>
               <button className="view-all-btn-pill" onClick={() => setTab("invoices")}>
                 Все <Icon name="chevron_right" />
               </button>
             </div>
-            <div className="recent-docs-card" style={{ marginTop: 0 }}>
-              <div className="ios-group no-border">
-                {documents.slice(0, 25).map((doc) => (
-                  <div className="doc-row clickable" key={doc.id} onClick={() => loadAndPreviewInvoice(doc.id)}>
-                    <div className="doc-row-left">
-                      <div className="doc-row-title">{doc.title.replace(/^Счет\s*(№|N)?\s*/i, "")} {doc.client_name}</div>
-                      <div className="doc-row-meta">
-                        <span className="doc-row-date">{new Date(doc.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}</span>
-                      </div>
+            <div className="ios-group" style={{ margin: "0 16px" }}>
+              {invoiceRecords.slice(0, 10).map((inv) => (
+                <div className="doc-row clickable" key={inv.id} onClick={() => loadAndPreviewInvoice(inv.id)}>
+                  <div className="doc-row-left">
+                    <div className="doc-row-title">{inv.number} · {inv.client_name || "—"}</div>
+                    <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, color: "#fff", background: statusColors[inv.status] || "#8E8E93" }}>
+                        {statusLabels[inv.status] || inv.status}
+                      </span>
+                      <span className="doc-row-date">{formatMoney(inv.total_amount)} ₸</span>
                     </div>
-                    <div className="ios-row-right"><Icon name="chevron_right" /></div>
                   </div>
-                ))}
-              </div>
+                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : documents.length > 0 ? (
+          <>
+            <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
+              <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние документы</h2>
+            </div>
+            <div className="ios-group" style={{ margin: "0 16px" }}>
+              {documents.slice(0, 10).map((doc) => (
+                <div className="doc-row clickable" key={doc.id} onClick={() => loadAndPreviewInvoice(doc.id)}>
+                  <div className="doc-row-left">
+                    <div className="doc-row-title">{doc.title.replace(/^Счет\s*(№|N)?\s*/i, "")} {doc.client_name}</div>
+                    <div className="doc-row-meta">
+                      <span className="doc-row-date">{new Date(doc.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    </div>
+                  </div>
+                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
+                </div>
+              ))}
             </div>
           </>
         ) : (
           <div className="empty-state" style={{ marginTop: 24 }}>
-            <div className="empty-state-icon"><Icon name="description" /></div>
-            <div className="empty-state-title">Нет документов</div>
-            <div className="empty-state-text">Создайте свой первый документ прямо сейчас</div>
+            <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+            <div className="empty-state-title">Нет счетов</div>
+            <div className="empty-state-text">Создайте первый счёт, чтобы начать контролировать деньги</div>
           </div>
         )}
         <div className="spacer-24" />
@@ -591,19 +635,26 @@ export function App() {
     </>
   );
 
-  /* ═══ RENDER: INVOICES TAB — Documents List (Все документы) ═══ */
-  const filteredDocs = documents.filter((d) => {
-    if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
-    // For now all docs are drafts since we don't have status field
-    // if (docFilter === "paid") return d.status === "paid";
-    // if (docFilter === "draft") return d.status === "draft";
+  /* ═══ RENDER: INVOICES TAB — with status filters ═══ */
+  const statusFilters = ["all", "sent", "overdue", "paid", "draft"] as const;
+  const statusFilterLabels: Record<string, string> = { all: "Все", sent: "Отправленные", overdue: "Просроченные", paid: "Оплаченные", draft: "Черновики" };
+
+  const filteredInvoices = invoiceRecords.filter((inv) => {
+    if (invoiceStatusFilter !== "all" && inv.status !== invoiceStatusFilter) return false;
+    if (docSearch && !inv.number.toLowerCase().includes(docSearch.toLowerCase()) && !inv.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
     return true;
   });
+  // Fallback to old documents if no new invoices
+  const filteredDocs = documents.filter((d) => {
+    if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
+    return true;
+  });
+  const showNewInvoicesList = invoiceRecords.length > 0;
   const invoicesListView = (
     <>
       <div className="nav-bar">
         <div className="nav-bar-inner">
-          <h1 className="nav-bar-title">Документы</h1>
+          <h1 className="nav-bar-title">Счета</h1>
           <button className="nav-bar-btn" onClick={openNewInvoice}><Icon name="add" /></button>
         </div>
       </div>
@@ -613,14 +664,60 @@ export function App() {
           <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
         </div>
       </div>
-      <div className="spacer-8" />
-      <div className="spacer-8" />
+      {/* Status filter chips */}
+      {showNewInvoicesList && (
+        <div style={{ display: "flex", gap: "8px", padding: "8px 16px", overflowX: "auto" }}>
+          {statusFilters.map((sf) => (
+            <button
+              key={sf}
+              onClick={() => setInvoiceStatusFilter(sf)}
+              style={{
+                padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                background: invoiceStatusFilter === sf ? "var(--tg-theme-button-color, #007AFF)" : "var(--bg-secondary, #F2F2F7)",
+                color: invoiceStatusFilter === sf ? "#fff" : "var(--text-secondary, #8E8E93)",
+              }}
+            >
+              {statusFilterLabels[sf]}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="content-area">
-        {filteredDocs.length === 0 ? (
+        {showNewInvoicesList ? (
+          filteredInvoices.length === 0 ? (
+            <div className="empty-state full-height">
+              <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+              <div className="empty-state-title">Ничего не найдено</div>
+              <div className="empty-state-text">Нет счетов с таким статусом</div>
+            </div>
+          ) : (
+            <>
+              <div className="spacer-8" />
+              <div className="ios-group">
+                {filteredInvoices.map((inv) => (
+                  <div className="doc-row clickable" key={inv.id} onClick={() => loadAndPreviewInvoice(inv.id)}>
+                    <div className="doc-row-left">
+                      <div className="doc-row-title">{inv.number} · {inv.client_name || "—"}</div>
+                      <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, color: "#fff", background: statusColors[inv.status] || "#8E8E93" }}>
+                          {statusLabels[inv.status] || inv.status}
+                        </span>
+                        <span className="doc-row-date">{formatMoney(inv.total_amount)} ₸</span>
+                        <span className="doc-row-date">{new Date(inv.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}</span>
+                      </div>
+                    </div>
+                    <div className="ios-row-right"><Icon name="chevron_right" /></div>
+                  </div>
+                ))}
+              </div>
+              <div className="spacer-24" />
+            </>
+          )
+        ) : filteredDocs.length === 0 ? (
           <div className="empty-state full-height">
             <div className="empty-state-icon"><Icon name="article" /></div>
             <div className="empty-state-title">Список пуст</div>
-            <div className="empty-state-text">По вашему запросу не найдено ни одного документа</div>
+            <div className="empty-state-text">Создайте свой первый счёт</div>
           </div>
         ) : (
           <>
@@ -1362,8 +1459,8 @@ export function App() {
 
   /* ═══ MAIN RENDER ═══ */
   const isAuthenticated = !!getAuthToken();
-  const tabIcons: Record<TabKey, string> = { home: "description", invoices: "description", clients: "group", items: "inventory_2", profile: "person" };
-  const tabLabels: Record<TabKey, string> = { home: "Документы", invoices: "Документы", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
+  const tabIcons: Record<TabKey, string> = { home: "payments", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
+  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
   // Sub-view routing
   const subViewContent = subView === "invoiceForm" ? invoiceFormView
