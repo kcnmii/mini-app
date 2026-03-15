@@ -35,5 +35,9 @@ class ClientRead(BaseModel):
     created_at: Optional[datetime.datetime] = None
     accounts: List[ClientBankAccountSchema] = []
     contacts: List[ClientContactSchema] = []
-
     model_config = {"from_attributes": True}
+
+class ClientBalance(BaseModel):
+    total_invoiced: float = 0.0
+    total_paid: float = 0.0
+    debt: float = 0.0

@@ -63,6 +63,11 @@ export type InvoiceForm = {
     DUE_DATE: string;           // YYYY-MM-DD format, empty if not set
     DEAL_REFERENCE: string;     // "Договор №15" or similar
 };
+export type ClientBalance = {
+    total_invoiced: number;
+    total_paid: number;
+    debt: number;
+};
 
 export type DocumentRecord = {
     id: number; title: string; client_name: string; total_sum: string;

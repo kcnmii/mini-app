@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact, InvoiceRecord, DashboardSummary } from "./types";
+import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact, InvoiceRecord, DashboardSummary, ClientBalance } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 import { getBankByIIK } from "./utils/bankAutofill";
 import { fetchCompanyByBin } from "./utils/binAutofill";
@@ -108,6 +108,7 @@ export function App() {
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
   const [isBinLoading, setIsBinLoading] = useState(false);
+  const [clientBalance, setClientBalance] = useState<ClientBalance | null>(null);
 
   async function openNewInvoice() {
     const fresh = makeInitialInvoice(profile);
@@ -506,6 +507,14 @@ export function App() {
     request(`/clients/${deletedId}`, { method: "DELETE" })
       .catch(() => { setClients(backup); setStatus("Ошибка: не удалось удалить клиента"); });
   }
+
+  async function loadClientBalance(clientId: number) {
+    try {
+      const b = await request<ClientBalance>(`/clients/${clientId}/balance`);
+      setClientBalance(b);
+    } catch (e) { console.error("balance fetch error", e); }
+  }
+
   async function deleteItem() {
     if (!selectedCatalogItem) return;
     if (!confirm("Вы уверены, что хотите удалить этот товар/услугу?")) return;
@@ -967,6 +976,8 @@ export function App() {
                 <div className="ios-row clickable" key={cl.id} onClick={() => {
                   setClientDraft({ ...cl });
                   setSelectedCatalogClient(cl);
+                  setClientBalance(null);
+                  loadClientBalance(cl.id);
                   setSubView("addClient");
                 }}>
                   <div className="ios-row-content">
@@ -1133,6 +1144,26 @@ export function App() {
         </div>
       </header>
       <div className="content-area">
+        {selectedCatalogClient && clientBalance && (
+          <div style={{ padding: "16px 16px 8px" }}>
+            <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>
+              <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>Баланс взаиморасчётов</div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                <span style={{ fontSize: "15px" }}>Выставлено:</span>
+                <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_invoiced)} ₸</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", color: "#34C759" }}>
+                <span style={{ fontSize: "15px" }}>Оплачено:</span>
+                <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_paid)} ₸</span>
+              </div>
+              <div style={{ borderTop: "1px solid rgba(0,123,255,0.1)", margin: "8px 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", color: clientBalance.debt > 0 ? "#FF3B30" : "inherit" }}>
+                <span style={{ fontSize: "15px", fontWeight: 600 }}>Долг:</span>
+                <span style={{ fontSize: "17px", fontWeight: 700 }}>{formatMoney(clientBalance.debt)} ₸</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="section-title">Реквизиты</div>
         <div className="ios-group">
           <div className="form-field" style={{ position: "relative" }}>

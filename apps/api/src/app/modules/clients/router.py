@@ -132,3 +132,41 @@ async def delete_client(
     db.delete(client)
     db.commit()
     return {"status": "ok"}
+
+
+@router.get("/{client_id}/balance")
+async def get_client_balance(
+    client_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    from app.core.db import Invoice
+    from sqlalchemy import func
+
+    # Make sure client belongs to user
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == user_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+
+    # Invoiced: all non-draft invoices
+    total_invoiced = (
+        db.query(func.coalesce(func.sum(Invoice.total_amount), 0.0))
+        .filter(Invoice.client_id == client_id, Invoice.status.in_(["sent", "paid", "overdue"]))
+        .scalar()
+    )
+
+    # Paid: all paid invoices (we define 'paid' amount as the full amount for phase 5 simplicity)
+    # or you could map to Payments if you want strictly real payments
+    total_paid = (
+        db.query(func.coalesce(func.sum(Invoice.total_amount), 0.0))
+        .filter(Invoice.client_id == client_id, Invoice.status == "paid")
+        .scalar()
+    )
+
+    debt = float(total_invoiced) - float(total_paid)
+
+    return {
+        "total_invoiced": float(total_invoiced),
+        "total_paid": float(total_paid),
+        "debt": debt if debt > 0 else 0.0
+    }
