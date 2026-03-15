@@ -1,65 +1,19 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact, InvoiceRecord, DashboardSummary, ClientBalance } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
 import { getBankByIIK } from "./utils/bankAutofill";
 import { fetchCompanyByBin } from "./utils/binAutofill";
+import { parse1CFile } from "./utils/oneCParser";
 
-/* ─── Icon helper ─── */
-function Icon({ name, filled, className }: { name: string; filled?: boolean; className?: string }) {
-  return <span className={`material-symbols-outlined${filled ? " filled" : ""}${className ? ` ${className}` : ""}`}>{name}</span>;
-}
-
-/* ─── iOS Toggle ─── */
-function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-  return (
-    <button type="button" className={`ios-switch-track${checked ? " on" : ""}`} disabled={disabled} onClick={() => onChange(!checked)}>
-      <span className="ios-switch-knob" />
-    </button>
-  );
-}
-
-/* ─── Image Upload ─── */
-function ImageUploadRow({ label, hint, imageType, onStatusChange, onSuccess }: { label: string; hint: string; imageType: "logo" | "signature" | "stamp"; onStatusChange: (msg: string) => void; onSuccess?: () => void; }) {
-  const [preview, setPreview] = useState<string>("");
-  const loadPreview = useCallback(async () => {
-    try {
-      const res = await request<{ has_image: boolean; data: string }>(`/profile/${imageType}/preview`);
-      setPreview(res.has_image ? res.data : "");
-    } catch { setPreview(""); }
-  }, [imageType]);
-  useEffect(() => { loadPreview(); }, [loadPreview]);
-
-  async function handleUpload(file: File) {
-    try {
-      const fd = new FormData(); fd.append("file", file);
-      const headers: Record<string, string> = {};
-      const token = getAuthToken();
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      await fetch(`${API_BASE_URL}/profile/${imageType}`, { method: "POST", body: fd, headers });
-      await loadPreview();
-      onStatusChange(`${label} загружен`);
-      if (onSuccess) onSuccess();
-    } catch { onStatusChange(`Ошибка загрузки: ${label}`); }
-  }
-
-  return (
-    <label className="upload-row">
-      <div className="upload-row-info">
-        <span className="upload-row-title">{label}</span>
-        <span className="upload-row-hint">{hint}</span>
-      </div>
-      <div className="upload-row-action">
-        {preview ? (
-          <div className="upload-preview-thumb"><img src={preview} alt={label} /></div>
-        ) : (
-          <Icon name="cloud_upload" />
-        )}
-      </div>
-      <input type="file" className="hidden-input" accept="image/png,image/jpeg,image/webp"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
-    </label>
-  );
-}
+import { Icon, Toggle } from "./components/Common";
+import { StatusBadge } from "./components/StatusBadge";
+import { ImageUploadRow } from "./components/ImageUploadRow";
+import { NavBar } from "./components/NavBar";
+import { Dashboard } from "./components/Dashboard";
+import { InvoiceRow } from "./components/InvoiceRow";
+import { ClientRow } from "./components/ClientRow";
+import { ItemRow } from "./components/ItemRow";
+import { DocumentRow } from "./components/DocumentRow";
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
 export function App() {
@@ -515,6 +469,59 @@ export function App() {
     } catch (e) { console.error("balance fetch error", e); }
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshDashboardAndInvoices = async () => {
+    try {
+      const summary = await request<DashboardSummary>("/dashboard/summary");
+      setDashboardSummary(summary);
+      const invList = await request<InvoiceRecord[]>("/invoices");
+      setInvoiceRecords(invList);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setBusy("save");
+        const text = event.target?.result as string;
+        await parseAndImport1CFile(text);
+      } catch (error) {
+        console.error("1C Parse Error", error);
+        setStatus("Ошибка при чтении файла 1С");
+      } finally {
+        setBusy("idle");
+      }
+    };
+    // 1C files in KZ are typically windows-1251, but we can try UTF-8 first or use a fallback. We'll use windows-1251.
+    reader.readAsText(file, "windows-1251");
+    e.target.value = '';
+  };
+
+  const parseAndImport1CFile = async (text: string) => {
+    try {
+      const payload = parse1CFile(text, profile.company_iic || "");
+
+      const res = await request<any>("/banks/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      setStatus(`Из выписки 1С получено ${res.added_count} оп. Найдено оплат счетов: ${res.matched_count} ✅`);
+      if (res.matched_count > 0 || res.added_count > 0) {
+        refreshDashboardAndInvoices();
+      }
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Ошибка парсинга 1С");
+    }
+  };
+
   async function deleteItem() {
     if (!selectedCatalogItem) return;
     if (!confirm("Вы уверены, что хотите удалить этот товар/услугу?")) return;
@@ -607,48 +614,22 @@ export function App() {
 
   const homeView = (
     <>
-      <div className="nav-bar">
-        <div className="nav-bar-inner" style={{ justifyContent: "flex-start", gap: "12px" }}>
-          <div className="user-avatar" style={{ background: tgUser?.photo_url ? "transparent" : getAvatarColor(tgName), color: "white", fontSize: "18px", fontWeight: 700 }}>
-            {tgUser?.photo_url ? (
-              <img src={tgUser.photo_url} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-            ) : (
-              tgName.charAt(0).toUpperCase()
-            )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <span style={{ fontSize: "20px", fontWeight: 600, lineHeight: tgUser?.username ? "23px" : "normal" }}>{tgName}</span>
-            {tgUser?.username && <span style={{ fontSize: "15px", color: "var(--text-secondary)", lineHeight: "18px" }}>@{tgUser.username}</span>}
-          </div>
-        </div>
-      </div>
+      <NavBar showProfile tgUser={tgUser} tgName={tgName} />
       <div className="content-area">
-        {/* ── Money Dashboard Cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px 16px 0" }}>
-          <div style={{ background: "linear-gradient(135deg, #FF9500 0%, #FF6B00 100%)", borderRadius: "16px", padding: "16px", color: "#fff", gridColumn: dashboardSummary.overdue > 0 ? "1" : "1 / -1" }}>
-            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Ожидается</div>
-            <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.awaiting)} ₸</div>
-          </div>
-          {dashboardSummary.overdue > 0 && (
-            <div style={{ background: "linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%)", borderRadius: "16px", padding: "16px", color: "#fff" }}>
-              <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Просрочено{dashboardSummary.overdue_count > 0 && ` (${dashboardSummary.overdue_count})`}</div>
-              <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.overdue)} ₸</div>
-            </div>
-          )}
-          <div style={{ background: "linear-gradient(135deg, #34C759 0%, #28A745 100%)", borderRadius: "16px", padding: "16px", color: "#fff", gridColumn: "1 / -1" }}>
-            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Оплачено в этом месяце</div>
-            <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(dashboardSummary.paid_this_month)} ₸</div>
-          </div>
-        </div>
+        <Dashboard summary={dashboardSummary} />
 
-        {/* ── Create invoice button ── */}
-        <div style={{ padding: "16px 16px 0" }}>
-          <button className="glass-hero-btn" onClick={openNewInvoice} style={{ width: "100%" }}>
+        {/* ── Create invoice & Import 1C buttons ── */}
+        <div style={{ padding: "16px 16px 0", display: "flex", gap: "10px" }}>
+          <button className="glass-hero-btn" onClick={openNewInvoice} style={{ flex: 1, padding: "12px 0" }}>
             <Icon name="add" /> Создать счёт
           </button>
+          <button className="glass-hero-btn" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: "12px 0", background: "var(--tg-theme-secondary-bg-color, rgba(0,0,0,0.05))", color: "var(--tg-theme-text-color, #000)" }}>
+            <Icon name="upload_file" /> 1С Выписка
+          </button>
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" style={{ display: 'none' }} />
         </div>
 
-        {/* ── Recent invoices from new API (with status badges) ── */}
+        {/* ── Recent invoices ── */}
         {invoiceRecords.length > 0 ? (
           <>
             <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
@@ -659,18 +640,7 @@ export function App() {
             </div>
             <div className="ios-group" style={{ margin: "0 16px" }}>
               {invoiceRecords.slice(0, 10).map((inv) => (
-                <div className="doc-row clickable" key={inv.id} onClick={() => loadAndPreviewInvoice(inv.id)}>
-                  <div className="doc-row-left">
-                    <div className="doc-row-title">{inv.number} · {inv.client_name || "—"}</div>
-                    <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, color: "#fff", background: statusColors[inv.status] || "#8E8E93" }}>
-                        {statusLabels[inv.status] || inv.status}
-                      </span>
-                      <span className="doc-row-date">{formatMoney(inv.total_amount)} ₸</span>
-                    </div>
-                  </div>
-                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                </div>
+                <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewInvoice} showDate={false} />
               ))}
             </div>
           </>
@@ -681,15 +651,7 @@ export function App() {
             </div>
             <div className="ios-group" style={{ margin: "0 16px" }}>
               {documents.slice(0, 10).map((doc) => (
-                <div className="doc-row clickable" key={doc.id} onClick={() => loadAndPreviewInvoice(doc.id)}>
-                  <div className="doc-row-left">
-                    <div className="doc-row-title">{doc.title.replace(/^Счет\s*(№|N)?\s*/i, "")} {doc.client_name}</div>
-                    <div className="doc-row-meta">
-                      <span className="doc-row-date">{new Date(doc.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}</span>
-                    </div>
-                  </div>
-                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                </div>
+                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewInvoice} />
               ))}
             </div>
           </>
@@ -722,19 +684,13 @@ export function App() {
   const showNewInvoicesList = invoiceRecords.length > 0;
   const invoicesListView = (
     <>
-      <div className="nav-bar">
-        <div className="nav-bar-inner">
-          <h1 className="nav-bar-title">Счета</h1>
-          <button className="nav-bar-btn" onClick={openNewInvoice}><Icon name="add" /></button>
-        </div>
-      </div>
+      <NavBar title="Счета" onAction={openNewInvoice} actionIcon="add" />
       <div className="search-bar">
         <div className="search-input-wrap">
           <Icon name="search" />
           <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
         </div>
       </div>
-      {/* Status filter chips */}
       {showNewInvoicesList && (
         <div style={{ display: "flex", gap: "8px", padding: "8px 16px", overflowX: "auto" }}>
           {statusFilters.map((sf) => (
@@ -765,19 +721,7 @@ export function App() {
               <div className="spacer-8" />
               <div className="ios-group">
                 {filteredInvoices.map((inv) => (
-                  <div className="doc-row clickable" key={inv.id} onClick={() => loadAndPreviewInvoice(inv.id)}>
-                    <div className="doc-row-left">
-                      <div className="doc-row-title">{inv.number} · {inv.client_name || "—"}</div>
-                      <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, color: "#fff", background: statusColors[inv.status] || "#8E8E93" }}>
-                          {statusLabels[inv.status] || inv.status}
-                        </span>
-                        <span className="doc-row-date">{formatMoney(inv.total_amount)} ₸</span>
-                        <span className="doc-row-date">{new Date(inv.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}</span>
-                      </div>
-                    </div>
-                    <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                  </div>
+                  <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewInvoice} />
                 ))}
               </div>
               <div className="spacer-24" />
@@ -794,15 +738,7 @@ export function App() {
             <div className="spacer-8" />
             <div className="ios-group">
               {filteredDocs.map((doc) => (
-                <div className="doc-row clickable" key={doc.id} onClick={() => loadAndPreviewInvoice(doc.id)}>
-                  <div className="doc-row-left">
-                    <div className="doc-row-title">{doc.title.replace(/^Счет\s*(№|N)?\s*/i, "")} {doc.client_name}</div>
-                    <div className="doc-row-meta">
-                      <span className="doc-row-date">{new Date(doc.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}</span>
-                    </div>
-                  </div>
-                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                </div>
+                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewInvoice} />
               ))}
             </div>
             <div className="spacer-24" />
@@ -972,20 +908,13 @@ export function App() {
           <>
             <div className="spacer-8" />
             <div className="ios-group">
-              {filteredClientsList.map((cl) => (
-                <div className="ios-row clickable" key={cl.id} onClick={() => {
-                  setClientDraft({ ...cl });
+              {filteredClientsList.map((client) => (
+                <ClientRow key={client.id} client={client} onClick={(cl) => {
                   setSelectedCatalogClient(cl);
-                  setClientBalance(null);
+                  setClientDraft({ ...cl, accounts: cl.accounts || [], contacts: cl.contacts || [] });
                   loadClientBalance(cl.id);
                   setSubView("addClient");
-                }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{cl.name}</div>
-                    <div className="ios-row-subtitle">{cl.bin_iin ? `${cl.bin_iin.length === 12 ? "БИН" : "ИИН"} ${cl.bin_iin}` : "Без БИН/ИИН"}</div>
-                  </div>
-                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                </div>
+                }} />
               ))}
             </div>
             <div className="spacer-24" />
@@ -1019,18 +948,12 @@ export function App() {
           <>
             <div className="spacer-8" />
             <div className="ios-group">
-              {filteredItemsList.map((it) => (
-                <div className="ios-row clickable" key={it.id} onClick={() => {
-                  setItemDraft({ name: it.name, unit: it.unit, price: String(it.price), sku: it.sku || "" });
+              {filteredItemsList.map((item) => (
+                <ItemRow key={item.id} item={item} onClick={(it) => {
                   setSelectedCatalogItem(it);
+                  setItemDraft({ name: it.name, unit: it.unit, price: String(it.price), sku: it.sku || "" });
                   setSubView("addItem");
-                }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{it.name}</div>
-                    <div className="ios-row-subtitle">{formatMoney(it.price)} ₸</div>
-                  </div>
-                  <div className="ios-row-right"><Icon name="chevron_right" /></div>
-                </div>
+                }} />
               ))}
             </div>
             <div className="spacer-24" />

@@ -13,6 +13,7 @@ from app.modules.profile.router import router as profile_router
 from app.modules.telegram_bot.router import router as telegram_router
 from app.modules.invoices.router import router as invoices_router
 from app.modules.dashboard.router import router as dashboard_router
+from app.modules.banks.router import router as banks_router
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(
@@ -32,7 +33,7 @@ app.include_router(render_router)
 app.include_router(telegram_router)
 app.include_router(invoices_router)
 app.include_router(dashboard_router)
-
+app.include_router(banks_router)
 
 @app.on_event("startup")
 async def startup() -> None:

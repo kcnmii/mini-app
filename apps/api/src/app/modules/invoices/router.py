@@ -16,6 +16,7 @@ from app.schemas.invoice import (
     PaymentCreate,
     PaymentRead,
 )
+from app.modules.telegram_bot.service import TelegramBotClient
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -196,6 +197,23 @@ async def mark_invoice_paid(
     inv.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(payment)
+
+    # Telegram notification
+    bot = TelegramBotClient()
+    try:
+        msg = (
+            f"✅ <b>Оплата получена!</b> (вручную)\n\n"
+            f"Счет: <code>{inv.number}</code>\n"
+            f"Клиент: <code>{inv.client_name}</code>\n"
+            f"Сумма: <b>{payment_amount:,.2f} ₸</b>\n\n"
+            f"<i>Статус счета обновлен на 'Оплачен'.</i>"
+        )
+        await bot.send_message(chat_id=user_id, text=msg)
+    except Exception as e:
+        print(f"Failed to send telegram notification: {e}")
+    finally:
+        await bot.close()
+
     return payment
 
 

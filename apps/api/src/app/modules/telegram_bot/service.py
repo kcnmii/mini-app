@@ -26,8 +26,13 @@ def build_launch_keyboard() -> InlineKeyboardMarkup | None:
 
 class TelegramBotClient:
     def __init__(self) -> None:
-        if not settings.telegram_bot_token:
-            raise RuntimeError("telegram_bot_token_missing")
+        token = settings.telegram_bot_token
+        self.enabled = bool(token) and token != "fake"
+        if not self.enabled:
+            # Skip initialization if no token or fake token
+            self.bot = None
+            return
+
         self.bot = Bot(
             token=settings.telegram_bot_token,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
@@ -41,6 +46,7 @@ class TelegramBotClient:
         pdf_bytes: bytes,
         caption: str | None,
     ) -> int:
+        if not self.enabled: return 0
         document = BufferedInputFile(pdf_bytes, filename=filename)
         message = await self.bot.send_document(
             chat_id=chat_id,
@@ -59,6 +65,7 @@ class TelegramBotClient:
         docx_bytes: bytes,
         caption: str | None,
     ) -> int:
+        if not self.enabled: return 0
         # Send PDF first
         pdf_doc = BufferedInputFile(pdf_bytes, filename=f"{filename_prefix}.pdf")
         msg = await self.bot.send_document(
@@ -76,5 +83,20 @@ class TelegramBotClient:
         )
         return msg.message_id
 
+    async def send_message(
+        self,
+        *,
+        chat_id: int,
+        text: str,
+    ) -> int:
+        if not self.enabled: return 0
+        message = await self.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=build_launch_keyboard(),
+        )
+        return message.message_id
+
     async def close(self) -> None:
+        if not self.enabled: return
         await self.bot.session.close()

@@ -126,6 +126,33 @@ class Payment(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class BankAccount(Base):
+    __tablename__ = "bank_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    bank_name = Column(Text, default="")
+    account_number = Column(Text, default="") # IIC
+    bic = Column(Text, default="")
+    currency = Column(Text, default="KZT")
+    is_default = Column(Integer, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
+class BankTransaction(Base):
+    __tablename__ = "bank_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    bank_account_id = Column(Integer, ForeignKey("bank_accounts.id", ondelete="CASCADE"), nullable=False)
+    date = Column(DateTime, nullable=False)
+    amount = Column(Float, nullable=False)
+    sender_name = Column(Text, default="")
+    sender_bin = Column(Text, default="")
+    description = Column(Text, default="")
+    matched_invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True)
+    is_income = Column(Integer, default=1) # 1 = Income, 0 = Expense
+    doc_num = Column(Text, default="")
+    is_processed = Column(Integer, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
 class SupplierProfile(Base):
     __tablename__ = "supplier_profile"
     id = Column(Integer, primary_key=True, index=True)
@@ -183,6 +210,15 @@ engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db() -> None:
+    # Ensure data directory exists if using SQLite
+    db_url = settings.database_url or f"sqlite:///{settings.sqlite_path}"
+    if db_url.startswith("sqlite"):
+        import os
+        db_file = settings.sqlite_path
+        db_dir = os.path.dirname(db_file)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+
     # Create tables if they don't exist
     Base.metadata.create_all(bind=engine)
     
