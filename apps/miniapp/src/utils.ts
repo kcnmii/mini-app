@@ -29,8 +29,12 @@ export function makeInitialInvoice(profile?: SupplierProfileData): InvoiceForm {
     const compIin = p.company_iin || p.supplier_iin || "";
     const compAddr = p.supplier_address || "";
 
+    const today = new Date();
+    const due = new Date(today);
+    due.setDate(today.getDate() + 14);
+
     return {
-        INVOICE_NUMBER: "СФ-001", INVOICE_DATE: new Date().toLocaleDateString("ru-RU"),
+        INVOICE_NUMBER: "СФ-001", INVOICE_DATE: today.toLocaleDateString("ru-RU"),
         CONTRACT: "Договор без номера",
         SUPPLIER_NAME: compName,
         SUPPLIER_IIN: compIin,
@@ -49,6 +53,8 @@ export function makeInitialInvoice(profile?: SupplierProfileData): InvoiceForm {
         TOTAL_SUM_IN_WORDS: "Ноль тенге 00 тиын",
         items: [],
         INCLUDE_LOGO: !!p.logo_path, INCLUDE_SIGNATURE: !!p.signature_path, INCLUDE_STAMP: !!p.stamp_path,
+        DUE_DATE: due.toISOString().split("T")[0],
+        DEAL_REFERENCE: "",
     };
 }
 

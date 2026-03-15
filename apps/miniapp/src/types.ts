@@ -60,6 +60,8 @@ export type InvoiceForm = {
     VAT: string; ITEMS_TOTAL_LINE: string; TOTAL_SUM: string;
     TOTAL_SUM_IN_WORDS: string; items: DocumentItem[];
     INCLUDE_LOGO: boolean; INCLUDE_SIGNATURE: boolean; INCLUDE_STAMP: boolean;
+    DUE_DATE: string;           // YYYY-MM-DD format, empty if not set
+    DEAL_REFERENCE: string;     // "Договор №15" or similar
 };
 
 export type DocumentRecord = {

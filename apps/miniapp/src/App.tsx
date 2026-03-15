@@ -434,8 +434,43 @@ export function App() {
     setBusy("save");
     setStatus("Сохранение...");
     try {
-      const s = await request<DocumentRecord>("/documents/invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payload: invoice }) });
-      setDocuments((c) => [s, ...c].slice(0, 50));
+      const payloadDate = invoice.INVOICE_DATE.split('.').reverse().join('-');
+      // 1. Generate PDF by saving DocumentRecord (old API)
+      const docRequest = request<DocumentRecord>("/documents/invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payload: invoice }) });
+
+      // 2. Save financial tracking record (new Phase 1 API)
+      const newInvBody = {
+        number: invoice.INVOICE_NUMBER,
+        date: payloadDate,
+        due_date: invoice.DUE_DATE || null,
+        client_name: invoice.CLIENT_NAME,
+        client_bin: invoice.CLIENT_IIN,
+        deal_reference: invoice.DEAL_REFERENCE || "",
+        items: invoice.items.map(i => ({
+          name: i.name || "Позиция",
+          quantity: parseFloat(i.quantity) || 1,
+          unit: i.unit,
+          price: parseMoney(i.price),
+          total: parseMoney(i.total),
+          code: i.code
+        }))
+      };
+
+      // Try to save to both safely
+      let newDoc: DocumentRecord | null = null;
+      try {
+        newDoc = await docRequest;
+        setDocuments((c) => [newDoc!, ...c].slice(0, 50));
+      } catch (e) { console.error("document API error", e); }
+
+      // If updating an existing document/invoice, we might need a PUT, but current flow creates a new one every time or updates existing via another way?
+      // For now, in Phase 4 we just send to newly created API:
+      if (!selectedDocId) {
+        try {
+          await request<InvoiceRecord>("/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newInvBody) });
+        } catch (e) { console.error("invoice API error", e); }
+      }
+
       setStatus("Счет сохранен");
       setSubView(null);
       setSelectedDocId(null);
@@ -786,9 +821,10 @@ export function App() {
         </div>
       </div>
       <div className="content-area has-footer">
-        <div className="section-title" style={{ paddingTop: 8 }}>Дата счета</div>
+        <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
         <div className="ios-group">
           <div className="form-field">
+            <span className="form-field-label">Дата счета</span>
             <input
               type="date"
               className="native-date-input"
@@ -800,8 +836,18 @@ export function App() {
               }}
             />
           </div>
+          <div className="field-divider" />
+          <div className="form-field">
+            <span className="form-field-label">Срок оплаты</span>
+            <input
+              type="date"
+              className="native-date-input"
+              value={invoice.DUE_DATE || ""}
+              onChange={(e) => setInvoice(c => ({ ...c, DUE_DATE: e.target.value }))}
+            />
+          </div>
         </div>
-        <div className="section-title">Клиент</div>
+        <div className="section-title">Клиент и договор</div>
         <div className="ios-group">
           <div className="form-field">
             <span className="form-field-icon"><Icon name="search" /></span>
@@ -819,6 +865,11 @@ export function App() {
               ))}
             </>
           )}
+          <div className="field-divider" />
+          <div className="form-field">
+            <span className="form-field-icon"><Icon name="contract" /></span>
+            <input placeholder="Договор (опционально)..." value={invoice.DEAL_REFERENCE || ""} onChange={(e) => setInvoice(c => ({ ...c, DEAL_REFERENCE: e.target.value }))} />
+          </div>
         </div>
         <div className="section-title">Позиции</div>
         {invoice.items.length > 0 && (
