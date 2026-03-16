@@ -1549,11 +1549,13 @@ export function App() {
     <>
       <header className="nav-bar">
         <div className="nav-bar-detail">
-          <button className="nav-bar-back" onClick={() => setSubView(null)}><Icon name="chevron_left" /><span>Назад</span></button>
+          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
+            <Icon name="close" />
+          </button>
           <span className="nav-bar-title-center">{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
           <div className="nav-bar-right">
-            <button className="nav-bar-btn" onClick={() => window.open(`${API_BASE_URL}/documents/${selectedDocId}/pdf`, '_blank')}>
-              <Icon name="download" />
+            <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")}>
+              <Icon name="edit" />
             </button>
           </div>
         </div>
@@ -1631,21 +1633,7 @@ export function App() {
           gap: "8px",
           zIndex: 100
         }}>
-          <button
-            onClick={() => setSubView("invoiceForm")}
-            style={{
-              flex: selectedInvoice.status === "paid" ? 1 : 0,
-              width: selectedInvoice.status === "paid" ? "auto" : "48px",
-              height: "48px",
-              borderRadius: "12px",
-              border: "none",
-              background: "var(--tg-theme-secondary-bg-color, #f4f4f5)",
-              color: "var(--tg-theme-text-color, #000)",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-              fontSize: "15px", fontWeight: 600, cursor: "pointer"
-            }}>
-            <Icon name="edit" /> {selectedInvoice.status === "paid" && "Редактировать"}
-          </button>
+
 
           {selectedInvoice.status !== "paid" && (
             <button
