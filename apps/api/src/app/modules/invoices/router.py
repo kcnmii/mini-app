@@ -82,6 +82,7 @@ async def create_invoice(
         client_name=payload.client_name,
         client_bin=payload.client_bin,
         deal_reference=payload.deal_reference,
+        payment_code=payload.payment_code,
         status="draft",
         total_amount=total,
     )

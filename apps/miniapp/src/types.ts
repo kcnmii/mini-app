@@ -89,6 +89,7 @@ export type InvoiceRecord = {
     client_name: string;
     client_bin: string;
     deal_reference: string;
+    payment_code: string;
     status: "draft" | "sent" | "paid" | "overdue";
     total_amount: number;
     pdf_path: string;

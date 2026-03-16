@@ -401,6 +401,7 @@ export function App() {
         client_name: invoice.CLIENT_NAME,
         client_bin: invoice.CLIENT_IIN,
         deal_reference: invoice.DEAL_REFERENCE || "",
+        payment_code: invoice.PAYMENT_CODE || "",
         items: invoice.items.map(i => ({
           name: i.name || "Позиция",
           quantity: parseFloat(i.quantity) || 1,
@@ -814,6 +815,16 @@ export function App() {
           <div className="form-field">
             <span className="form-field-icon"><Icon name="contract" /></span>
             <input placeholder="Договор (опционально)..." value={invoice.DEAL_REFERENCE || ""} onChange={(e) => setInvoice(c => ({ ...c, DEAL_REFERENCE: e.target.value }))} />
+          </div>
+          <div className="field-divider" />
+          <div className="form-field">
+            <span className="form-field-icon"><Icon name="payments" /></span>
+            <input
+              placeholder="Код назначения платежа (КНП)"
+              value={invoice.PAYMENT_CODE || ""}
+              onChange={(e) => setInvoice(c => ({ ...c, PAYMENT_CODE: e.target.value }))}
+              inputMode="numeric"
+            />
           </div>
         </div>
         <div className="section-title">Позиции</div>
@@ -1436,6 +1447,7 @@ export function App() {
           <div className="form-field"><input placeholder="БИК банка" value={profileDraft.company_bic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_bic: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Название банка" value={profileDraft.beneficiary_bank} onChange={(e) => setProfileDraft((c) => ({ ...c, beneficiary_bank: e.target.value }))} /></div>
           <div className="form-field"><input placeholder="Кбе" value={profileDraft.company_kbe} onChange={(e) => setProfileDraft((c) => ({ ...c, company_kbe: e.target.value }))} /></div>
+          <div className="form-field"><input placeholder="Код назначения платежа (КНП)" value={profileDraft.payment_code} onChange={(e) => setProfileDraft((c) => ({ ...c, payment_code: e.target.value }))} inputMode="numeric" /></div>
         </div>
         <div className="section-title">Состояние</div>
         <div className="ios-group">

@@ -87,6 +87,7 @@ class Invoice(Base):
     client_name = Column(Text, default="")
     client_bin = Column(Text, default="")
     deal_reference = Column(Text, default="")
+    payment_code = Column(Text, default="")
     status = Column(Text, default="draft")  # draft | sent | paid | overdue
     total_amount = Column(Float, default=0.0)
     pdf_path = Column(Text, default="")
@@ -241,10 +242,11 @@ def init_db() -> None:
             except Exception:
                 pass
         
-        # Add docx_path and total_amount to documents
+        # Add docx_path, total_amount, payment_code to documents/invoices
         try:
             conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS docx_path TEXT DEFAULT ''"))
             conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS total_amount DOUBLE PRECISION DEFAULT 0.0"))
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_code TEXT DEFAULT ''"))
             conn.commit()
         except Exception:
             pass

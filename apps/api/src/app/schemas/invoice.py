@@ -35,6 +35,7 @@ class InvoiceCreate(BaseModel):
     client_name: str = ""
     client_bin: str = ""
     deal_reference: str = ""
+    payment_code: str = ""
     items: List[InvoiceItemCreate] = []
     # render payload is passed through when we need PDF generation
     render_payload: Optional[dict] = None
@@ -49,6 +50,7 @@ class InvoiceRead(BaseModel):
     client_name: str = ""
     client_bin: str = ""
     deal_reference: str = ""
+    payment_code: str = ""
     status: str = "draft"
     total_amount: float = 0.0
     pdf_path: str = ""
