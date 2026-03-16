@@ -8,12 +8,18 @@ from app.core.config import settings
 
 
 def get_current_user_id(request: Request) -> int:
-    """Extract and validate user_id from the Authorization: Bearer <token> header."""
+    """Extract and validate user_id from the Authorization header or token query param."""
     auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="missing_token")
+    token = None
 
-    token = auth_header[7:]
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+    else:
+        # Fallback to query parameter (needed for iframes/PDFs)
+        token = request.query_params.get("token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="missing_token")
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
         user_id = int(payload["sub"])

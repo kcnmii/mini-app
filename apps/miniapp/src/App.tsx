@@ -1575,7 +1575,7 @@ export function App() {
         {/* PDF preview taking all remaining height */}
         {selectedDocId ? (
           <iframe
-            src={`${API_BASE_URL}/documents/${selectedDocId}/pdf#toolbar=0&navpanes=0`}
+            src={`${API_BASE_URL}/documents/${selectedDocId}/pdf?token=${getAuthToken()}#toolbar=0&navpanes=0`}
             style={{ width: "100%", flex: 1, border: "none", backgroundColor: "#fff" }}
             title="PDF Preview"
           />
