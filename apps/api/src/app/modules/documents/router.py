@@ -102,11 +102,42 @@ async def get_document_pdf(
     db: Session = Depends(get_db),
 ):
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
-    if not doc or not doc.pdf_path or not os.path.exists(doc.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF не найден")
+    if not doc:
+        raise HTTPException(status_code=404, detail="Документ не найден")
 
-    filename = os.path.basename(doc.pdf_path)
-    return FileResponse(doc.pdf_path, media_type="application/pdf", filename=filename)
+    # If file exists on disk — return immediately
+    if doc.pdf_path and os.path.exists(doc.pdf_path):
+        filename = os.path.basename(doc.pdf_path)
+        return FileResponse(doc.pdf_path, media_type="application/pdf", filename=filename)
+
+    # Auto-regenerate from payload_json if available
+    if not doc.payload_json:
+        raise HTTPException(status_code=404, detail="PDF не найден и нет данных для генерации")
+
+    import json
+    from app.schemas.render import InvoiceRenderPayload
+
+    try:
+        payload_data = json.loads(doc.payload_json)
+        render_payload = InvoiceRenderPayload(**payload_data)
+
+        safe_title = ''.join(c if c.isascii() and c.isalnum() else '-' for c in (doc.title or 'doc')).strip('-') or 'document'
+        fname = f"{safe_title}.docx"
+
+        docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
+        pdf_bytes = await render_service.convert_docx_to_pdf(fname, docx_bytes)
+
+        pdf_path = render_service.persist_debug_output(fname.replace(".docx", ".pdf"), pdf_bytes)
+        docx_path = render_service.persist_debug_output(fname, docx_bytes)
+
+        # Update record with new persistent paths
+        doc.pdf_path = pdf_path
+        doc.docx_path = docx_path
+        db.commit()
+
+        return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
 
 
 @router.post("/invoice", response_model=DocumentRead)

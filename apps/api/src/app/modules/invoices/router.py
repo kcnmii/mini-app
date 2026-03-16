@@ -241,22 +241,52 @@ async def get_invoice_pdf(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Proxy to the PDF file of the matching Document record."""
+    """Serve PDF for an invoice. Auto-regenerates if file is missing from disk."""
+    import os
+    import json
+    from app.modules.render.service import RenderService
+    from app.schemas.render import InvoiceRenderPayload
+
     inv = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user_id).first()
     if not inv:
         raise HTTPException(status_code=404, detail="Счёт не найден")
 
-    # Find document by number/title
+    # Find the matching Document record
     doc = db.query(Document).filter(
         Document.user_id == user_id,
         Document.title.like(f"%{inv.number}%")
     ).order_by(Document.id.desc()).first()
 
-    if not doc or not doc.pdf_path:
-        raise HTTPException(status_code=404, detail="PDF файл еще не сгенерирован")
+    # If document exists and PDF file is on disk — return it immediately
+    if doc and doc.pdf_path and os.path.exists(doc.pdf_path):
+        return FileResponse(doc.pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
 
-    import os
-    if not os.path.exists(doc.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF файл не найден на сервере (диск)")
+    # Otherwise, regenerate PDF from stored payload_json
+    payload_json = doc.payload_json if doc and doc.payload_json else None
+    if not payload_json:
+        raise HTTPException(status_code=404, detail="Нет данных для генерации PDF. Пересохраните счет.")
 
-    return FileResponse(doc.pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
+    try:
+        payload_data = json.loads(payload_json)
+        render_payload = InvoiceRenderPayload(**payload_data)
+        render_service = RenderService()
+
+        safe_number = ''.join(c if c.isascii() and c.isalnum() else '-' for c in inv.number).strip('-') or 'document'
+        filename = f"invoice-{safe_number}.docx"
+
+        docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
+        pdf_bytes = await render_service.convert_docx_to_pdf(filename, docx_bytes)
+
+        pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
+        docx_path = render_service.persist_debug_output(filename, docx_bytes)
+
+        # Update document record with new paths
+        if doc:
+            doc.pdf_path = pdf_path
+            doc.docx_path = docx_path
+            db.commit()
+
+        return FileResponse(pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
+
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
