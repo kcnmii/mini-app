@@ -47,6 +47,8 @@ textarea {
   border: none;
   outline: none;
   background: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 button {
