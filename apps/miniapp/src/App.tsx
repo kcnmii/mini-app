@@ -336,7 +336,7 @@ export function App() {
   }
 
   function selectClient(client: Client) {
-    setInvoice((c) => ({ ...c, CLIENT_NAME: client.name, CLIENT_IIN: client.bin_iin, CLIENT_ADDRESS: client.address || "" }));
+    setInvoice((c) => ({ ...c, CLIENT_NAME: client.name, CLIENT_IIN: client.bin_iin, CLIENT_ADDRESS: client.address || "", CLIENT_ID: client.id }));
     setInvoiceClientSearch(client.name);
     setStatus(`Клиент: ${client.name}`);
   }
@@ -457,6 +457,7 @@ export function App() {
         number: invoice.INVOICE_NUMBER,
         date: payloadDate,
         due_date: invoice.DUE_DATE || null,
+        client_id: (invoice as any).CLIENT_ID || null,
         client_name: invoice.CLIENT_NAME,
         client_bin: invoice.CLIENT_IIN,
         deal_reference: invoice.DEAL_REFERENCE || "",
