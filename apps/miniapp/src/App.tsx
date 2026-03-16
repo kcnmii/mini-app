@@ -1620,25 +1620,24 @@ export function App() {
         </div>
       </div>
 
-      {/* Floating Bottom Action Bar */}
+      {/* Floating Bottom Action Bar — Forced Light Theme */}
       {selectedInvoice && (
         <div style={{
           position: "fixed",
           bottom: 0, left: 0, right: 0,
-          background: "var(--tg-theme-bg-color, #fff)",
-          borderTop: "1px solid var(--tg-theme-secondary-bg-color, #efeff4)",
+          background: "#fff",
+          borderTop: "1px solid #eee",
           padding: "12px 16px",
           paddingBottom: "max(12px, env(safe-area-inset-bottom))",
           display: "flex",
           gap: "8px",
-          zIndex: 100
+          zIndex: 100,
+          boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
         }}>
-
-
           {selectedInvoice.status !== "paid" && (
             <button
               onClick={() => markInvoicePaid(selectedInvoice.id)}
-              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
             >
               <Icon name="check_circle" /> Оплачен
             </button>
@@ -1647,7 +1646,7 @@ export function App() {
           {selectedInvoice.status === "draft" && (
             <button
               onClick={() => markInvoiceSent(selectedInvoice.id)}
-              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
             >
               <Icon name="send" /> Отправлен
             </button>
