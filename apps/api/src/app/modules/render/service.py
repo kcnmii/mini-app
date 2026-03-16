@@ -43,7 +43,7 @@ class RenderService:
             return response.content
 
     def persist_debug_output(self, filename: str, content: bytes) -> str:
-        output_dir = Path("tmp/output")
+        output_dir = Path("data/storage")
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / filename
         output_path.write_bytes(content)

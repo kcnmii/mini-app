@@ -60,6 +60,7 @@ export function App() {
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
   const [isBinLoading, setIsBinLoading] = useState(false);
@@ -85,12 +86,8 @@ export function App() {
     try {
       const inv = await request<InvoiceRecord>(`/invoices/${id}`);
       setSelectedDocId(null);
+      setIsPdfLoading(true); // Start loading spinner for PDF
 
-      // Try to find the matching old DocumentRecord by number to show PDF
-      const matchingDoc = documents.find(d => d.title.includes(inv.number) && d.client_name === inv.client_name);
-      if (matchingDoc) {
-        setSelectedDocId(matchingDoc.id);
-      }
 
       // We set a special state to let the viewer know we're looking at this specific invoice
       // However, App.tsx currently uses selectedDocId to find the invoice:
@@ -1573,17 +1570,28 @@ export function App() {
         )}
 
         {/* PDF preview taking all remaining height */}
-        {selectedDocId ? (
+        <div style={{ flex: 1, position: "relative", backgroundColor: "#fff" }}>
+          {isPdfLoading && (
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+              backgroundColor: "rgba(255,255,255,0.8)", zIndex: 10
+            }}>
+              <div style={{ width: "32px", height: "32px", border: "3px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "12px" }} />
+              <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Загрузка документа...</div>
+            </div>
+          )}
+
           <iframe
-            src={`${API_BASE_URL}/documents/${selectedDocId}/pdf?token=${getAuthToken()}#toolbar=0&navpanes=0`}
-            style={{ width: "100%", flex: 1, border: "none", backgroundColor: "#fff" }}
+            src={selectedInvoiceId
+              ? `${API_BASE_URL}/invoices/${selectedInvoiceId}/pdf?token=${getAuthToken()}#toolbar=0&navpanes=0`
+              : `${API_BASE_URL}/documents/${selectedDocId}/pdf?token=${getAuthToken()}#toolbar=0&navpanes=0`
+            }
+            onLoad={() => setIsPdfLoading(false)}
+            style={{ width: "100%", height: "100%", border: "none" }}
             title="PDF Preview"
           />
-        ) : (
-          <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text-secondary)" }}>
-            PDF недоступен
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Floating Bottom Action Bar */}

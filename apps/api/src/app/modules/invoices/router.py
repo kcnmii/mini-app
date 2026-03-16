@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_user_id
-from app.core.db import get_db, Invoice, NewInvoiceItem, Payment
+from app.core.db import get_db, Invoice, NewInvoiceItem, Payment, Document
 from app.schemas.invoice import (
     InvoiceCreate,
     InvoiceRead,
@@ -232,3 +233,30 @@ async def delete_invoice(
     db.delete(inv)
     db.commit()
     return {"status": "ok"}
+
+
+@router.get("/{invoice_id}/pdf")
+async def get_invoice_pdf(
+    invoice_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Proxy to the PDF file of the matching Document record."""
+    inv = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user_id).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Счёт не найден")
+
+    # Find document by number/title
+    doc = db.query(Document).filter(
+        Document.user_id == user_id,
+        Document.title.like(f"%{inv.number}%")
+    ).order_by(Document.id.desc()).first()
+
+    if not doc or not doc.pdf_path:
+        raise HTTPException(status_code=404, detail="PDF файл еще не сгенерирован")
+
+    import os
+    if not os.path.exists(doc.pdf_path):
+        raise HTTPException(status_code=404, detail="PDF файл не найден на сервере (диск)")
+
+    return FileResponse(doc.pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
