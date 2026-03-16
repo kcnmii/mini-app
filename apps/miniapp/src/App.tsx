@@ -1547,14 +1547,14 @@ export function App() {
   const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedInvoiceId);
   const viewDocumentView = (
     <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
+      <header className="nav-bar" style={{ background: "#fff", borderBottom: "1px solid #e5e5ea" }}>
+        <div className="nav-bar-detail" style={{ background: "#fff" }}>
+          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)} style={{ background: "#f0f0f0" }}>
             <Icon name="close" />
           </button>
-          <span className="nav-bar-title-center">{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
+          <span className="nav-bar-title-center" style={{ color: "#000" }}>{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
           <div className="nav-bar-right">
-            <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")}>
+            <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")} style={{ background: "#f0f0f0" }}>
               <Icon name="edit" />
             </button>
           </div>
@@ -1562,16 +1562,16 @@ export function App() {
       </header>
 
       <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: selectedInvoice ? "80px" : "0", overflow: "hidden" }}>
-        {/* Compact Info Bar */}
+        {/* Compact Info Bar — Forced Light Theme for contrast */}
         {selectedInvoice && (
-          <div style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--tg-theme-secondary-bg-color, #f4f4f5)", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93" }}>
+          <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93", textTransform: "uppercase" }}>
                 {statusLabels[selectedInvoice.status] || selectedInvoice.status}
               </span>
-              <span style={{ fontSize: "14px", fontWeight: 600 }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
+              <span style={{ fontSize: "15px", fontWeight: 700, color: "#000" }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
             </div>
-            <span style={{ fontSize: "13px", color: "var(--text-secondary)", maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
+            <span style={{ fontSize: "13px", color: "#666", fontWeight: 500, maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
           </div>
         )}
 
