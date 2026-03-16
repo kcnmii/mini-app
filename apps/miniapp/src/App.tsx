@@ -59,6 +59,7 @@ export function App() {
   const [editingBaIndex, setEditingBaIndex] = useState<number | null>(null);
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
   const [isBinLoading, setIsBinLoading] = useState(false);
@@ -70,6 +71,7 @@ export function App() {
     setInvoiceClientSearch("");
     setSubView("invoiceForm");
     setSelectedDocId(null);
+    setSelectedInvoiceId(null);
     try {
       const { next_number } = await request<{ next_number: string }>("/documents/next-number");
       setInvoice(c => ({ ...c, INVOICE_NUMBER: next_number }));
@@ -78,12 +80,66 @@ export function App() {
     }
   }
 
-  async function loadAndPreviewInvoice(id: number) {
+  async function loadAndPreviewNewInvoice(id: number) {
+    setBusy("save");
+    try {
+      const inv = await request<InvoiceRecord>(`/invoices/${id}`);
+      setSelectedDocId(null);
+
+      // Try to find the matching old DocumentRecord by number to show PDF
+      const matchingDoc = documents.find(d => d.title.includes(inv.number) && d.client_name === inv.client_name);
+      if (matchingDoc) {
+        setSelectedDocId(matchingDoc.id);
+      }
+
+      // We set a special state to let the viewer know we're looking at this specific invoice
+      // However, App.tsx currently uses selectedDocId to find the invoice:
+      // const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedDocId);
+      // To not break the UI heavily, we could set selectedDocId to 'id', but then PDF iframe will fail.
+      // So instead, we should adjust viewDocumentView to use a new state: selectedInvoiceId
+      setSelectedInvoiceId(id);
+
+      // Reconstruct UI state for editing
+      const reconstructed = makeInitialInvoice(profile);
+      reconstructed.INVOICE_NUMBER = inv.number;
+      if (inv.date) {
+        const dparts = inv.date.split('T')[0].split('-');
+        reconstructed.INVOICE_DATE = `${dparts[2]}.${dparts[1]}.${dparts[0]}`;
+      }
+      if (inv.due_date) {
+        const uparts = inv.due_date.split('T')[0].split('-');
+        reconstructed.DUE_DATE = `${uparts[2]}.${uparts[1]}.${uparts[0]}`;
+      }
+      reconstructed.CLIENT_NAME = inv.client_name;
+      reconstructed.CLIENT_IIN = inv.client_bin;
+      reconstructed.DEAL_REFERENCE = inv.deal_reference;
+      reconstructed.PAYMENT_CODE = inv.payment_code;
+      reconstructed.TOTAL_SUM = String(inv.total_amount);
+      reconstructed.items = inv.line_items.map((it, idx) => ({
+        number: idx + 1,
+        name: it.name,
+        quantity: String(it.quantity),
+        unit: it.unit,
+        price: String(it.price),
+        total: String(it.total),
+        code: it.code || ""
+      }));
+      setInvoice(reconstructed);
+      setInvoiceClientSearch(inv.client_name);
+      setSubView("viewDocument");
+    } catch (e) {
+      setStatus("Ошибка загрузки");
+    } finally {
+      setBusy("idle");
+    }
+  }
+
+  async function loadAndPreviewOldDocument(id: number) {
     setBusy("save");
     try {
       const doc = await request<DocumentRecord & { payload_json?: string }>(`/documents/${id}`);
       setSelectedDocId(id);
-      setSubView("invoiceForm");
+      setSelectedInvoiceId(null);
 
       // Load invoice data for editing
       if (doc.payload_json) {
@@ -113,6 +169,8 @@ export function App() {
         setInvoice(reconstructed);
         setInvoiceClientSearch(doc.client_name);
       }
+      // For old documents we default to just the edit form
+      setSubView("invoiceForm");
     } catch (e) {
       setStatus("Ошибка загрузки");
     } finally {
@@ -430,22 +488,37 @@ export function App() {
       setStatus("Счет сохранен");
       setSubView(null);
       setSelectedDocId(null);
+      setSelectedInvoiceId(null);
       loadData(); // Refresh stats and other lists
     } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
   }
   async function deleteInvoice() {
-    if (!selectedDocId) return;
-    if (!confirm("Вы уверены, что хотите удалить этот документ?")) return;
-    const deletedId = selectedDocId;
-    const backup = documents;
-    // Optimistic: remove immediately
-    setDocuments((c) => c.filter(d => d.id !== deletedId));
-    setStatus("Документ удален");
-    setSubView(null);
-    setSelectedDocId(null);
-    // Sync in background
-    request(`/documents/${deletedId}`, { method: "DELETE" })
-      .catch(() => { setDocuments(backup); setStatus("Ошибка: не удалось удалить документ"); });
+    if (!selectedDocId && !selectedInvoiceId) return;
+    if (!confirm("Вы уверены, что хотите удалить этот счет?")) return;
+
+    if (selectedInvoiceId) {
+      const deletedId = selectedInvoiceId;
+      const backup = invoiceRecords;
+      setInvoiceRecords((c) => c.filter(d => d.id !== deletedId));
+      setStatus("Счет удален");
+      setSubView(null);
+      setSelectedDocId(null);
+      setSelectedInvoiceId(null);
+      request(`/invoices/${deletedId}`, { method: "DELETE" })
+        .catch(() => { setInvoiceRecords(backup); setStatus("Ошибка: не удалось удалить счет"); });
+    } else if (selectedDocId) {
+      const deletedId = selectedDocId;
+      const backup = documents;
+      // Optimistic: remove immediately
+      setDocuments((c) => c.filter(d => d.id !== deletedId));
+      setStatus("Документ удален");
+      setSubView(null);
+      setSelectedDocId(null);
+      setSelectedInvoiceId(null);
+      // Sync in background
+      request(`/documents/${deletedId}`, { method: "DELETE" })
+        .catch(() => { setDocuments(backup); setStatus("Ошибка: не удалось удалить документ"); });
+    }
   }
   async function deleteClient() {
     if (!selectedCatalogClient) return;
@@ -641,7 +714,7 @@ export function App() {
             </div>
             <div className="ios-group" style={{ margin: "0 16px" }}>
               {invoiceRecords.slice(0, 10).map((inv) => (
-                <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewInvoice} showDate={false} />
+                <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewNewInvoice} showDate={false} />
               ))}
             </div>
           </>
@@ -652,7 +725,7 @@ export function App() {
             </div>
             <div className="ios-group" style={{ margin: "0 16px" }}>
               {documents.slice(0, 10).map((doc) => (
-                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewInvoice} />
+                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
               ))}
             </div>
           </>
@@ -722,7 +795,7 @@ export function App() {
               <div className="spacer-8" />
               <div className="ios-group">
                 {filteredInvoices.map((inv) => (
-                  <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewInvoice} />
+                  <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewNewInvoice} />
                 ))}
               </div>
               <div className="spacer-24" />
@@ -739,7 +812,7 @@ export function App() {
             <div className="spacer-8" />
             <div className="ios-group">
               {filteredDocs.map((doc) => (
-                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewInvoice} />
+                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
               ))}
             </div>
             <div className="spacer-24" />
@@ -758,7 +831,7 @@ export function App() {
           <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
             <Icon name="close" />
           </button>
-          <span className="nav-bar-title-center">{selectedDocId ? `Счет ${invoice.INVOICE_NUMBER}` : "Новый счет"}</span>
+          <span className="nav-bar-title-center">{(selectedDocId || selectedInvoiceId) ? `Счет ${invoice.INVOICE_NUMBER}` : "Новый счет"}</span>
           <div className="nav-bar-right">
             <button className="nav-bar-btn-circle" onClick={saveInvoice} disabled={busy !== "idle"}>
               <Icon name="check" />
@@ -872,7 +945,7 @@ export function App() {
             <Toggle checked={invoice.INCLUDE_LOGO} disabled={!profile.logo_path} onChange={(v) => setInvoice((c) => ({ ...c, INCLUDE_LOGO: v }))} />
           </div>
         </div>
-        {selectedDocId && (
+        {(selectedDocId || selectedInvoiceId) && (
           <div style={{ padding: "0 16px" }}>
             <button className="destructive-btn" onClick={deleteInvoice} disabled={busy !== "idle"}>
               <Icon name="delete" /> Удалить документ
@@ -1470,7 +1543,7 @@ export function App() {
 
   /* View Document — full page with PDF preview */
   const selectedDoc = documents.find(d => d.id === selectedDocId);
-  const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedDocId);
+  const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedInvoiceId);
   const viewDocumentView = (
     <>
       <header className="nav-bar">
