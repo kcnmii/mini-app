@@ -1549,70 +1549,91 @@ export function App() {
       <header className="nav-bar">
         <div className="nav-bar-detail">
           <button className="nav-bar-back" onClick={() => setSubView(null)}><Icon name="chevron_left" /><span>Назад</span></button>
-          <span className="nav-bar-title-center">{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр счета"}</span>
+          <span className="nav-bar-title-center">{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
           <div className="nav-bar-right">
-            <button className="nav-bar-btn" title="Редактировать" onClick={() => setSubView("invoiceForm")}>
-              <Icon name="edit" />
-            </button>
             <button className="nav-bar-btn" onClick={() => window.open(`${API_BASE_URL}/documents/${selectedDocId}/pdf`, '_blank')}>
               <Icon name="download" />
             </button>
           </div>
         </div>
       </header>
-      <div className="content-area" style={{ paddingBottom: 0, height: selectedInvoice ? "auto" : "calc(100vh - 64px)", overflow: selectedInvoice ? "auto" : "hidden" }}>
-        {/* Invoice status + info bar */}
+
+      <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: selectedInvoice ? "80px" : "0", overflow: "hidden" }}>
+        {/* Compact Info Bar */}
         {selectedInvoice && (
-          <div style={{ padding: "12px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93" }}>
+          <div style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--tg-theme-secondary-bg-color, #f4f4f5)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93" }}>
                 {statusLabels[selectedInvoice.status] || selectedInvoice.status}
               </span>
-              <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>{selectedInvoice.client_name}</span>
+              <span style={{ fontSize: "14px", fontWeight: 600 }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
             </div>
-            <div style={{ fontSize: "28px", fontWeight: 700, marginBottom: "4px" }}>{formatMoney(selectedInvoice.total_amount)} ₸</div>
-            {selectedInvoice.due_date && (
-              <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Срок оплаты: {new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU")}</div>
-            )}
+            <span style={{ fontSize: "13px", color: "var(--text-secondary)", maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
           </div>
         )}
 
-        {/* Action buttons */}
-        {selectedInvoice && selectedInvoice.status !== "paid" && (
-          <div style={{ display: "flex", gap: "8px", padding: "0 16px 12px" }}>
+        {/* PDF preview taking all remaining height */}
+        {selectedDocId ? (
+          <iframe
+            src={`${API_BASE_URL}/documents/${selectedDocId}/pdf#toolbar=0&navpanes=0`}
+            style={{ width: "100%", flex: 1, border: "none", backgroundColor: "#fff" }}
+            title="PDF Preview"
+          />
+        ) : (
+          <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text-secondary)" }}>
+            PDF недоступен
+          </div>
+        )}
+      </div>
+
+      {/* Floating Bottom Action Bar */}
+      {selectedInvoice && (
+        <div style={{
+          position: "fixed",
+          bottom: 0, left: 0, right: 0,
+          background: "var(--tg-theme-bg-color, #fff)",
+          borderTop: "1px solid var(--tg-theme-secondary-bg-color, #efeff4)",
+          padding: "12px 16px",
+          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+          display: "flex",
+          gap: "8px",
+          zIndex: 100
+        }}>
+          <button
+            onClick={() => setSubView("invoiceForm")}
+            style={{
+              flex: selectedInvoice.status === "paid" ? 1 : 0,
+              width: selectedInvoice.status === "paid" ? "auto" : "48px",
+              height: "48px",
+              borderRadius: "12px",
+              border: "none",
+              background: "var(--tg-theme-secondary-bg-color, #f4f4f5)",
+              color: "var(--tg-theme-text-color, #000)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              fontSize: "15px", fontWeight: 600, cursor: "pointer"
+            }}>
+            <Icon name="edit" /> {selectedInvoice.status === "paid" && "Редактировать"}
+          </button>
+
+          {selectedInvoice.status !== "paid" && (
             <button
               onClick={() => markInvoicePaid(selectedInvoice.id)}
-              style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
             >
               <Icon name="check_circle" /> Оплачен
             </button>
-            {selectedInvoice.status === "draft" && (
-              <button
-                onClick={() => markInvoiceSent(selectedInvoice.id)}
-                style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-              >
-                <Icon name="send" /> Отправлен
-              </button>
-            )}
-          </div>
-        )}
-        {selectedInvoice && selectedInvoice.status === "paid" && (
-          <div style={{ padding: "0 16px 12px" }}>
-            <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", fontSize: "15px", fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <Icon name="check_circle" /> Счёт оплачен
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* PDF preview */}
-        {selectedDocId && (
-          <iframe
-            src={`${API_BASE_URL}/documents/${selectedDocId}/pdf#toolbar=0&navpanes=0`}
-            style={{ width: "100%", height: selectedInvoice ? "60vh" : "100%", border: "none" }}
-            title="PDF Preview"
-          />
-        )}
-      </div>
+          {selectedInvoice.status === "draft" && (
+            <button
+              onClick={() => markInvoiceSent(selectedInvoice.id)}
+              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+            >
+              <Icon name="send" /> Отправлен
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 
