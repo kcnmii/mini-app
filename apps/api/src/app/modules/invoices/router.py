@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_user_id
@@ -290,3 +290,74 @@ async def get_invoice_pdf(
 
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
+
+
+@router.get("/{invoice_id}/preview")
+async def get_invoice_preview(
+    invoice_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Convert invoice PDF pages to PNG images for mobile-friendly viewing."""
+    import os
+    import json
+    import base64
+    import fitz  # PyMuPDF
+    from app.modules.render.service import RenderService
+    from app.schemas.render import InvoiceRenderPayload
+
+    inv = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user_id).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Счёт не найден")
+
+    # Find the matching Document record
+    doc = db.query(Document).filter(
+        Document.user_id == user_id,
+        Document.title.like(f"%{inv.number}%")
+    ).order_by(Document.id.desc()).first()
+
+    pdf_path = doc.pdf_path if doc and doc.pdf_path else None
+
+    # If PDF file is missing — regenerate it
+    if not pdf_path or not os.path.exists(pdf_path):
+        payload_json = doc.payload_json if doc and doc.payload_json else None
+        if not payload_json:
+            raise HTTPException(status_code=404, detail="Нет данных для генерации превью")
+
+        try:
+            payload_data = json.loads(payload_json)
+            render_payload = InvoiceRenderPayload(**payload_data)
+            render_service = RenderService()
+
+            safe_number = ''.join(c if c.isascii() and c.isalnum() else '-' for c in inv.number).strip('-') or 'document'
+            filename = f"invoice-{safe_number}.docx"
+
+            docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
+            pdf_bytes = await render_service.convert_docx_to_pdf(filename, docx_bytes)
+
+            pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
+            docx_path = render_service.persist_debug_output(filename, docx_bytes)
+
+            if doc:
+                doc.pdf_path = pdf_path
+                doc.docx_path = docx_path
+                db.commit()
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Ошибка генерации: {exc}") from exc
+
+    # Convert PDF pages to PNG images using PyMuPDF
+    try:
+        pdf_doc = fitz.open(pdf_path)
+        pages = []
+        for page_num in range(len(pdf_doc)):
+            page = pdf_doc[page_num]
+            # Render at 2x resolution for crisp display on Retina
+            mat = fitz.Matrix(2.0, 2.0)
+            pix = page.get_pixmap(matrix=mat)
+            img_bytes = pix.tobytes("png")
+            b64 = base64.b64encode(img_bytes).decode("ascii")
+            pages.append({"page": page_num + 1, "data": f"data:image/png;base64,{b64}"})
+        pdf_doc.close()
+        return {"pages": pages, "total": len(pages)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ошибка конвертации: {exc}") from exc
