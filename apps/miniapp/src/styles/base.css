@@ -32,6 +32,19 @@ body,
     min-height: 100dvh;
 }
 
+/* Slight scale-down for small devices (iPhone SE, 6/7/8) */
+@media (max-width: 390px) {
+    html {
+        font-size: 95%;
+    }
+}
+
+@media (max-width: 360px) {
+    html {
+        font-size: 91%;
+    }
+}
+
 body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);

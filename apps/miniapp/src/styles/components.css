@@ -92,7 +92,7 @@
     background: rgba(255, 255, 255, 0.85);
 }
 
-/* ═══ Home Action Buttons (no shadow) ═══ */
+/* ═══ Home Action Buttons (white card, blue icon, gray text) ═══ */
 .home-action-btn {
     display: flex;
     align-items: center;
@@ -102,25 +102,33 @@
     border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
-    background: rgba(0, 123, 255, 0.08);
-    color: var(--primary);
+    background: var(--card, #fff);
+    color: var(--text-secondary);
     border: none;
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
 }
 
+.home-action-btn .material-symbols-outlined {
+    color: var(--primary);
+}
+
 .home-action-btn:active {
-    background: rgba(0, 123, 255, 0.16);
+    background: rgba(0, 123, 255, 0.06);
     transform: scale(0.97);
 }
 
 .home-action-btn--secondary {
-    background: var(--card, rgba(0, 0, 0, 0.05));
+    background: var(--card, #fff);
     color: var(--text-secondary);
 }
 
+.home-action-btn--secondary .material-symbols-outlined {
+    color: var(--primary);
+}
+
 .home-action-btn--secondary:active {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 123, 255, 0.06);
 }
 
 /* ═══ Status Chips ═══ */
