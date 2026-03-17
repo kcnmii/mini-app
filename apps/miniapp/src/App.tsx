@@ -18,6 +18,14 @@ import { TelegramLoginButton } from "./components/TelegramLoginButton";
 import { DateFilterView } from "./views/DateFilterView";
 import { BankPickerView } from "./views/BankPickerView";
 import { HomeView } from "./views/HomeView";
+import { InvoicesListView } from "./views/InvoicesListView";
+import { ClientsView } from "./views/ClientsView";
+import { ItemsView } from "./views/ItemsView";
+import { ProfileView } from "./views/ProfileView";
+import { AddBankAccountView } from "./views/AddBankAccountView";
+import { EditRequisitesView } from "./views/EditRequisitesView";
+
+
 
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
@@ -733,86 +741,6 @@ export function App() {
   const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
 
-  /* ═══ RENDER: INVOICES TAB — with status filters ═══ */
-  const statusFilters = ["all", "sent", "overdue", "paid", "draft"] as const;
-  const statusFilterLabels: Record<string, string> = { all: "Все", sent: "Отправленные", overdue: "Просроченные", paid: "Оплаченные", draft: "Черновики" };
-
-  const filteredInvoices = invoiceRecords.filter((inv) => {
-    if (invoiceStatusFilter !== "all" && inv.status !== invoiceStatusFilter) return false;
-    if (docSearch && !inv.number.toLowerCase().includes(docSearch.toLowerCase()) && !inv.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
-    return true;
-  });
-  // Fallback to old documents if no new invoices
-  const filteredDocs = documents.filter((d) => {
-    if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
-    return true;
-  });
-  const showNewInvoicesList = invoiceRecords.length > 0;
-  const invoicesListView = (
-    <>
-      <NavBar title="Счета" onAction={openNewInvoice} actionIcon="add" />
-      <div className="search-bar">
-        <div className="search-input-wrap">
-          <Icon name="search" />
-          <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
-        </div>
-      </div>
-      {showNewInvoicesList && (
-        <div style={{ display: "flex", gap: "8px", padding: "8px 16px", overflowX: "auto" }}>
-          {statusFilters.map((sf) => (
-            <button
-              key={sf}
-              onClick={() => setInvoiceStatusFilter(sf)}
-              style={{
-                padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-                background: invoiceStatusFilter === sf ? "var(--tg-theme-button-color, #007AFF)" : "var(--bg-secondary, #F2F2F7)",
-                color: invoiceStatusFilter === sf ? "#fff" : "var(--text-secondary, #8E8E93)",
-              }}
-            >
-              {statusFilterLabels[sf]}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="content-area">
-        {showNewInvoicesList ? (
-          filteredInvoices.length === 0 ? (
-            <div className="empty-state full-height">
-              <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-              <div className="empty-state-title">Ничего не найдено</div>
-              <div className="empty-state-text">Нет счетов с таким статусом</div>
-            </div>
-          ) : (
-            <>
-              <div className="spacer-8" />
-              <div className="ios-group">
-                {filteredInvoices.map((inv) => (
-                  <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewNewInvoice} />
-                ))}
-              </div>
-              <div className="spacer-24" />
-            </>
-          )
-        ) : filteredDocs.length === 0 ? (
-          <div className="empty-state full-height">
-            <div className="empty-state-icon"><Icon name="article" /></div>
-            <div className="empty-state-title">Список пуст</div>
-            <div className="empty-state-text">Создайте свой первый счёт</div>
-          </div>
-        ) : (
-          <>
-            <div className="spacer-8" />
-            <div className="ios-group">
-              {filteredDocs.map((doc) => (
-                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
-              ))}
-            </div>
-            <div className="spacer-24" />
-          </>
-        )}
-      </div>
-    </>
-  );
 
   /* ═══ RENDER: INVOICE FORM (sub-view) ═══ */
   const filteredClients = clients.filter((c) => !invoiceClientSearch || c.name.toLowerCase().includes(invoiceClientSearch.toLowerCase()) || c.bin_iin.includes(invoiceClientSearch));
@@ -983,187 +911,8 @@ export function App() {
     </>
   );
 
-  /* ═══ RENDER: CLIENTS TAB ═══ */
-  const filteredClientsList = clients.filter((c) => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()) || c.bin_iin.includes(clientSearch));
-  const clientsView = (
-    <>
-      <div className="nav-bar">
-        <div className="nav-bar-inner">
-          <h1 className="nav-bar-title">Клиенты</h1>
-          <button className="nav-bar-btn" onClick={() => setSubView("addClient")}><Icon name="add" /></button>
-        </div>
-      </div>
-      <div className="search-bar">
-        <div className="search-input-wrap"><Icon name="search" /><input placeholder="Поиск..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} /></div>
-      </div>
-      <div className="content-area">
-        {filteredClientsList.length === 0 ? (
-          <div className="empty-state full-height">
-            <div className="empty-state-icon"><Icon name="group" /></div>
-            <div className="empty-state-title">База клиентов пуста</div>
-            <div className="empty-state-text">Добавьте клиентов, чтобы быстрее оформлять документы</div>
-          </div>
-        ) : (
-          <>
-            <div className="spacer-8" />
-            <div className="ios-group">
-              {filteredClientsList.map((client) => (
-                <ClientRow key={client.id} client={client} onClick={(cl) => {
-                  setSelectedCatalogClient(cl);
-                  setClientDraft({ ...cl, accounts: cl.accounts || [], contacts: cl.contacts || [] });
-                  loadClientBalance(cl.id);
-                  setSubView("addClient");
-                }} />
-              ))}
-            </div>
-            <div className="spacer-24" />
-          </>
-        )}
-      </div>
-    </>
-  );
 
-  /* ═══ RENDER: ITEMS TAB ═══ */
-  const filteredItemsList = items.filter((i) => !itemSearch || i.name.toLowerCase().includes(itemSearch.toLowerCase()));
-  const itemsView = (
-    <>
-      <div className="nav-bar">
-        <div className="nav-bar-inner">
-          <h1 className="nav-bar-title">Каталог</h1>
-          <button className="nav-bar-btn" onClick={() => setSubView("addItem")}><Icon name="add" /></button>
-        </div>
-      </div>
-      <div className="search-bar">
-        <div className="search-input-wrap"><Icon name="search" /><input placeholder="Поиск..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} /></div>
-      </div>
-      <div className="content-area">
-        {filteredItemsList.length === 0 ? (
-          <div className="empty-state full-height">
-            <div className="empty-state-icon"><Icon name="inventory_2" /></div>
-            <div className="empty-state-title">Каталог пуст</div>
-            <div className="empty-state-text">Добавьте товары или услуги для автоматического расчета</div>
-          </div>
-        ) : (
-          <>
-            <div className="spacer-8" />
-            <div className="ios-group">
-              {filteredItemsList.map((item) => (
-                <ItemRow key={item.id} item={item} onClick={(it) => {
-                  setSelectedCatalogItem(it);
-                  setItemDraft({ name: it.name, unit: it.unit, price: String(it.price), sku: it.sku || "" });
-                  setSubView("addItem");
-                }} />
-              ))}
-            </div>
-            <div className="spacer-24" />
-          </>
-        )}
-      </div>
-    </>
-  );
 
-  /* ═══ RENDER: PROFILE TAB ═══ */
-  const profileView = (
-    <>
-      <div className="nav-bar">
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0 10px" }}>
-          <div className="user-avatar" style={{
-            width: "80px", height: "80px",
-            background: tgUser?.photo_url ? "transparent" : getAvatarColor(tgName),
-            color: "white", fontSize: "32px", fontWeight: 700,
-            marginBottom: "12px"
-          }}>
-            {tgUser?.photo_url ? (
-              <img src={tgUser.photo_url} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-            ) : (
-              tgName.charAt(0).toUpperCase()
-            )}
-          </div>
-          <h1 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 4px" }}>{tgName}</h1>
-          {tgUser?.username && <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>@{tgUser.username}</span>}
-        </div>
-      </div>
-      <div className="content-area">
-        <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты</div>
-        {profile.company_name ? (
-          <div className="ios-group">
-            <div className="ios-row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{profile.company_name}</span>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>БИН: {profile.company_iin}</span>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Директор: {profile.executor_name}</span>
-              </div>
-              <button className="requisites-card-edit" onClick={() => { setProfileDraft(profile); setSubView("editRequisites"); }}><Icon name="edit" /></button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ padding: "0 16px", marginBottom: 20 }}>
-            <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("editRequisites"); }}>
-              <Icon name="add_circle" /> Добавить реквизиты
-            </button>
-          </div>
-        )}
-        <div className="section-title">Банковские счета</div>
-        {profile.company_iic ? (
-          <>
-            <div className="ios-group">
-              <div className="ios-row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600 }}>{profile.company_iic}</span>
-                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Банк: {profile.beneficiary_bank}</span>
-                  <div><span className="badge badge-blue">Основной</span></div>
-                </div>
-                <button className="requisites-card-edit" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="edit" /></button>
-              </div>
-            </div>
-            <div style={{ padding: "12px 16px 0" }}>
-              <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="add_circle" /> Добавить счет</button>
-            </div>
-          </>
-        ) : (
-          <div style={{ padding: "0 16px", marginBottom: 20 }}>
-            <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="add_circle" /> Добавить счет</button>
-          </div>
-        )}
-        <div className="section-title">Оформление документов</div>
-        <div className="ios-group">
-          <ImageUploadRow label="Логотип" hint="PNG или JPG, макс. 2МБ" imageType="logo" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
-          <ImageUploadRow label="Подпись" hint="На прозрачном фоне" imageType="signature" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
-          <ImageUploadRow label="Печать" hint="Круглая печать организации" imageType="stamp" onStatusChange={setStatus} onSuccess={refreshProfileImages} />
-        </div>
-        <div className="section-title">Общие настройки</div>
-        <div className="ios-group">
-          <div className="settings-row">
-            <div className="settings-row-left">
-              <div className="settings-icon red"><Icon name="notifications" filled /></div>
-              <span className="settings-row-label">Уведомления</span>
-            </div>
-            <Toggle checked={true} onChange={() => { }} />
-          </div>
-          <div className="settings-row">
-            <div className="settings-row-left">
-              <div className="settings-icon blue"><Icon name="language" /></div>
-              <span className="settings-row-label">Язык</span>
-            </div>
-            <div className="settings-row-right"><span>Русский</span><Icon name="chevron_right" /></div>
-          </div>
-          <div className="settings-row">
-            <div className="settings-row-left">
-              <div className="settings-icon dark"><Icon name="dark_mode" /></div>
-              <span className="settings-row-label">Оформление</span>
-            </div>
-            <div className="settings-row-right"><span>Системное</span><Icon name="chevron_right" /></div>
-          </div>
-        </div>
-        {!webApp?.initData && (
-          <div style={{ marginTop: "16px", padding: "0 16px" }}>
-            <button onClick={() => { setAuthToken(""); setAuthUser(null); window.location.reload(); }} style={{ background: "var(--tg-theme-destructive-text-color, #ff3b30)", color: "white", width: "100%", padding: "14px", borderRadius: "12px", fontSize: "16px", fontWeight: 600, border: "none" }}>Выйти</button>
-          </div>
-        )}
-        <div className="version-text">Версия приложения 1.0.0</div>
-      </div>
-    </>
-  );
 
   /* ═══ FULL-PAGE SUB-VIEWS (replace modals) ═══ */
 
@@ -1441,135 +1190,6 @@ export function App() {
     </>
   );
 
-  /* Edit Requisites — full page */
-  const editRequisitesView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">Реквизиты</span>
-          <button className="nav-bar-btn-circle" onClick={() => { saveProfile(); setSubView(null); }}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты организации</div>
-        <div className="ios-group">
-          <div className="form-field" style={{ position: "relative" }}>
-            <input
-              placeholder="БИН (12-значный номер)"
-              value={profileDraft.company_iin}
-              onChange={async (e) => {
-                const val = e.target.value;
-                setProfileDraft((c) => ({ ...c, company_iin: val, supplier_iin: val }));
-                if (val.length === 12) {
-                  setIsBinLoading(true);
-                  try {
-                    const info = await fetchCompanyByBin(val);
-                    if (info) {
-                      setProfileDraft(c => ({
-                        ...c,
-                        company_name: info.name || c.company_name,
-                        supplier_name: info.name || c.supplier_name,
-                        supplier_iin: val,
-                        supplier_address: info.address || c.supplier_address,
-                        executor_name: info.director || c.executor_name,
-                        company_kbe: info.type === 'ИП' ? '19' : '17'
-                      }));
-                      setStatus("Данные организации получены");
-                    }
-                  } finally {
-                    setIsBinLoading(false);
-                  }
-                }
-              }}
-            />
-            {isBinLoading && (
-              <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
-                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-              </div>
-            )}
-          </div>
-          <div className="form-field"><input placeholder="Название организации" value={profileDraft.company_name} onChange={(e) => setProfileDraft((c) => ({ ...c, company_name: e.target.value, supplier_name: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Адрес (Юридический адрес)" value={profileDraft.supplier_address} onChange={(e) => setProfileDraft((c) => ({ ...c, supplier_address: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="ФИО (например, Иванов И.И.)" value={profileDraft.executor_name} onChange={(e) => setProfileDraft((c) => ({ ...c, executor_name: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Должность (например, Директор)" value={profileDraft.position} onChange={(e) => setProfileDraft((c) => ({ ...c, position: e.target.value }))} /></div>
-        </div>
-        <div className="section-title">Контакты</div>
-        <div className="ios-group">
-          <div className="form-field"><input placeholder="Телефон (+7...)" value={profileDraft.phone} onChange={(e) => setProfileDraft((c) => ({ ...c, phone: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Email (email@example.com)" value={profileDraft.email} onChange={(e) => setProfileDraft((c) => ({ ...c, email: e.target.value }))} /></div>
-        </div>
-        {profile.company_iin && (
-          <div style={{ padding: "24px 16px 8px" }}>
-            <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteRequisites}>
-              Удалить реквизиты
-            </button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-  /* Add Bank Account — full page (matches _5/code.html exactly) */
-  const addBankAccountView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">Добавить счет</span>
-          <button className="nav-bar-btn-circle" onClick={() => { saveProfile(); setSubView(null); }}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты счета</div>
-        <div className="ios-group">
-          <div className="form-field">
-            <input
-              placeholder="IBAN (Например, KZ...)"
-              value={profileDraft.company_iic}
-              onChange={(e) => {
-                const val = e.target.value;
-                const info = getBankByIIK(val);
-                setProfileDraft(c => ({
-                  ...c,
-                  company_iic: val,
-                  company_bic: info ? info.bik : c.company_bic,
-                  beneficiary_bank: info ? info.name : c.beneficiary_bank
-                }));
-              }}
-            />
-          </div>
-          <div className="form-field"><input placeholder="БИК банка" value={profileDraft.company_bic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_bic: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Название банка" value={profileDraft.beneficiary_bank} onChange={(e) => setProfileDraft((c) => ({ ...c, beneficiary_bank: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Кбе" value={profileDraft.company_kbe} onChange={(e) => setProfileDraft((c) => ({ ...c, company_kbe: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Код назначения платежа (КНП)" value={profileDraft.payment_code} onChange={(e) => setProfileDraft((c) => ({ ...c, payment_code: e.target.value }))} inputMode="numeric" /></div>
-        </div>
-        <div className="section-title">Состояние</div>
-        <div className="ios-group">
-          <div className="toggle-row">
-            <span className="toggle-row-label">Сделать основным</span>
-            <Toggle checked={true} onChange={() => { }} />
-          </div>
-        </div>
-        <div className="form-hint">Этот счет будет использоваться по умолчанию для всех новых счетов-фактур.</div>
-        {profile.company_iic && (
-          <div style={{ padding: "24px 16px 8px" }}>
-            <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteBankAccount}>
-              Удалить счет
-            </button>
-          </div>
-        )}
-      </div>
-    </>
-  );
 
   /* View Document — full page with PDF preview */
   const selectedDoc = documents.find(d => d.id === selectedDocId);
@@ -1692,12 +1312,39 @@ export function App() {
   let subViewContent = subView === "invoiceForm" ? invoiceFormView
     : subView === "addClient" ? addClientView
       : subView === "addItem" ? addItemView
-        : subView === "editRequisites" ? editRequisitesView
-          : subView === "addBankAccount" ? addBankAccountView
-            : subView === "viewDocument" ? viewDocumentView
-              : subView === "addClientBankAccount" ? addClientBankAccountView
-                : subView === "addClientContact" ? addClientContactView
-                  : null;
+        : subView === "viewDocument" ? viewDocumentView
+          : subView === "addClientBankAccount" ? addClientBankAccountView
+            : subView === "addClientContact" ? addClientContactView
+              : null;
+
+  if (subView === "editRequisites") {
+    subViewContent = (
+      <EditRequisitesView
+        profile={profile}
+        profileDraft={profileDraft as any}
+        setProfileDraft={setProfileDraft as any}
+        setSubView={setSubView}
+        saveProfile={saveProfile}
+        deleteRequisites={deleteRequisites}
+        busy={busy}
+        isBinLoading={isBinLoading}
+        setIsBinLoading={setIsBinLoading}
+        setStatus={setStatus}
+      />
+    );
+  } else if (subView === "addBankAccount") {
+    subViewContent = (
+      <AddBankAccountView
+        profile={profile}
+        profileDraft={profileDraft as any}
+        setProfileDraft={setProfileDraft as any}
+        setSubView={setSubView}
+        saveProfile={saveProfile}
+        deleteBankAccount={deleteBankAccount}
+        busy={busy}
+      />
+    );
+  }
 
   // Date Filter Subview
   if (subView === ("dateFilter" as any)) {
@@ -1766,10 +1413,53 @@ export function App() {
               loadAndPreviewOldDocument={loadAndPreviewOldDocument}
             />
           )}
-          {tab === "invoices" && invoicesListView}
-          {tab === "clients" && clientsView}
-          {tab === "items" && itemsView}
-          {tab === "profile" && profileView}
+          {tab === "invoices" && (
+            <InvoicesListView
+              invoiceRecords={invoiceRecords}
+              documents={documents}
+              docSearch={docSearch}
+              setDocSearch={setDocSearch}
+              invoiceStatusFilter={invoiceStatusFilter}
+              setInvoiceStatusFilter={setInvoiceStatusFilter}
+              openNewInvoice={openNewInvoice}
+              loadAndPreviewNewInvoice={loadAndPreviewNewInvoice}
+              loadAndPreviewOldDocument={loadAndPreviewOldDocument}
+            />
+          )}
+          {tab === "clients" && (
+            <ClientsView
+              clients={clients}
+              clientSearch={clientSearch}
+              setClientSearch={setClientSearch}
+              setSubView={setSubView}
+              setSelectedCatalogClient={setSelectedCatalogClient}
+              setClientDraft={setClientDraft}
+              loadClientBalance={loadClientBalance}
+            />
+          )}
+          {tab === "items" && (
+            <ItemsView
+              items={items}
+              itemSearch={itemSearch}
+              setItemSearch={setItemSearch}
+              setSubView={setSubView}
+              setSelectedCatalogItem={setSelectedCatalogItem}
+              setItemDraft={setItemDraft}
+            />
+          )}
+          {tab === "profile" && (
+            <ProfileView
+              tgUser={tgUser}
+              tgName={tgName}
+              profile={profile}
+              webAppInitData={!!webApp?.initData}
+              setProfileDraft={setProfileDraft}
+              setSubView={setSubView}
+              setStatus={setStatus}
+              refreshProfileImages={refreshProfileImages}
+              onLogout={() => { setAuthToken(""); setAuthUser(null); window.location.reload(); }}
+            />
+          )}
         </>
       )}
       {isAuthenticated && !subViewContent && (
