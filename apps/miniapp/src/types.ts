@@ -15,6 +15,16 @@ declare global {
     }
 }
 
+export interface BankAccount {
+    id: number;
+    bank_name: string;
+    account_number: string;
+    bic: string;
+    currency: string;
+    is_default: boolean;
+}
+
+
 export type ClientBankAccount = {
     id?: number;
     iic: string;

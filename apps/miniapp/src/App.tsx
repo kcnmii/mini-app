@@ -14,6 +14,11 @@ import { InvoiceRow } from "./components/InvoiceRow";
 import { ClientRow } from "./components/ClientRow";
 import { ItemRow } from "./components/ItemRow";
 import { DocumentRow } from "./components/DocumentRow";
+import { TelegramLoginButton } from "./components/TelegramLoginButton";
+import { DateFilterView } from "./views/DateFilterView";
+import { BankPickerView } from "./views/BankPickerView";
+import { HomeView } from "./views/HomeView";
+
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
 export function App() {
@@ -727,76 +732,6 @@ export function App() {
   const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
   const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
-  const selectedBa = bankAccounts.find(b => b.id === selectedBankAccountId);
-  const bankBtnLabel = bankAccounts.length === 0 ? "Добавить счёт" : selectedBa ? selectedBa.bank_name : "Все счета";
-
-  const homeView = (
-    <>
-      <div className="nav-bar">
-        <div className="nav-bar-inner">
-          <button className="nav-bar-btn-circle" onClick={() => {
-            if (bankAccounts.length === 0) { setProfileDraft(profile); setSubView("addBankAccount"); }
-            else setSubView("bankPicker" as any);
-          }} style={{ borderRadius: "20px", width: "auto", padding: "0 14px", gap: "6px", fontSize: "14px", fontWeight: 600 }}>
-            <Icon name={bankAccounts.length === 0 ? "add" : "account_balance"} />
-            <span>{bankBtnLabel}</span>
-          </button>
-          <button className="nav-bar-btn-circle" onClick={() => setSubView("dateFilter" as any)}>
-            <Icon name="calendar_month" />
-          </button>
-        </div>
-      </div>
-      <div className="content-area">
-        <Dashboard summary={dashboardSummary} />
-
-        {/* ── Create invoice & Import 1C buttons ── */}
-        <div style={{ padding: "16px 16px 0", display: "flex", gap: "10px" }}>
-          <button className="glass-hero-btn" onClick={openNewInvoice} style={{ flex: 1, padding: "12px 0" }}>
-            <Icon name="add" /> Создать счёт
-          </button>
-          <button className="glass-hero-btn" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: "12px 0", background: "var(--tg-theme-secondary-bg-color, rgba(0,0,0,0.05))", color: "var(--tg-theme-text-color, #000)" }}>
-            <Icon name="upload_file" /> 1С Выписка
-          </button>
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" style={{ display: 'none' }} />
-        </div>
-
-        {/* ── Recent invoices ── */}
-        {invoiceRecords.length > 0 ? (
-          <>
-            <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
-              <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние счета</h2>
-              <button className="view-all-btn-pill" onClick={() => setTab("invoices")}>
-                Все <Icon name="chevron_right" />
-              </button>
-            </div>
-            <div className="ios-group" style={{ margin: "0 16px" }}>
-              {invoiceRecords.slice(0, 10).map((inv) => (
-                <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewNewInvoice} showDate={false} />
-              ))}
-            </div>
-          </>
-        ) : documents.length > 0 ? (
-          <>
-            <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
-              <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние документы</h2>
-            </div>
-            <div className="ios-group" style={{ margin: "0 16px" }}>
-              {documents.slice(0, 10).map((doc) => (
-                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="empty-state" style={{ marginTop: 24 }}>
-            <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-            <div className="empty-state-title">Нет счетов</div>
-            <div className="empty-state-text">Создайте первый счёт, чтобы начать контролировать деньги</div>
-          </div>
-        )}
-        <div className="spacer-24" />
-      </div>
-    </>
-  );
 
   /* ═══ RENDER: INVOICES TAB — with status filters ═══ */
   const statusFilters = ["all", "sent", "overdue", "paid", "draft"] as const;
@@ -1766,113 +1701,19 @@ export function App() {
 
   // Date Filter Subview
   if (subView === ("dateFilter" as any)) {
-    subViewContent = (
-      <>
-        <header className="nav-bar">
-          <div className="nav-bar-detail">
-            <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-              <Icon name="close" />
-            </button>
-            <span className="nav-bar-title-center">Период</span>
-            <div className="nav-bar-right" />
-          </div>
-        </header>
-        <div className="content-area">
-          <div className="section-title" style={{ paddingTop: 8 }}>Выберите период</div>
-          <div className="ios-group">
-            <button className="ios-row" onClick={() => { setDateFilter({ type: "today" }); setSubView(null); }}>
-              <div className="ios-row-content"><div className="ios-row-title">Сегодня</div></div>
-              {dateFilter.type === "today" && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-            <button className="ios-row" onClick={() => { setDateFilter({ type: "week" }); setSubView(null); }}>
-              <div className="ios-row-content"><div className="ios-row-title">Неделя</div></div>
-              {dateFilter.type === "week" && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-            <button className="ios-row" onClick={() => { setDateFilter({ type: "month" }); setSubView(null); }}>
-              <div className="ios-row-content"><div className="ios-row-title">Месяц</div></div>
-              {dateFilter.type === "month" && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-            <button className="ios-row" onClick={() => { setDateFilter({ type: "all" }); setSubView(null); }}>
-              <div className="ios-row-content"><div className="ios-row-title">За все время</div></div>
-              {dateFilter.type === "all" && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-            <button className="ios-row" onClick={() => setDateFilter(d => ({ ...d, type: "custom" }))}>
-              <div className="ios-row-content"><div className="ios-row-title">Кастомный период</div></div>
-              {dateFilter.type === "custom" && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-          </div>
-
-          {dateFilter.type === "custom" && (
-            <>
-              <div className="section-title">Диапазон дат</div>
-              <div className="ios-group">
-                <div className="form-field">
-                  <span className="form-field-label">Начало</span>
-                  <input
-                    type="date"
-                    className="native-date-input"
-                    value={dateFilter.from?.split("T")[0] || ""}
-                    onChange={(e) => setDateFilter(d => ({ ...d, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
-                  />
-                </div>
-                <div className="field-divider" />
-                <div className="form-field">
-                  <span className="form-field-label">Конец</span>
-                  <input
-                    type="date"
-                    className="native-date-input"
-                    value={dateFilter.to?.split("T")[0] || ""}
-                    onChange={(e) => setDateFilter(d => ({ ...d, to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
-                  />
-                </div>
-              </div>
-              <div style={{ padding: "24px 16px" }}>
-                <button className="action-btn-main" onClick={() => setSubView(null)}>Применить</button>
-              </div>
-            </>
-          )}
-        </div>
-      </>
-    );
+    subViewContent = <DateFilterView dateFilter={dateFilter as any} setDateFilter={setDateFilter as any} onClose={() => setSubView(null)} />;
   }
 
   // Bank Account Picker Subview
   if (subView === ("bankPicker" as any)) {
     subViewContent = (
-      <>
-        <header className="nav-bar">
-          <div className="nav-bar-detail">
-            <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-              <Icon name="close" />
-            </button>
-            <span className="nav-bar-title-center">Банковский счёт</span>
-            <div className="nav-bar-right" />
-          </div>
-        </header>
-        <div className="content-area">
-          <div className="section-title" style={{ paddingTop: 8 }}>Выберите счёт</div>
-          <div className="ios-group">
-            <button className="ios-row" onClick={() => { setSelectedBankAccountId(null); setSubView(null); }}>
-              <div className="ios-row-content"><div className="ios-row-title">Все счета</div></div>
-              {selectedBankAccountId === null && <Icon name="check" style={{ color: "var(--primary)" }} />}
-            </button>
-            {bankAccounts.map(ba => (
-              <button className="ios-row" key={ba.id} onClick={() => { setSelectedBankAccountId(ba.id); setSubView(null); }}>
-                <div className="ios-row-content">
-                  <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
-                  <div className="ios-row-subtitle">{ba.account_number}</div>
-                </div>
-                {selectedBankAccountId === ba.id && <Icon name="check" style={{ color: "var(--primary)" }} />}
-              </button>
-            ))}
-          </div>
-          <div style={{ padding: "24px 16px" }}>
-            <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}>
-              <Icon name="add_circle" /> Добавить счёт
-            </button>
-          </div>
-        </div>
-      </>
+      <BankPickerView
+        bankAccounts={bankAccounts}
+        selectedBankAccountId={selectedBankAccountId}
+        setSelectedBankAccountId={setSelectedBankAccountId}
+        onClose={() => setSubView(null)}
+        onAddAccount={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}
+      />
     );
   }
 
@@ -1907,7 +1748,24 @@ export function App() {
         subViewContent
       ) : (
         <>
-          {tab === "home" && homeView}
+          {tab === "home" && (
+            <HomeView
+              bankAccounts={bankAccounts}
+              selectedBankAccountId={selectedBankAccountId}
+              profile={profile}
+              dashboardSummary={dashboardSummary}
+              invoiceRecords={invoiceRecords}
+              documents={documents}
+              fileInputRef={fileInputRef}
+              setProfileDraft={setProfileDraft}
+              setSubView={setSubView}
+              setTab={setTab}
+              openNewInvoice={openNewInvoice}
+              handleFileUpload={handleFileUpload}
+              loadAndPreviewNewInvoice={loadAndPreviewNewInvoice}
+              loadAndPreviewOldDocument={loadAndPreviewOldDocument}
+            />
+          )}
           {tab === "invoices" && invoicesListView}
           {tab === "clients" && clientsView}
           {tab === "items" && itemsView}
@@ -1928,34 +1786,5 @@ export function App() {
       )}
     </main>
   );
-}
-
-/* ─── Telegram Login Widget Component ─── */
-function TelegramLoginButton() {
-  const [botName, setBotName] = useState<string>("");
-
-  useEffect(() => {
-    authRequest<{ bot_name: string }>("/auth/telegram/bot-name")
-      .then(res => setBotName(res.bot_name))
-      .catch(() => setBotName("docminiapp_bot")); // fallback just in case
-  }, []);
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node || !botName) return;
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", botName);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-    node.innerHTML = "";
-    node.appendChild(script);
-  }, [botName]);
-
-  if (!botName) return <div style={{ height: "40px", color: "var(--text-secondary)" }}>Загрузка виджета...</div>;
-
-  return <div ref={containerRef} />;
 }
 
