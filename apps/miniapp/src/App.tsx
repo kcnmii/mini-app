@@ -1739,27 +1739,31 @@ export function App() {
             <>
               <div className="section-title">Диапазон дат</div>
               <div className="ios-group">
-                <div className="form-field">
-                  <div className="form-field-label">С</div>
+                <label className="form-field" style={{ cursor: "pointer" }}>
+                  <div className="form-field-label">Начало</div>
                   <input
                     type="date"
                     className="native-date-input"
+                    style={{ flex: 1, textAlign: "right", border: "none" }}
                     value={dateFilter.from?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
-                </div>
-                <div className="form-field">
-                  <div className="form-field-label">По</div>
+                  <Icon name="chevron_right" className="form-field-icon" style={{ marginLeft: "8px" }} />
+                </label>
+                <label className="form-field" style={{ cursor: "pointer" }}>
+                  <div className="form-field-label">Конец</div>
                   <input
                     type="date"
                     className="native-date-input"
+                    style={{ flex: 1, textAlign: "right", border: "none" }}
                     value={dateFilter.to?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
-                </div>
+                  <Icon name="chevron_right" className="form-field-icon" style={{ marginLeft: "8px" }} />
+                </label>
               </div>
-              <div style={{ padding: "16px" }}>
-                <button className="glass-hero-btn" onClick={() => setSubView(null)}>Применить</button>
+              <div style={{ padding: "24px 16px" }}>
+                <button className="action-btn-main" onClick={() => setSubView(null)}>Применить</button>
               </div>
             </>
           )}

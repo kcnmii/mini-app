@@ -8,22 +8,22 @@ interface DashboardProps {
 
 export function Dashboard({ summary }: DashboardProps) {
     return (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", padding: "16px 16px 8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "12px 20px 8px" }}>
             <div>
-                <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "2px" }}>Ожидается</div>
-                <div style={{ fontSize: "24px", fontWeight: 700, color: "#FF9500" }}>{formatMoney(summary.awaiting)} ₸</div>
+                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Ожидается</div>
+                <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.awaiting)} ₸</div>
             </div>
 
             {summary.overdue > 0 && (
                 <div>
-                    <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "2px" }}>Просрочено</div>
-                    <div style={{ fontSize: "24px", fontWeight: 700, color: "#FF3B30" }}>{formatMoney(summary.overdue)} ₸</div>
+                    <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--ios-red)", marginBottom: "4px" }}>Просрочено</div>
+                    <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--ios-red)", letterSpacing: "-0.02em" }}>{formatMoney(summary.overdue)} ₸</div>
                 </div>
             )}
 
             <div>
-                <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "2px" }}>Получено</div>
-                <div style={{ fontSize: "24px", fontWeight: 700, color: "#34C759" }}>{formatMoney(summary.paid_this_month)} ₸</div>
+                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Получено</div>
+                <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.paid_this_month)} ₸</div>
             </div>
         </div>
     );
