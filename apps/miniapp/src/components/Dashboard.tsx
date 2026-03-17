@@ -36,7 +36,7 @@ export function Dashboard({ summary }: DashboardProps) {
                 color: "#fff",
                 gridColumn: "1 / -1"
             }}>
-                <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Оплачено в этом месяце</div>
+                <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "4px" }}>Получено</div>
                 <div style={{ fontSize: "22px", fontWeight: 700 }}>{formatMoney(summary.paid_this_month)} ₸</div>
             </div>
         </div>

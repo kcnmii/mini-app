@@ -1661,7 +1661,7 @@ export function App() {
 
   /* ═══ MAIN RENDER ═══ */
   const isAuthenticated = !!getAuthToken();
-  const tabIcons: Record<TabKey, string> = { home: "payments", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
   const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
   // Sub-view routing
