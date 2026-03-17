@@ -1431,3 +1431,35 @@ input[type="number"] {
 .destructive-btn:active {
   background: rgba(255, 59, 48, 0.05);
 }
+/* ═══ Header Pill Buttons ═══ */
+.nav-bar-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 123, 255, 0.08); /* iOS Blue tint */
+  color: var(--primary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.1s;
+  max-width: 220px;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-bar-pill-btn:active {
+  background: rgba(0, 123, 255, 0.16);
+  transform: scale(0.97);
+}
+
+.nav-bar-pill-btn .material-symbols-outlined {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.bank-pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

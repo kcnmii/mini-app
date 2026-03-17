@@ -43,6 +43,8 @@ export function App() {
   const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
   const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
   const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "all" | "custom", from?: string, to?: string }>({ type: "month" });
+  const [bankAccounts, setBankAccounts] = useState<{ id: number; bank_name: string; account_number: string; bic: string; currency: string; is_default: boolean }[]>([]);
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState<number | null>(null);
 
   const refreshProfileImages = useCallback(async () => {
     try {
@@ -221,16 +223,18 @@ export function App() {
         query = "?" + params.toString();
       }
 
-      const [c, i, d, p, summary, invRecords] = await Promise.all([
+      const [c, i, d, p, summary, invRecords, ba] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
         request<DashboardSummary>(`/dashboard/summary${query}`).catch(() => ({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 })),
         request<InvoiceRecord[]>("/invoices").catch(() => []),
+        request<{ id: number; bank_name: string; account_number: string; bic: string; currency: string; is_default: boolean }[]>("/banks/accounts").catch(() => []),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
       setInvoice(makeInitialInvoice(p));
       setDashboardSummary(summary);
       setInvoiceRecords(invRecords);
+      setBankAccounts(ba);
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
     } finally {
@@ -723,14 +727,25 @@ export function App() {
   const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
   const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
+  const selectedBa = bankAccounts.find(b => b.id === selectedBankAccountId);
+  const bankBtnLabel = bankAccounts.length === 0 ? "Добавить счёт" : selectedBa ? selectedBa.bank_name : "Все счета";
+
   const homeView = (
     <>
-      <NavBar
-        title="Главная"
-        onAction={() => setSubView("dateFilter" as any)}
-        actionIcon="calendar_month"
-        actionType="circle"
-      />
+      <div className="nav-bar">
+        <div className="nav-bar-inner">
+          <button className="nav-bar-btn-circle" onClick={() => {
+            if (bankAccounts.length === 0) { setProfileDraft(profile); setSubView("addBankAccount"); }
+            else setSubView("bankPicker" as any);
+          }} style={{ borderRadius: "20px", width: "auto", padding: "0 14px", gap: "6px", fontSize: "14px", fontWeight: 600 }}>
+            <Icon name={bankAccounts.length === 0 ? "add" : "account_balance"} />
+            <span>{bankBtnLabel}</span>
+          </button>
+          <button className="nav-bar-btn-circle" onClick={() => setSubView("dateFilter" as any)}>
+            <Icon name="calendar_month" />
+          </button>
+        </div>
+      </div>
       <div className="content-area">
         <Dashboard summary={dashboardSummary} />
 
@@ -908,6 +923,29 @@ export function App() {
             />
           </div>
         </div>
+        {bankAccounts.length > 0 && (
+          <>
+            <div className="section-title">Банковский счёт</div>
+            <div className="ios-group">
+              {bankAccounts.map(ba => (
+                <button className="ios-row" key={ba.id} onClick={() => {
+                  setInvoice(c => ({
+                    ...c,
+                    COMPANY_IIC: ba.account_number,
+                    COMPANY_BIC: ba.bic,
+                    BENEFICIARY_BANK: ba.bank_name,
+                  }));
+                }}>
+                  <div className="ios-row-content">
+                    <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
+                    <div className="ios-row-subtitle">{ba.account_number}</div>
+                  </div>
+                  {invoice.COMPANY_IIC === ba.account_number && <Icon name="check" style={{ color: "var(--primary)" }} />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="section-title">Клиент и договор</div>
         <div className="ios-group">
           <div className="form-field">
@@ -1729,9 +1767,18 @@ export function App() {
   // Date Filter Subview
   if (subView === ("dateFilter" as any)) {
     subViewContent = (
-      <div className="sub-view">
-        <NavBar title="Период" onBack={() => setSubView(null)} />
+      <>
+        <header className="nav-bar">
+          <div className="nav-bar-detail">
+            <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
+              <Icon name="close" />
+            </button>
+            <span className="nav-bar-title-center">Период</span>
+            <div className="nav-bar-right" />
+          </div>
+        </header>
         <div className="content-area">
+          <div className="section-title" style={{ paddingTop: 8 }}>Выберите период</div>
           <div className="ios-group">
             <button className="ios-row" onClick={() => { setDateFilter({ type: "today" }); setSubView(null); }}>
               <div className="ios-row-content"><div className="ios-row-title">Сегодня</div></div>
@@ -1743,11 +1790,11 @@ export function App() {
             </button>
             <button className="ios-row" onClick={() => { setDateFilter({ type: "month" }); setSubView(null); }}>
               <div className="ios-row-content"><div className="ios-row-title">Месяц</div></div>
-              {dateFilter.type === "month" && !dateFilter.from && <Icon name="check" style={{ color: "var(--primary)" }} />}
+              {dateFilter.type === "month" && <Icon name="check" style={{ color: "var(--primary)" }} />}
             </button>
-            <button className="ios-row" onClick={() => { setDateFilter({ type: "all" as any }); setSubView(null); }}>
+            <button className="ios-row" onClick={() => { setDateFilter({ type: "all" }); setSubView(null); }}>
               <div className="ios-row-content"><div className="ios-row-title">За все время</div></div>
-              {dateFilter.type === ("all" as any) && <Icon name="check" style={{ color: "var(--primary)" }} />}
+              {dateFilter.type === "all" && <Icon name="check" style={{ color: "var(--primary)" }} />}
             </button>
             <button className="ios-row" onClick={() => setDateFilter(d => ({ ...d, type: "custom" }))}>
               <div className="ios-row-content"><div className="ios-row-title">Кастомный период</div></div>
@@ -1764,7 +1811,6 @@ export function App() {
                   <input
                     type="date"
                     className="native-date-input"
-                    style={{ flex: 1, textAlign: "right", border: "none" }}
                     value={dateFilter.from?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
@@ -1775,7 +1821,6 @@ export function App() {
                   <input
                     type="date"
                     className="native-date-input"
-                    style={{ flex: 1, textAlign: "right", border: "none" }}
                     value={dateFilter.to?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
@@ -1787,7 +1832,47 @@ export function App() {
             </>
           )}
         </div>
-      </div>
+      </>
+    );
+  }
+
+  // Bank Account Picker Subview
+  if (subView === ("bankPicker" as any)) {
+    subViewContent = (
+      <>
+        <header className="nav-bar">
+          <div className="nav-bar-detail">
+            <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
+              <Icon name="close" />
+            </button>
+            <span className="nav-bar-title-center">Банковский счёт</span>
+            <div className="nav-bar-right" />
+          </div>
+        </header>
+        <div className="content-area">
+          <div className="section-title" style={{ paddingTop: 8 }}>Выберите счёт</div>
+          <div className="ios-group">
+            <button className="ios-row" onClick={() => { setSelectedBankAccountId(null); setSubView(null); }}>
+              <div className="ios-row-content"><div className="ios-row-title">Все счета</div></div>
+              {selectedBankAccountId === null && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
+            {bankAccounts.map(ba => (
+              <button className="ios-row" key={ba.id} onClick={() => { setSelectedBankAccountId(ba.id); setSubView(null); }}>
+                <div className="ios-row-content">
+                  <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
+                  <div className="ios-row-subtitle">{ba.account_number}</div>
+                </div>
+                {selectedBankAccountId === ba.id && <Icon name="check" style={{ color: "var(--primary)" }} />}
+              </button>
+            ))}
+          </div>
+          <div style={{ padding: "24px 16px" }}>
+            <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}>
+              <Icon name="add_circle" /> Добавить счёт
+            </button>
+          </div>
+        </div>
+      </>
     );
   }
 
