@@ -59,7 +59,9 @@ export function App() {
 
   const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload } = useBanks(setStatus, setBusy);
 
-  async function loadData() {
+  const { setInvoice, setDashboardSummary, setInvoiceRecords } = invHook;
+
+  const loadData = useCallback(async () => {
     try {
       let query = "";
       if (dateFilter.type !== "month" || dateFilter.from || dateFilter.to) {
@@ -80,7 +82,7 @@ export function App() {
         query = "?" + params.toString();
       }
 
-      const [c, i, d, p, summary, invRecords, ba] = await Promise.all([
+      const [c, i, d, p, summary, invRecs, ba] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
         request<DashboardSummary>(`/dashboard/summary${query}`).catch(() => ({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 })),
@@ -88,16 +90,14 @@ export function App() {
         request<{ id: number; bank_name: string; account_number: string; bic: string; currency: string; is_default: boolean }[]>("/banks/accounts").catch(() => []),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
-      invHook.setInvoice(makeInitialInvoice(p));
-      invHook.setDashboardSummary(summary);
-      invHook.setInvoiceRecords(invRecords);
+      setInvoice(makeInitialInvoice(p));
+      setDashboardSummary(summary);
+      setInvoiceRecords(invRecs);
       setBankAccounts(ba);
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
-    } finally {
-      setIsAppReady(true);
     }
-  }
+  }, [dateFilter, setClients, setItems, setDocuments, setProfile, setProfileDraft, setInvoice, setDashboardSummary, setInvoiceRecords, setBankAccounts, setStatus]);
 
   const { isAppReady, setIsAppReady, authUser, setAuthUser, chatId, setChatId, isAuthenticated, webApp, logout } = useAuth(setStatus, loadData);
 

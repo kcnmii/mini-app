@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getTelegramWebApp, authRequest, setAuthToken, getAuthToken, DEFAULT_TEST_CHAT_ID } from "../utils";
 
 export function useAuth(setStatus: (s: string) => void, onAuthenticated: () => Promise<void>) {
@@ -6,6 +6,9 @@ export function useAuth(setStatus: (s: string) => void, onAuthenticated: () => P
     const [isAppReady, setIsAppReady] = useState(false);
     const [authUser, setAuthUser] = useState<any>(null);
     const [chatId, setChatId] = useState(DEFAULT_TEST_CHAT_ID);
+
+    const onAuthRef = useRef(onAuthenticated);
+    onAuthRef.current = onAuthenticated;
 
     const isAuthenticated = !!getAuthToken();
 
@@ -19,17 +22,20 @@ export function useAuth(setStatus: (s: string) => void, onAuthenticated: () => P
                 setAuthUser(authData.user);
                 setAuthToken(authData.access_token);
                 setChatId(String(authData.user.id));
-                await onAuthenticated();
+                await onAuthRef.current();
+                setIsAppReady(true);
             } catch {
                 setStatus("Ошибка авторизации");
                 setIsAppReady(true);
             }
         };
-    }, [setStatus, onAuthenticated]);
+    }, [setStatus]);
 
     useEffect(() => {
-        webApp?.ready?.();
-        webApp?.expand?.();
+        if (webApp) {
+            webApp.ready?.();
+            webApp.expand?.();
+        }
 
         async function initAuth() {
             if (webApp?.initData) {
@@ -41,11 +47,11 @@ export function useAuth(setStatus: (s: string) => void, onAuthenticated: () => P
                     setAuthUser(authData.user);
                     setAuthToken(authData.access_token);
                     setChatId(String(authData.user.id));
-                    await onAuthenticated();
+                    await onAuthRef.current();
+                    setIsAppReady(true);
                 } catch {
                     setStatus("Ошибка авторизации");
                     setIsAppReady(true);
-                    return;
                 }
             } else {
                 setIsAppReady(true);
@@ -53,7 +59,7 @@ export function useAuth(setStatus: (s: string) => void, onAuthenticated: () => P
         }
 
         initAuth();
-    }, [webApp, setStatus, onAuthenticated]);
+    }, [webApp, setStatus]);
 
     const logout = useCallback(() => {
         setAuthToken("");
