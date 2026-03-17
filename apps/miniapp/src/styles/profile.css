@@ -1,0 +1,123 @@
+/* ═══ Settings Rows (Profile) ═══ */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    transition: background 0.15s;
+}
+
+.settings-row:not(:last-child) {
+    border-bottom: 0.5px solid #e2e8f0;
+}
+
+.settings-row:active {
+    background: #f8fafc;
+}
+
+.settings-row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.settings-icon .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.settings-icon.red {
+    background: #FF3B30;
+}
+
+.settings-icon.blue {
+    background: #007bff;
+}
+
+.settings-icon.dark {
+    background: #3a3a3c;
+}
+
+.settings-row-label {
+    font-size: 15px;
+}
+
+.settings-row-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+}
+
+.settings-row-right span:first-child {
+    font-size: 15px;
+}
+
+/* ═══ Upload Rows (Profile) ═══ */
+.upload-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.upload-row:not(:last-child) {
+    border-bottom: 0.5px solid #e2e8f0;
+}
+
+.upload-row:active {
+    background: #f8fafc;
+}
+
+.upload-row-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.upload-row-title {
+    font-size: 15px;
+}
+
+.upload-row-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.upload-row-action {
+    display: flex;
+    align-items: center;
+    color: var(--primary);
+}
+
+.upload-preview-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-preview-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.requisites-card-edit {
+    color: var(--text-muted);
+}

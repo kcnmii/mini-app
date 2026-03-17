@@ -1,0 +1,147 @@
+/* ═══ Nav Bar (iOS Large Title style) ═══ */
+.nav-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    padding: 16px 16px 8px;
+}
+
+.nav-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 4px;
+}
+
+.nav-bar-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.nav-bar-btn {
+    color: var(--primary);
+}
+
+.nav-bar-btn .material-symbols-outlined {
+    font-size: 28px;
+}
+
+.nav-bar-btn-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 123, 255, 0.08);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-bar-btn-circle:active {
+    background: rgba(0, 123, 255, 0.16);
+}
+
+.nav-bar-btn-circle .material-symbols-outlined {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.nav-bar-btn-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--primary);
+    min-width: 80px;
+    text-align: left;
+}
+
+/* Detail nav bar (centered title + back) */
+.nav-bar-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    padding: 0 16px;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.nav-bar-back {
+    display: flex;
+    align-items: center;
+    color: var(--primary);
+    gap: 0;
+    min-width: 80px;
+    text-align: left;
+}
+
+.nav-bar-back .material-symbols-outlined {
+    font-size: 28px;
+}
+
+.nav-bar-back span:last-child {
+    font-size: 17px;
+}
+
+.nav-bar-title-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 17px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.nav-bar-right {
+    min-width: 80px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.nav-bar-right .nav-bar-btn-text {
+    text-align: right;
+}
+
+/* ═══ Header Pill Buttons ═══ */
+.nav-bar-pill-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 123, 255, 0.08);
+    /* iOS Blue tint */
+    color: var(--primary);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+    max-width: 220px;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-bar-pill-btn:active {
+    background: rgba(0, 123, 255, 0.16);
+    transform: scale(0.97);
+}
+
+.nav-bar-pill-btn .material-symbols-outlined {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.bank-pill-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

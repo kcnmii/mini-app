@@ -1,0 +1,49 @@
+import { useState, useCallback } from "react";
+import { request, makeInitialInvoice } from "../utils";
+import type { DocumentRecord, SupplierProfileData, InvoiceForm } from "../types";
+
+export function useDocuments(setStatus: (s: string) => void, setBusy: (b: any) => void, profile: SupplierProfileData, setSubView: (v: any) => void) {
+    const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+
+    const loadAndPreviewOldDocument = useCallback(async (id: number, setInvoice: (i: any) => void, setInvoiceClientSearch: (s: string) => void) => {
+        setBusy("save");
+        try {
+            const doc = await request<DocumentRecord & { payload_json?: string }>(`/documents/${id}`);
+
+            if (doc.payload_json) {
+                try {
+                    const payload = JSON.parse(doc.payload_json);
+                    setInvoice(payload);
+                    setInvoiceClientSearch(payload.CLIENT_NAME || "");
+                } catch (e) {
+                    console.error("Parse error", e);
+                }
+            } else if ((doc as any).reconstructed_items) {
+                const items = (doc as any).reconstructed_items.map((it: any, idx: number) => ({
+                    number: idx + 1,
+                    name: it.name,
+                    quantity: it.quantity,
+                    unit: it.unit,
+                    price: it.price,
+                    total: it.total,
+                    code: it.code || ""
+                }));
+                const reconstructed = makeInitialInvoice(profile);
+                reconstructed.CLIENT_NAME = doc.client_name;
+                reconstructed.TOTAL_SUM = doc.total_sum;
+                reconstructed.items = items;
+                const numMatch = doc.title.match(/(?:№|N)\s*([^\s]+)/);
+                if (numMatch) reconstructed.INVOICE_NUMBER = numMatch[1];
+                setInvoice(reconstructed);
+                setInvoiceClientSearch(doc.client_name);
+            }
+            setSubView("invoiceForm");
+        } catch (e) {
+            setStatus("Ошибка загрузки");
+        } finally {
+            setBusy("idle");
+        }
+    }, [profile, setBusy, setStatus, setSubView]);
+
+    return { documents, setDocuments, loadAndPreviewOldDocument };
+}

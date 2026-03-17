@@ -1,0 +1,219 @@
+/* ═══ Position Rows (Invoice Items) Editable ═══ */
+.position-row-edit {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    gap: 16px;
+}
+
+.position-row-edit:not(:last-child) {
+    border-bottom: 0.5px solid #e2e8f0;
+}
+
+.position-edit-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.position-input-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 4px;
+    width: 100%;
+    border-radius: 0;
+}
+
+.position-input-name:focus {
+    border-bottom-color: var(--primary);
+    outline: none;
+}
+
+.position-input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.position-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.position-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.position-input-group input {
+    font-size: 15px;
+    color: var(--text);
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 6px 8px;
+    width: 100%;
+    transition: border 0.2s, background 0.2s;
+}
+
+.position-input-group input:focus {
+    background: #fff;
+    border-color: var(--primary);
+    outline: none;
+}
+
+.position-edit-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.position-total-calc {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.position-remove-btn {
+    color: var(--ios-red);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    padding: 4px;
+    margin-right: -4px;
+}
+
+.position-remove-btn:active {
+    opacity: 0.6;
+}
+
+.item-total-accent {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.item-delete-btn {
+    color: var(--ios-red);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: -8px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.item-delete-btn:active {
+    opacity: 1;
+}
+
+.add-position-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 16px;
+    color: var(--primary);
+    font-size: 17px;
+    transition: background 0.15s;
+    text-align: left;
+}
+
+.add-position-btn:active {
+    background: #f8fafc;
+}
+
+/* ═══ Invoice Footer ═══ */
+.invoice-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 8px));
+    z-index: 50;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.invoice-footer-inner {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.invoice-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 4px;
+}
+
+.invoice-total-label {
+    font-size: 17px;
+    color: var(--text-muted);
+}
+
+.invoice-total-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.invoice-send-btn {
+    width: 100%;
+    padding: 16px 0;
+    background: var(--primary);
+    color: white;
+    font-size: 17px;
+    font-weight: 600;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.15s;
+    margin-bottom: 12px;
+}
+
+.invoice-send-btn:active {
+    opacity: 0.8;
+}
+
+.invoice-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.invoice-draft-btn {
+    width: 100%;
+    padding: 12px 0;
+    color: var(--primary);
+    font-size: 17px;
+    text-align: center;
+    transition: opacity 0.15s;
+    background: transparent;
+    border: none;
+}
+
+.invoice-draft-btn:active {
+    opacity: 0.6;
+}
+
+.invoice-draft-btn:disabled {
+    opacity: 0.4;
+}

@@ -1,0 +1,143 @@
+/* ═══ iOS Inset Grouped List ═══ */
+.ios-group {
+    margin: 0 16px;
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Basic row */
+.ios-row {
+    display: flex;
+    align-items: center;
+    padding: 18px 16px;
+    transition: background 0.15s;
+    width: 100%;
+    text-align: left;
+}
+
+.ios-row:not(:last-child) {
+    border-bottom: 0.5px solid #e2e8f0;
+}
+
+.ios-row:active {
+    background: #f8fafc;
+}
+
+.ios-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.ios-row-title {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ios-row-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.ios-row-right {
+    display: flex;
+    align-items: center;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.ios-row-right .material-symbols-outlined {
+    color: #cbd5e1;
+    font-size: 22px;
+}
+
+/* Document row with amount */
+.doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    transition: background 0.15s;
+    width: 100%;
+}
+
+.doc-row:not(:last-child) {
+    border-bottom: 0.5px solid #e2e8f0;
+}
+
+.doc-row:active {
+    background: #f8fafc;
+}
+
+.doc-row-left {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.doc-row-title {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.doc-row-date {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.doc-row-amount {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 16px;
+    padding-top: 2px;
+    text-align: right;
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    width: fit-content;
+}
+
+.badge-green {
+    background: var(--badge-green-bg);
+    color: var(--badge-green-text);
+}
+
+.badge-gray {
+    background: var(--badge-gray-bg);
+    color: var(--badge-gray-text);
+}
+
+.badge-blue {
+    background: var(--badge-blue-bg);
+    color: var(--badge-blue-text);
+    width: auto;
+    line-height: normal;
+}
+
+.ios-group.no-border .doc-row,
+.ios-group.no-border .ios-row {
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+}

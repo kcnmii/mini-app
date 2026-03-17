@@ -1,0 +1,64 @@
+/* ═══ iOS-style Design System — taken from stitch_dashboard_home designs ═══ */
+
+:root {
+    --primary: #007bff;
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #8E8E93;
+    --separator: rgba(60, 60, 67, 0.12);
+    --ios-green: #34C759;
+    --ios-red: #FF3B30;
+    --badge-green-bg: #dcfce7;
+    --badge-green-text: #15803d;
+    --badge-gray-bg: #f1f5f9;
+    --badge-gray-text: #475569;
+    --badge-blue-bg: #eff6ff;
+    --badge-blue-text: #007bff;
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+    min-height: 100dvh;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    border: none;
+    outline: none;
+    background: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+button {
+    cursor: pointer;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined.filled {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}

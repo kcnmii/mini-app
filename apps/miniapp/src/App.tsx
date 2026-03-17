@@ -1,19 +1,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import type { TabKey, Client, CatalogItem, DocumentItem, InvoiceForm, DocumentRecord, ClientDraft, ItemDraft, SupplierProfileData, ClientBankAccount, ClientContact, InvoiceRecord, DashboardSummary, ClientBalance } from "./types";
 import { API_BASE_URL, DEFAULT_TEST_CHAT_ID, emptyProfile, makeInitialInvoice, getTelegramWebApp, request, authRequest, setAuthToken, getAuthToken, parseMoney, formatMoney, buildInvoicePatch, getAvatarColor } from "./utils";
-import { getBankByIIK } from "./utils/bankAutofill";
-import { fetchCompanyByBin } from "./utils/binAutofill";
-import { parse1CFile } from "./utils/oneCParser";
 
 import { Icon, Toggle } from "./components/Common";
-import { StatusBadge } from "./components/StatusBadge";
-import { ImageUploadRow } from "./components/ImageUploadRow";
-import { NavBar } from "./components/NavBar";
-import { Dashboard } from "./components/Dashboard";
-import { InvoiceRow } from "./components/InvoiceRow";
-import { ClientRow } from "./components/ClientRow";
-import { ItemRow } from "./components/ItemRow";
-import { DocumentRow } from "./components/DocumentRow";
 import { TelegramLoginButton } from "./components/TelegramLoginButton";
 import { DateFilterView } from "./views/DateFilterView";
 import { BankPickerView } from "./views/BankPickerView";
@@ -24,186 +13,51 @@ import { ItemsView } from "./views/ItemsView";
 import { ProfileView } from "./views/ProfileView";
 import { AddBankAccountView } from "./views/AddBankAccountView";
 import { EditRequisitesView } from "./views/EditRequisitesView";
+import { AddItemView } from "./views/AddItemView";
+import { AddClientView } from "./views/AddClientView";
+import { AddClientBankAccountView } from "./views/AddClientBankAccountView";
+import { AddClientContactView } from "./views/AddClientContactView";
+import { InvoiceFormView } from "./views/InvoiceFormView";
+import { ViewDocumentView } from "./views/ViewDocumentView";
 
-
-
+import { useAuth } from "./hooks/useAuth";
+import { useSharedState } from "./hooks/useSharedState";
+import { useProfile } from "./hooks/useProfile";
+import { useClients } from "./hooks/useClients";
+import { useCatalog } from "./hooks/useCatalog";
+import { useInvoices } from "./hooks/useInvoices";
+import { useDocuments } from "./hooks/useDocuments";
+import { useBanks } from "./hooks/useBanks";
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
 export function App() {
-  const webApp = useMemo(getTelegramWebApp, []);
   const [tab, setTab] = useState<TabKey>("home");
-  const [chatId, setChatId] = useState(DEFAULT_TEST_CHAT_ID);
-  const [invoice, setInvoice] = useState<InvoiceForm>(makeInitialInvoice());
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [items, setItems] = useState<CatalogItem[]>([]);
-  const [profile, setProfile] = useState<SupplierProfileData>(emptyProfile);
-  const [profileDraft, setProfileDraft] = useState<SupplierProfileData>(emptyProfile);
-  const [clientDraft, setClientDraft] = useState<ClientDraft>({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
-  const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: "", unit: "шт.", price: "", sku: "" });
-  const [status, setStatus] = useState("");
-  // Phase 2: Dashboard + Invoice records
-  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary>({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 });
-  const [invoiceRecords, setInvoiceRecords] = useState<InvoiceRecord[]>([]);
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
-  const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
   const [clientSearch, setClientSearch] = useState("");
   const [itemSearch, setItemSearch] = useState("");
-  const [invoiceClientSearch, setInvoiceClientSearch] = useState("");
   const [docSearch, setDocSearch] = useState("");
-  // subView: null = show tab content, others = full-page sub-views
-  const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument" | "addClientBankAccount" | "addClientContact">(null);
-  const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
-  const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
   const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "all" | "custom", from?: string, to?: string }>({ type: "month" });
-  const [bankAccounts, setBankAccounts] = useState<{ id: number; bank_name: string; account_number: string; bic: string; currency: string; is_default: boolean }[]>([]);
-  const [selectedBankAccountId, setSelectedBankAccountId] = useState<number | null>(null);
 
-  const refreshProfileImages = useCallback(async () => {
-    try {
-      const p = await request<SupplierProfileData>("/profile");
-      setProfile(p);
-      setProfileDraft(p);
-      setInvoice(c => ({
-        ...c,
-        INCLUDE_LOGO: c.INCLUDE_LOGO || !!p.logo_path,
-        INCLUDE_SIGNATURE: c.INCLUDE_SIGNATURE || !!p.signature_path,
-        INCLUDE_STAMP: c.INCLUDE_STAMP || !!p.stamp_path,
-      }));
-    } catch { }
-  }, []);
-  const [editingBaIndex, setEditingBaIndex] = useState<number | null>(null);
-  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
-  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [previewPages, setPreviewPages] = useState<string[]>([]);
-  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
-  const [selectedCatalogClient, setSelectedCatalogClient] = useState<Client | null>(null);
-  const [isBinLoading, setIsBinLoading] = useState(false);
-  const [clientBalance, setClientBalance] = useState<ClientBalance | null>(null);
+  const { status, setStatus, busy, setBusy, subView, setSubView, isBinLoading, setIsBinLoading } = useSharedState();
 
-  async function openNewInvoice() {
-    const fresh = makeInitialInvoice(profile);
-    setInvoice(fresh);
-    setInvoiceClientSearch("");
-    setSubView("invoiceForm");
-    setSelectedDocId(null);
-    setSelectedInvoiceId(null);
-    try {
-      const { next_number } = await request<{ next_number: string }>("/documents/next-number");
-      setInvoice(c => ({ ...c, INVOICE_NUMBER: next_number }));
-    } catch (e) {
-      console.error("Failed to fetch next number", e);
-    }
-  }
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadAndPreviewNewInvoice(id: number) {
-    setBusy("save");
-    setPreviewPages([]);
-    setIsPdfLoading(true);
-    try {
-      const inv = await request<InvoiceRecord>(`/invoices/${id}`);
-      setSelectedDocId(null);
-      setSelectedInvoiceId(id);
+  const { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount } = useProfile(setStatus, setBusy, (i) => invHook.setInvoice(i), setSubView);
 
-      // Reconstruct UI state for editing
-      const reconstructed = makeInitialInvoice(profile);
-      reconstructed.INVOICE_NUMBER = inv.number;
-      if (inv.date) {
-        const dparts = inv.date.split('T')[0].split('-');
-        reconstructed.INVOICE_DATE = `${dparts[2]}.${dparts[1]}.${dparts[0]}`;
-      }
-      if (inv.due_date) {
-        const uparts = inv.due_date.split('T')[0].split('-');
-        reconstructed.DUE_DATE = `${uparts[2]}.${uparts[1]}.${uparts[0]}`;
-      }
-      reconstructed.CLIENT_NAME = inv.client_name;
-      reconstructed.CLIENT_IIN = inv.client_bin;
-      reconstructed.DEAL_REFERENCE = inv.deal_reference;
-      reconstructed.PAYMENT_CODE = inv.payment_code;
-      reconstructed.TOTAL_SUM = String(inv.total_amount);
-      reconstructed.items = inv.line_items.map((it, idx) => ({
-        number: idx + 1,
-        name: it.name,
-        quantity: String(it.quantity),
-        unit: it.unit,
-        price: String(it.price),
-        total: String(it.total),
-        code: it.code || ""
-      }));
-      setInvoice(reconstructed);
-      setInvoiceClientSearch(inv.client_name);
-      setSubView("viewDocument");
+  const invHook = useInvoices(setStatus, setBusy, profile, setSubView);
 
-      // Load preview images in background
-      try {
-        const preview = await request<{ pages: { data: string }[] }>(`/invoices/${id}/preview`);
-        setPreviewPages(preview.pages.map(p => p.data));
-      } catch {
-        console.error("preview load failed");
-      }
-    } catch (e) {
-      setStatus("Ошибка загрузки");
-    } finally {
-      setBusy("idle");
-      setIsPdfLoading(false);
-    }
-  }
+  const {
+    clients, setClients, clientDraft, setClientDraft, selectedCatalogClient, setSelectedCatalogClient, clientBalance, setClientBalance,
+    clientBaDraft, setClientBaDraft, clientContactDraft, setClientContactDraft, editingBaIndex, editingContactIndex,
+    openAddClientBa, saveClientBa, openAddClientContact, saveClientContact,
+    createClient, deleteClient, loadClientBalance
+  } = useClients(setStatus, setBusy, setSubView);
 
-  async function loadAndPreviewOldDocument(id: number) {
-    setBusy("save");
-    try {
-      const doc = await request<DocumentRecord & { payload_json?: string }>(`/documents/${id}`);
-      setSelectedDocId(id);
-      setSelectedInvoiceId(null);
+  const { items, setItems, itemDraft, setItemDraft, selectedCatalogItem, setSelectedCatalogItem, createItem, deleteItem } = useCatalog(setStatus, setBusy, setSubView);
 
-      // Load invoice data for editing
-      if (doc.payload_json) {
-        try {
-          const payload = JSON.parse(doc.payload_json);
-          setInvoice(payload);
-          setInvoiceClientSearch(payload.CLIENT_NAME || "");
-        } catch (e) {
-          console.error("Parse error", e);
-        }
-      } else if ((doc as any).reconstructed_items) {
-        const items = (doc as any).reconstructed_items.map((it: any, idx: number) => ({
-          number: idx + 1,
-          name: it.name,
-          quantity: it.quantity,
-          unit: it.unit,
-          price: it.price,
-          total: it.total,
-          code: it.code || ""
-        }));
-        const reconstructed = makeInitialInvoice(profile);
-        reconstructed.CLIENT_NAME = doc.client_name;
-        reconstructed.TOTAL_SUM = doc.total_sum;
-        reconstructed.items = items;
-        const numMatch = doc.title.match(/(?:№|N)\s*([^\s]+)/);
-        if (numMatch) reconstructed.INVOICE_NUMBER = numMatch[1];
-        setInvoice(reconstructed);
-        setInvoiceClientSearch(doc.client_name);
-      }
-      // For old documents we default to just the edit form
-      setSubView("invoiceForm");
-    } catch (e) {
-      setStatus("Ошибка загрузки");
-    } finally {
-      setBusy("idle");
-    }
-  }
+  const { documents, setDocuments, loadAndPreviewOldDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
 
-  // Status banner auto-hide
-  useEffect(() => {
-    if (!status) return;
-    const t = setTimeout(() => setStatus(""), 3000);
-    return () => clearTimeout(t);
-  }, [status]);
-
-  const [isAppReady, setIsAppReady] = useState(false);
-  const [authUser, setAuthUser] = useState<any>(null);
+  const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload } = useBanks(setStatus, setBusy);
 
   async function loadData() {
     try {
@@ -212,25 +66,15 @@ export function App() {
         const params = new URLSearchParams();
         let from: string | undefined = dateFilter.from;
         let to: string | undefined = dateFilter.to;
-
         if (dateFilter.type === "today") {
-          const d = new Date();
-          d.setHours(0, 0, 0, 0);
-          from = d.toISOString();
+          const d = new Date(); d.setHours(0, 0, 0, 0); from = d.toISOString();
         } else if (dateFilter.type === "week") {
-          const d = new Date();
-          d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1)); // Monday
-          d.setHours(0, 0, 0, 0);
-          from = d.toISOString();
+          const d = new Date(); d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1)); d.setHours(0, 0, 0, 0); from = d.toISOString();
         } else if (dateFilter.type === "month") {
-          const d = new Date();
-          d.setDate(1);
-          d.setHours(0, 0, 0, 0);
-          from = d.toISOString();
+          const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); from = d.toISOString();
         } else if (dateFilter.type === "all") {
           params.set("all_time", "true");
         }
-
         if (from) params.set("from_date", from);
         if (to) params.set("to_date", to);
         query = "?" + params.toString();
@@ -244,9 +88,9 @@ export function App() {
         request<{ id: number; bank_name: string; account_number: string; bic: string; currency: string; is_default: boolean }[]>("/banks/accounts").catch(() => []),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
-      setInvoice(makeInitialInvoice(p));
-      setDashboardSummary(summary);
-      setInvoiceRecords(invRecords);
+      invHook.setInvoice(makeInitialInvoice(p));
+      invHook.setDashboardSummary(summary);
+      invHook.setInvoiceRecords(invRecords);
       setBankAccounts(ba);
     } catch (e) {
       setTimeout(() => setStatus("Ошибка: сервер недоступен"), 500);
@@ -255,1129 +99,118 @@ export function App() {
     }
   }
 
-  // Telegram Login Widget callback — exposed globally for the widget script
-  useEffect(() => {
-    (window as any).onTelegramAuth = async (user: any) => {
-      try {
-        const authData = await authRequest<{ access_token: string; user: any }>("/auth/telegram/widget", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-        setAuthUser(authData.user);
-        setAuthToken(authData.access_token);
-        setChatId(String(authData.user.id));
-        await loadData();
-      } catch {
-        setStatus("Ошибка авторизации");
-        setIsAppReady(true);
-      }
-    };
-  }, []);
+  const { isAppReady, setIsAppReady, authUser, setAuthUser, chatId, setChatId, isAuthenticated, webApp, logout } = useAuth(setStatus, loadData);
+
   useEffect(() => {
     if (!!getAuthToken()) {
       loadData();
     }
   }, [dateFilter]);
 
-  useEffect(() => {
-    webApp?.ready?.();
-    webApp?.expand?.();
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
+  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
-    async function initAuth() {
-      // Path 1: Telegram Mini App — initData is available
-      if (webApp?.initData) {
-        try {
-          const authData = await authRequest<{ access_token: string; user: any }>("/auth/telegram/init", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ init_data: webApp.initData }),
-          });
-          setAuthUser(authData.user);
-          setAuthToken(authData.access_token);
-          setChatId(String(authData.user.id));
-        } catch {
-          setStatus("Ошибка авторизации");
-          setIsAppReady(true);
-          return;
-        }
-        await loadData();
-        return;
-      }
+  const loginView = (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "24px", padding: "32px" }}>
+      <div style={{ fontSize: "48px" }}><Icon name="description" /></div>
+      <h1 style={{ fontSize: "22px", fontWeight: 700, textAlign: "center", margin: 0 }}>Doc Mini App</h1>
+      <p style={{ color: "var(--text-secondary)", textAlign: "center", fontSize: "15px", margin: 0, maxWidth: "280px" }}>Войдите через Telegram, чтобы управлять документами, клиентами и каталогом.</p>
+      <TelegramLoginButton />
+    </div>
+  );
 
-      // Path 2: Browser — no initData, show login widget
-      // We just mark app as ready without loading data (user needs to login first)
-      setIsAppReady(true);
-    }
-
-    initAuth();
-  }, [webApp]);
-
-  function updateItem(index: number, key: keyof DocumentItem, value: string) {
-    setInvoice((c) => {
-      const ni = c.items.map((it, ii) => ii === index ? { ...it, [key]: value } : it);
-      return { ...c, ...buildInvoicePatch(ni) };
-    });
-  }
-  function addRow(item?: CatalogItem) {
-    setInvoice((c) => {
-      const ni = [...c.items, { number: c.items.length + 1, name: item?.name ?? "", quantity: "1", unit: item?.unit ?? "шт.", price: item ? String(item.price) : "", total: item ? formatMoney(item.price) : "0", code: item?.sku ?? "" }];
-      return { ...c, ...buildInvoicePatch(ni) };
-    });
-  }
-  function removeRow(index: number) {
-    setInvoice((c) => {
-      const ni = c.items.filter((_, ii) => ii !== index);
-      return { ...c, ...buildInvoicePatch(ni) };
-    });
-  }
-  function changeQuantity(index: number, delta: number) {
-    setInvoice((c) => {
-      const ni = c.items.map((it, ii) => {
-        if (ii !== index) return it;
-        const nq = Math.max(1, (parseFloat(it.quantity) || 0) + delta);
-        return { ...it, quantity: String(nq) };
-      });
-      return { ...c, ...buildInvoicePatch(ni) };
-    });
-  }
-  function openAddClientBa(index?: number) {
-    if (index !== undefined) {
-      setClientBaDraft(clientDraft.accounts[index]);
-      setEditingBaIndex(index);
-    } else {
-      setClientBaDraft({ iic: "", bank_name: "", bic: "", kbe: clientDraft.kbe || "", is_main: false });
-      setEditingBaIndex(null);
-    }
-    setSubView("addClientBankAccount");
-  }
-
-  function saveClientBa() {
-    setClientDraft((c) => {
-      const na = [...c.accounts];
-      if (editingBaIndex !== null) {
-        na[editingBaIndex] = clientBaDraft;
-      } else {
-        na.push(clientBaDraft);
-      }
-      return { ...c, accounts: na };
-    });
-    setSubView("addClient");
-  }
-
-  function openAddClientContact(index?: number) {
-    if (index !== undefined) {
-      setClientContactDraft(clientDraft.contacts[index]);
-      setEditingContactIndex(index);
-    } else {
-      setClientContactDraft({ name: "", phone: "", email: "" });
-      setEditingContactIndex(null);
-    }
-    setSubView("addClientContact");
-  }
-
-  function saveClientContact() {
-    setClientDraft((c) => {
-      const nc = [...c.contacts];
-      if (editingContactIndex !== null) {
-        nc[editingContactIndex] = clientContactDraft;
-      } else {
-        nc.push(clientContactDraft);
-      }
-      return { ...c, contacts: nc };
-    });
-    setSubView("addClient");
-  }
-
-  function selectClient(client: Client) {
-    setInvoice((c) => ({ ...c, CLIENT_NAME: client.name, CLIENT_IIN: client.bin_iin, CLIENT_ADDRESS: client.address || "", CLIENT_ID: client.id }));
-    setInvoiceClientSearch(client.name);
-    setStatus(`Клиент: ${client.name}`);
-  }
-
-  async function createClient() {
-    if (!clientDraft.name.trim()) return;
-    setBusy("save");
-
-    if (selectedCatalogClient) {
-      // Optimistic update
-      const optimisticClient = { ...selectedCatalogClient, ...clientDraft } as Client;
-      setClients((c) => c.map(cl => cl.id === optimisticClient.id ? optimisticClient : cl));
-      setStatus("Клиент обновлен");
-      setSubView(tab === "home" ? "invoiceForm" : null);
-      setBusy("idle");
-      // sync in background
-      request<Client>(`/clients/${selectedCatalogClient.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(clientDraft)
-      }).then(updated => {
-        setClients((c) => c.map(cl => cl.id === updated.id ? updated : cl));
-      }).catch(() => setStatus("Ошибка синхронизации"));
-      return;
-    }
-
-    const existingByBin = clients.find(cl => cl.bin_iin === clientDraft.bin_iin && cl.bin_iin !== "");
-    let finalClient: Client;
-
-    if (!existingByBin) {
-      // Optimistic: add with temp id, then replace
-      const tempClient: Client = { id: -Date.now(), ...clientDraft, created_at: new Date().toISOString() };
-      setClients((c) => [tempClient, ...c]);
-      finalClient = tempClient;
-      setStatus("Клиент сохранен");
-      // sync in background
-      request<Client>("/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientDraft) })
-        .then(real => setClients((c) => c.map(cl => cl.id === tempClient.id ? real : cl)))
-        .catch(() => {
-          setClients((c) => c.filter(cl => cl.id !== tempClient.id));
-          setStatus("Ошибка сохранения клиента");
-        });
-    } else {
-      finalClient = existingByBin;
-      setStatus("Клиент добавлен");
-    }
-
-    setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
-    setSelectedCatalogClient(null);
-
-    if (tab === "home") {
-      selectClient(finalClient);
-    }
-
-    setSubView(tab === "home" ? "invoiceForm" : null);
-    setBusy("idle");
-  }
-  async function createItem() {
-    if (!itemDraft.name.trim()) return;
-    setBusy("save");
-    try {
-      const draftNameMatch = itemDraft.name.trim().toLowerCase();
-      let existingItem = items.find((it) => it.name.trim().toLowerCase() === draftNameMatch);
-
-      const isModified = selectedCatalogItem && (
-        selectedCatalogItem.name !== itemDraft.name ||
-        selectedCatalogItem.unit !== itemDraft.unit ||
-        parseMoney(String(selectedCatalogItem.price)) !== parseMoney(itemDraft.price) ||
-        (selectedCatalogItem.sku || "") !== (itemDraft.sku || "")
-      );
-
-      if (isModified && selectedCatalogItem) {
-        // Update existing
-        const updated = await request<CatalogItem>(`/catalog/items/${selectedCatalogItem.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: itemDraft.name, unit: itemDraft.unit, price: parseMoney(itemDraft.price), sku: itemDraft.sku })
-        });
-        setItems((c) => c.map(i => i.id === updated.id ? updated : i));
-        setSelectedCatalogItem(updated);
-        setStatus("Товар обновлен");
-        return; // Stay on screen to let user click "Ready"
-      }
-
-      if (!existingItem) {
-        existingItem = await request<CatalogItem>("/catalog/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: itemDraft.name, unit: itemDraft.unit, price: parseMoney(itemDraft.price), sku: itemDraft.sku })
-        });
-        setItems((c) => [existingItem!, ...c]);
-        setStatus("Товар сохранен");
-      } else {
-        setStatus("Товар добавлен");
-      }
-
-      if (tab === "home") {
-        addRow(existingItem);
-      }
-
-      setItemDraft({ name: "", unit: "шт.", price: "", sku: "" });
-      setSelectedCatalogItem(null);
-      setSubView(tab === "home" ? "invoiceForm" : null);
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка");
-    } finally { setBusy("idle"); }
-  }
-  async function saveInvoice() {
-    setBusy("save");
-    setStatus("Сохранение...");
-    try {
-      const payloadDate = invoice.INVOICE_DATE.split('.').reverse().join('-');
-      // 1. Generate PDF by saving DocumentRecord (old API)
-      const docRequest = request<DocumentRecord>("/documents/invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payload: invoice }) });
-
-      // 2. Save financial tracking record (new Phase 1 API)
-      const newInvBody = {
-        number: invoice.INVOICE_NUMBER,
-        date: payloadDate,
-        due_date: invoice.DUE_DATE || null,
-        client_id: (invoice as any).CLIENT_ID || null,
-        client_name: invoice.CLIENT_NAME,
-        client_bin: invoice.CLIENT_IIN,
-        deal_reference: invoice.DEAL_REFERENCE || "",
-        payment_code: invoice.PAYMENT_CODE || "",
-        items: invoice.items.map(i => ({
-          name: i.name || "Позиция",
-          quantity: parseFloat(i.quantity) || 1,
-          unit: i.unit,
-          price: parseMoney(i.price),
-          total: parseMoney(i.total),
-          code: i.code
-        }))
-      };
-
-      // Try to save to both safely
-      let newDoc: DocumentRecord | null = null;
-      try {
-        newDoc = await docRequest;
-        setDocuments((c) => [newDoc!, ...c].slice(0, 50));
-      } catch (e) { console.error("document API error", e); }
-
-      // If updating an existing document/invoice, we might need a PUT, but current flow creates a new one every time or updates existing via another way?
-      // For now, in Phase 4 we just send to newly created API:
-      if (!selectedDocId) {
-        try {
-          await request<InvoiceRecord>("/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newInvBody) });
-        } catch (e) { console.error("invoice API error", e); }
-      }
-
-      setStatus("Счет сохранен");
-      setSubView(null);
-      setSelectedDocId(null);
-      setSelectedInvoiceId(null);
-      loadData(); // Refresh stats and other lists
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
-  }
-  async function deleteInvoice() {
-    if (!selectedDocId && !selectedInvoiceId) return;
-    if (!confirm("Вы уверены, что хотите удалить этот счет?")) return;
-
-    if (selectedInvoiceId) {
-      const deletedId = selectedInvoiceId;
-      const backup = invoiceRecords;
-      setInvoiceRecords((c) => c.filter(d => d.id !== deletedId));
-      setStatus("Счет удален");
-      setSubView(null);
-      setSelectedDocId(null);
-      setSelectedInvoiceId(null);
-      request(`/invoices/${deletedId}`, { method: "DELETE" })
-        .catch(() => { setInvoiceRecords(backup); setStatus("Ошибка: не удалось удалить счет"); });
-    } else if (selectedDocId) {
-      const deletedId = selectedDocId;
-      const backup = documents;
-      // Optimistic: remove immediately
-      setDocuments((c) => c.filter(d => d.id !== deletedId));
-      setStatus("Документ удален");
-      setSubView(null);
-      setSelectedDocId(null);
-      setSelectedInvoiceId(null);
-      // Sync in background
-      request(`/documents/${deletedId}`, { method: "DELETE" })
-        .catch(() => { setDocuments(backup); setStatus("Ошибка: не удалось удалить документ"); });
-    }
-  }
-  async function deleteClient() {
-    if (!selectedCatalogClient) return;
-    if (!confirm("Вы уверены, что хотите удалить этого клиента?")) return;
-    const deletedId = selectedCatalogClient.id;
-    const backup = clients;
-    // Optimistic: remove immediately
-    setClients((c) => c.filter(cl => cl.id !== deletedId));
-    setStatus("Клиент удален");
-    setSubView(null);
-    setSelectedCatalogClient(null);
-    setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
-    // Sync in background
-    request(`/clients/${deletedId}`, { method: "DELETE" })
-      .catch(() => { setClients(backup); setStatus("Ошибка: не удалось удалить клиента"); });
-  }
-
-  async function loadClientBalance(clientId: number) {
-    try {
-      const b = await request<ClientBalance>(`/clients/${clientId}/balance`);
-      setClientBalance(b);
-    } catch (e) { console.error("balance fetch error", e); }
-  }
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const refreshDashboardAndInvoices = async () => {
-    try {
-      const summary = await request<DashboardSummary>("/dashboard/summary");
-      setDashboardSummary(summary);
-      const invList = await request<InvoiceRecord[]>("/invoices");
-      setInvoiceRecords(invList);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        setBusy("save");
-        const text = event.target?.result as string;
-        await parseAndImport1CFile(text);
-      } catch (error) {
-        console.error("1C Parse Error", error);
-        setStatus("Ошибка при чтении файла 1С");
-      } finally {
-        setBusy("idle");
-      }
-    };
-    // 1C files in KZ are typically windows-1251, but we can try UTF-8 first or use a fallback. We'll use windows-1251.
-    reader.readAsText(file, "windows-1251");
-    e.target.value = '';
-  };
-
-  const parseAndImport1CFile = async (text: string) => {
-    try {
-      const payload = parse1CFile(text, profile.company_iic || "");
-
-      const res = await request<any>("/banks/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      setStatus(`Из выписки 1С получено ${res.added_count} оп. Найдено оплат счетов: ${res.matched_count} ✅`);
-      if (res.matched_count > 0 || res.added_count > 0) {
-        refreshDashboardAndInvoices();
-      }
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Ошибка парсинга 1С");
-    }
-  };
-
-  async function deleteItem() {
-    if (!selectedCatalogItem) return;
-    if (!confirm("Вы уверены, что хотите удалить этот товар/услугу?")) return;
-    const deletedId = selectedCatalogItem.id;
-    const backup = items;
-    // Optimistic: remove immediately
-    setItems((c) => c.filter(i => i.id !== deletedId));
-    setStatus("Товар удален");
-    setSubView(null);
-    setSelectedCatalogItem(null);
-    setItemDraft({ name: "", unit: "шт.", price: "", sku: "" });
-    // Sync in background
-    request(`/catalog/items/${deletedId}`, { method: "DELETE" })
-      .catch(() => { setItems(backup); setStatus("Ошибка: не удалось удалить товар"); });
-  }
-  async function generatePdf() {
-    setBusy("pdf");
-    try {
-      const r = await fetch(`${API_BASE_URL}/render/invoice/pdf`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoice) });
-      if (!r.ok) throw new Error(await r.text());
-      const b = await r.blob(); window.open(URL.createObjectURL(b), "_blank"); setStatus("PDF сгенерирован");
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка PDF"); } finally { setBusy("idle"); }
-  }
-  async function sendInvoice() {
-    setBusy("send");
-    try {
-      await request("/telegram/send-invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: Number(chatId), payload: invoice }) });
-      setStatus("Отправлено в Telegram");
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка отправки"); } finally { setBusy("idle"); }
-  }
-
-  // Phase 3: Status management
-  async function markInvoicePaid(invoiceId: number) {
-    try {
-      await request(`/invoices/${invoiceId}/pay`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-      setStatus("Счёт отмечен как оплаченный ✅");
-      // Refresh invoices + dashboard
-      const [summary, invRecords] = await Promise.all([
-        request<DashboardSummary>("/dashboard/summary").catch(() => dashboardSummary),
-        request<InvoiceRecord[]>("/invoices").catch(() => invoiceRecords),
-      ]);
-      setDashboardSummary(summary); setInvoiceRecords(invRecords);
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); }
-  }
-
-  async function markInvoiceSent(invoiceId: number) {
-    try {
-      await request(`/invoices/${invoiceId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "sent" }) });
-      setStatus("Счёт отмечен как отправленный");
-      const [summary, invRecords] = await Promise.all([
-        request<DashboardSummary>("/dashboard/summary").catch(() => dashboardSummary),
-        request<InvoiceRecord[]>("/invoices").catch(() => invoiceRecords),
-      ]);
-      setDashboardSummary(summary); setInvoiceRecords(invRecords);
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); }
-  }
-  async function saveProfile() {
-    setBusy("save");
-    try {
-      const s = await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profileDraft) });
-      setProfile(s); setProfileDraft(s); setInvoice(makeInitialInvoice(s)); setStatus("Профиль сохранён");
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
-  }
-  async function deleteRequisites() {
-    if (!confirm("Вы уверены, что хотите удалить реквизиты?")) return;
-    const cleared = { ...profile, company_iin: "", company_name: "", supplier_address: "", executor_name: "", position: "", phone: "", email: "" };
-    setBusy("save");
-    try {
-      const s = await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cleared) });
-      setProfile(s); setProfileDraft(s); setInvoice(makeInitialInvoice(s)); setStatus("Реквизиты удалены");
-      setSubView(null);
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
-  }
-  async function deleteBankAccount() {
-    if (!confirm("Вы уверены, что хотите удалить банковский счет?")) return;
-    const cleared = { ...profile, company_iic: "", company_bic: "", beneficiary_bank: "" };
-    setBusy("save");
-    try {
-      const s = await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cleared) });
-      setProfile(s); setProfileDraft(s); setInvoice(makeInitialInvoice(s)); setStatus("Счет удален");
-      setSubView(null);
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка"); } finally { setBusy("idle"); }
-  }
-
-  /* ═══ RENDER: HOME TAB — MONEY DASHBOARD ═══ */
   const tgUser = authUser || webApp?.initDataUnsafe?.user;
   const tgName = [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(" ") || "Пользователь";
-  const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
-  const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
-
-
-  /* ═══ RENDER: INVOICE FORM (sub-view) ═══ */
-  const filteredClients = clients.filter((c) => !invoiceClientSearch || c.name.toLowerCase().includes(invoiceClientSearch.toLowerCase()) || c.bin_iin.includes(invoiceClientSearch));
-  const invoiceFormView = (
-    <>
-      <div className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">{(selectedDocId || selectedInvoiceId) ? `Счет ${invoice.INVOICE_NUMBER}` : "Новый счет"}</span>
-          <div className="nav-bar-right">
-            <button className="nav-bar-btn-circle" onClick={saveInvoice} disabled={busy !== "idle"}>
-              <Icon name="check" />
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="content-area has-footer">
-        <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
-        <div className="ios-group">
-          <div className="form-field">
-            <span className="form-field-label">Дата счета</span>
-            <input
-              type="date"
-              className="native-date-input"
-              value={invoice.INVOICE_DATE.includes('.') ? invoice.INVOICE_DATE.split('.').reverse().join('-') : invoice.INVOICE_DATE}
-              onChange={(e) => {
-                const val = e.target.value;
-                const [y, m, d] = val.split('-');
-                setInvoice((c) => ({ ...c, INVOICE_DATE: (y && m && d) ? `${d}.${m}.${y}` : val }));
-              }}
-            />
-          </div>
-          <div className="field-divider" />
-          <div className="form-field">
-            <span className="form-field-label">Срок оплаты</span>
-            <input
-              type="date"
-              className="native-date-input"
-              value={invoice.DUE_DATE || ""}
-              onChange={(e) => setInvoice(c => ({ ...c, DUE_DATE: e.target.value }))}
-            />
-          </div>
-        </div>
-        {bankAccounts.length > 0 && (
-          <>
-            <div className="section-title">Банковский счёт</div>
-            <div className="ios-group">
-              {bankAccounts.map(ba => (
-                <button className="ios-row" key={ba.id} onClick={() => {
-                  setInvoice(c => ({
-                    ...c,
-                    COMPANY_IIC: ba.account_number,
-                    COMPANY_BIC: ba.bic,
-                    BENEFICIARY_BANK: ba.bank_name,
-                  }));
-                }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
-                    <div className="ios-row-subtitle">{ba.account_number}</div>
-                  </div>
-                  {invoice.COMPANY_IIC === ba.account_number && <Icon name="check" style={{ color: "var(--primary)" }} />}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <div className="section-title">Клиент и договор</div>
-        <div className="ios-group">
-          <div className="form-field">
-            <span className="form-field-icon"><Icon name="search" /></span>
-            <input placeholder="Поиск по имени или БИН" value={invoiceClientSearch} onChange={(e) => setInvoiceClientSearch(e.target.value)} onClick={() => { if (invoiceClientSearch === invoice.CLIENT_NAME) setInvoiceClientSearch("") }} />
-          </div>
-          {(invoiceClientSearch && invoiceClientSearch !== invoice.CLIENT_NAME) && filteredClients.length > 0 && (
-            <>
-              {filteredClients.slice(0, 4).map((cl) => (
-                <div className="ios-row" key={cl.id} onClick={() => selectClient(cl)} style={{ cursor: "pointer" }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{cl.name}</div>
-                    <div className="ios-row-subtitle">{cl.bin_iin}</div>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-          <div className="field-divider" />
-          <div className="form-field">
-            <span className="form-field-icon"><Icon name="contract" /></span>
-            <input placeholder="Договор (опционально)..." value={invoice.DEAL_REFERENCE || ""} onChange={(e) => setInvoice(c => ({ ...c, DEAL_REFERENCE: e.target.value }))} />
-          </div>
-          <div className="field-divider" />
-          <div className="form-field">
-            <span className="form-field-icon"><Icon name="payments" /></span>
-            <input
-              placeholder="Код назначения платежа (КНП)"
-              value={invoice.PAYMENT_CODE || ""}
-              onChange={(e) => setInvoice(c => ({ ...c, PAYMENT_CODE: e.target.value }))}
-              inputMode="numeric"
-            />
-          </div>
-        </div>
-        <div className="section-title">Позиции</div>
-        {invoice.items.length > 0 && (
-          <div className="ios-group">
-            {invoice.items.map((it, idx) => (
-              <div className="ios-row item-row" key={`inv-${it.number}-${idx}`}>
-                <div className="ios-row-content">
-                  <div className="ios-row-title">{it.name || "Без названия"}</div>
-                  <div className="ios-row-subtitle">
-                    {formatMoney(parseMoney(it.price))} ₸ × {it.quantity} {it.unit}
-                  </div>
-                </div>
-                <div className="ios-row-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div className="qty-selector">
-                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); changeQuantity(idx, -1); }}><Icon name="remove" /></button>
-                    <span className="qty-value">{it.quantity}</span>
-                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); changeQuantity(idx, 1); }}><Icon name="add" /></button>
-                  </div>
-                  <span onClick={(e) => { e.stopPropagation(); removeRow(idx); }} className="item-delete-btn">
-                    <Icon name="delete" />
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ padding: "12px 16px 16px" }}>
-          <button className="dashed-add-btn" onClick={() => setSubView("addItem")}>
-            <Icon name="add_circle" /> Добавить позицию
-          </button>
-        </div>
-        <div className="section-title">Настройки документа</div>
-        <div className="ios-group">
-          <div className="toggle-row">
-            <div className="toggle-row-left"><Icon name="approval" /><span className="toggle-row-label">Печать</span></div>
-            <Toggle checked={invoice.INCLUDE_STAMP} disabled={!profile.stamp_path} onChange={(v) => setInvoice((c) => ({ ...c, INCLUDE_STAMP: v }))} />
-          </div>
-          <div className="toggle-row">
-            <div className="toggle-row-left"><Icon name="draw" /><span className="toggle-row-label">Подпись</span></div>
-            <Toggle checked={invoice.INCLUDE_SIGNATURE} disabled={!profile.signature_path} onChange={(v) => setInvoice((c) => ({ ...c, INCLUDE_SIGNATURE: v }))} />
-          </div>
-          <div className="toggle-row">
-            <div className="toggle-row-left"><Icon name="image" /><span className="toggle-row-label">Логотип</span></div>
-            <Toggle checked={invoice.INCLUDE_LOGO} disabled={!profile.logo_path} onChange={(v) => setInvoice((c) => ({ ...c, INCLUDE_LOGO: v }))} />
-          </div>
-        </div>
-        {(selectedDocId || selectedInvoiceId) && (
-          <div style={{ padding: "0 16px" }}>
-            <button className="destructive-btn" onClick={deleteInvoice} disabled={busy !== "idle"}>
-              <Icon name="delete" /> Удалить документ
-            </button>
-          </div>
-        )}
-        <div className="spacer-24" />
-      </div>
-      <div className="invoice-footer">
-        <div className="invoice-footer-inner">
-          <div className="invoice-total-row">
-            <span className="invoice-total-label">Общая сумма</span>
-            <span className="invoice-total-value">{invoice.TOTAL_SUM} ₸</span>
-          </div>
-          <button className="invoice-send-btn" disabled={busy !== "idle"} onClick={sendInvoice}>
-            <Icon name="send" />{busy === "send" ? "Отправка..." : "Отправить"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-
-
-
-
-  /* ═══ FULL-PAGE SUB-VIEWS (replace modals) ═══ */
-
-  const addClientView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogClient(null); }}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">{selectedCatalogClient ? "Клиент" : "Новый клиент"}</span>
-          <button className="nav-bar-btn-circle" onClick={createClient}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        {selectedCatalogClient && clientBalance && (
-          <div style={{ padding: "16px 16px 8px" }}>
-            <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>
-              <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>Баланс взаиморасчётов</div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ fontSize: "15px" }}>Выставлено:</span>
-                <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_invoiced)} ₸</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", color: "#34C759" }}>
-                <span style={{ fontSize: "15px" }}>Оплачено:</span>
-                <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_paid)} ₸</span>
-              </div>
-              <div style={{ borderTop: "1px solid rgba(0,123,255,0.1)", margin: "8px 0" }} />
-              <div style={{ display: "flex", justifyContent: "space-between", color: clientBalance.debt > 0 ? "#FF3B30" : "inherit" }}>
-                <span style={{ fontSize: "15px", fontWeight: 600 }}>Долг:</span>
-                <span style={{ fontSize: "17px", fontWeight: 700 }}>{formatMoney(clientBalance.debt)} ₸</span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="section-title">Реквизиты</div>
-        <div className="ios-group">
-          <div className="form-field" style={{ position: "relative" }}>
-            <input
-              placeholder="БИН/ИИН (12 цифр)"
-              value={clientDraft.bin_iin}
-              onChange={async (e) => {
-                const val = e.target.value;
-                setClientDraft((c) => ({ ...c, bin_iin: val }));
-
-                if (val.length === 12) {
-                  setIsBinLoading(true);
-                  try {
-                    const info = await fetchCompanyByBin(val);
-                    if (info) {
-                      setClientDraft(c => ({
-                        ...c,
-                        name: info.name || c.name,
-                        address: info.address || c.address,
-                        director: info.director || c.director,
-                        kbe: info.type === 'ИП' ? '19' : '17'
-                      }));
-                      setStatus("Данные организации получены");
-                    }
-                  } finally {
-                    setIsBinLoading(false);
-                  }
-                }
-
-                const found = clients.find(cl => cl.bin_iin === val.trim() && val.trim() !== "");
-                if (found) {
-                  const firstKbe = found.accounts.length > 0 ? found.accounts[0].kbe : "";
-                  setClientDraft({ ...found, kbe: firstKbe });
-                  setSelectedCatalogClient(found);
-                }
-              }}
-            />
-            {isBinLoading && (
-              <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
-                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-              </div>
-            )}
-          </div>
-          <div className="form-field">
-            <input placeholder="Наименование" value={clientDraft.name} onChange={(e) => setClientDraft((c) => ({ ...c, name: e.target.value }))} />
-          </div>
-          <div className="form-field">
-            <input placeholder="Адрес" value={clientDraft.address} onChange={(e) => setClientDraft((c) => ({ ...c, address: e.target.value }))} />
-          </div>
-          <div className="form-field">
-            <input placeholder="Руководитель" value={clientDraft.director} onChange={(e) => setClientDraft((c) => ({ ...c, director: e.target.value }))} />
-          </div>
-        </div>
-
-        <div className="section-title">Счета</div>
-        {clientDraft.accounts.length > 0 && (
-          <div className="ios-group">
-            {clientDraft.accounts.map((acc, idx) => (
-              <div className="ios-row clickable" key={idx} onClick={() => openAddClientBa(idx)}>
-                <div className="ios-row-content">
-                  <div className="ios-row-title">{acc.bank_name || "Новый счет"}</div>
-                  <div className="ios-row-subtitle">{acc.iic || "Без номера"}{acc.is_main ? " (Основной)" : ""}</div>
-                </div>
-                <Icon name="chevron_right" className="ios-row-chevron" />
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ padding: "8px 16px 16px" }}>
-          <button className="dashed-add-btn" onClick={() => openAddClientBa()}>
-            <Icon name="add_circle" /> Добавить счет
-          </button>
-        </div>
-
-        <div className="section-title">Контакты</div>
-        {clientDraft.contacts.length > 0 && (
-          <div className="ios-group">
-            {clientDraft.contacts.map((con, idx) => (
-              <div className="ios-row clickable" key={idx} onClick={() => openAddClientContact(idx)}>
-                <div className="ios-row-content">
-                  <div className="ios-row-title">{con.name || "Новый контакт"}</div>
-                  <div className="ios-row-subtitle">{con.phone || "Без телефона"}</div>
-                </div>
-                <Icon name="chevron_right" className="ios-row-chevron" />
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ padding: "8px 16px 16px" }}>
-          <button className="dashed-add-btn" onClick={() => openAddClientContact()}>
-            <Icon name="add_circle" /> Добавить контакт
-          </button>
-        </div>
-
-        {selectedCatalogClient && (
-          <div style={{ padding: "24px 16px 32px" }}>
-            <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteClient}>
-              Удалить клиента
-            </button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-  const addClientBankAccountView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">Банковский счет</span>
-          <button className="nav-bar-btn-circle" onClick={saveClientBa}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        <div className="ios-group" style={{ marginTop: 16 }}>
-          <div className="form-field">
-            <input
-              placeholder="ИИК (Напр. KZ...)"
-              value={clientBaDraft.iic}
-              onChange={(e) => {
-                const val = e.target.value;
-                const info = getBankByIIK(val);
-                setClientBaDraft(c => ({
-                  ...c,
-                  iic: val,
-                  bank_name: info ? info.name : c.bank_name,
-                  bic: info ? info.bik : c.bic
-                }));
-              }}
-            />
-          </div>
-          <div className="form-field"><input placeholder="Наименование банка" value={clientBaDraft.bank_name} onChange={(e) => setClientBaDraft(c => ({ ...c, bank_name: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="БИК" value={clientBaDraft.bic} onChange={(e) => setClientBaDraft(c => ({ ...c, bic: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Кбе" value={clientBaDraft.kbe} onChange={(e) => setClientBaDraft(c => ({ ...c, kbe: e.target.value }))} /></div>
-          <div className="settings-row">
-            <span className="settings-row-label">Основной счет</span>
-            <Toggle checked={clientBaDraft.is_main} onChange={(v) => setClientBaDraft(c => ({ ...c, is_main: v }))} />
-          </div>
-        </div>
-        {editingBaIndex !== null && (
-          <div style={{ padding: "16px" }}>
-            <button className="destructive-btn" onClick={() => {
-              setClientDraft(c => ({ ...c, accounts: c.accounts.filter((_, i) => i !== editingBaIndex) }));
-              setSubView("addClient");
-            }}>Удалить счет</button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-  const addClientContactView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">Контакт</span>
-          <button className="nav-bar-btn-circle" onClick={saveClientContact}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        <div className="ios-group" style={{ marginTop: 16 }}>
-          <div className="form-field"><input placeholder="Имя" value={clientContactDraft.name} onChange={(e) => setClientContactDraft(c => ({ ...c, name: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Телефон" value={clientContactDraft.phone} onChange={(e) => setClientContactDraft(c => ({ ...c, phone: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Email" value={clientContactDraft.email} onChange={(e) => setClientContactDraft(c => ({ ...c, email: e.target.value }))} /></div>
-        </div>
-        {editingContactIndex !== null && (
-          <div style={{ padding: "16px" }}>
-            <button className="destructive-btn" onClick={() => {
-              setClientDraft(c => ({ ...c, contacts: c.contacts.filter((_, i) => i !== editingContactIndex) }));
-              setSubView("addClient");
-            }}>Удалить контакт</button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-  /* Add Item — full page (matches ux/code.html exactly) */
-  const addItemView = (
-    <>
-      <header className="nav-bar">
-        <div className="nav-bar-detail">
-          <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogItem(null); }}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center">{selectedCatalogItem ? "Товар/Услуга" : "Добавить товар"}</span>
-          <button className="nav-bar-btn-circle" onClick={createItem}>
-            <Icon name="check" />
-          </button>
-        </div>
-      </header>
-      <div className="content-area">
-        <div className="ios-group" style={{ marginTop: 16 }}>
-          <div className="form-field">
-            <input
-              placeholder="Название (поиск или новое)"
-              value={itemDraft.name}
-              onChange={(e) => setItemDraft((c) => ({ ...c, name: e.target.value }))}
-            />
-          </div>
-          {itemDraft.name && !items.find(i => i.name.toLowerCase() === itemDraft.name.trim().toLowerCase()) && items.filter(i => i.name.toLowerCase().includes(itemDraft.name.toLowerCase())).length > 0 && (
-            <>
-              {items.filter(i => i.name.toLowerCase().includes(itemDraft.name.toLowerCase())).slice(0, 4).map(it => (
-                <div className="ios-row" key={it.id} onClick={() => {
-                  setItemDraft({ name: it.name, unit: it.unit, price: String(it.price), sku: it.sku || "" });
-                  setSelectedCatalogItem(it);
-                }} style={{ cursor: "pointer", background: "rgba(0,123,255,0.05)" }}>
-                  <div className="ios-row-content">
-                    <div className="ios-row-title">{it.name}</div>
-                    <div className="ios-row-subtitle">{formatMoney(it.price)} ₸ / {it.unit}</div>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-          <div className="form-field"><input placeholder="Ед. изм. (час, шт., кг)" value={itemDraft.unit} onChange={(e) => setItemDraft((c) => ({ ...c, unit: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Цена (50 000)" type="number" value={itemDraft.price} onChange={(e) => setItemDraft((c) => ({ ...c, price: e.target.value }))} /></div>
-          <div className="form-field"><input placeholder="Артикул (001)" value={itemDraft.sku} onChange={(e) => setItemDraft((c) => ({ ...c, sku: e.target.value }))} /></div>
-        </div>
-        {selectedCatalogItem && (
-          <div style={{ padding: "24px 16px 8px" }}>
-            <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteItem}>
-              Удалить товар/услугу
-            </button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-
-  /* View Document — full page with PDF preview */
-  const selectedDoc = documents.find(d => d.id === selectedDocId);
-  const selectedInvoice = invoiceRecords.find(inv => inv.id === selectedInvoiceId);
-  const viewDocumentView = (
-    <>
-      <header className="nav-bar" style={{ background: "#fff", borderBottom: "1px solid #e5e5ea" }}>
-        <div className="nav-bar-detail" style={{ background: "#fff" }}>
-          <button className="nav-bar-btn-circle" onClick={() => setSubView(null)} style={{ background: "#f0f0f0" }}>
-            <Icon name="close" />
-          </button>
-          <span className="nav-bar-title-center" style={{ color: "#000" }}>{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
-          <div className="nav-bar-right">
-            <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")} style={{ background: "#f0f0f0" }}>
-              <Icon name="edit" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: selectedInvoice ? "80px" : "0", overflow: "hidden" }}>
-        {/* Compact Info Bar — Forced Light Theme for contrast */}
-        {selectedInvoice && (
-          <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93", textTransform: "uppercase" }}>
-                {statusLabels[selectedInvoice.status] || selectedInvoice.status}
-              </span>
-              <span style={{ fontSize: "15px", fontWeight: 700, color: "#000" }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
-            </div>
-            <span style={{ fontSize: "13px", color: "#666", fontWeight: 500, maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
-          </div>
-        )}
-
-        {/* Document preview — images with pinch-to-zoom */}
-        <div style={{
-          flex: 1,
-          overflow: "auto",
-          WebkitOverflowScrolling: "touch",
-          touchAction: "pan-x pan-y pinch-zoom",
-          backgroundColor: "#e5e5ea",
-          position: "relative"
-        }}>
-          {isPdfLoading && previewPages.length === 0 && (
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.9)", zIndex: 10
-            }}>
-              <div style={{ width: "32px", height: "32px", border: "3px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "12px" }} />
-              <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Загрузка документа...</div>
-            </div>
-          )}
-
-          {previewPages.length > 0 ? (
-            <div style={{ padding: "8px" }}>
-              {previewPages.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt={`Страница ${i + 1}`}
-                  style={{
-                    width: "100%",
-                    display: "block",
-                    borderRadius: "4px",
-                    marginBottom: i < previewPages.length - 1 ? "8px" : "0",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.15)"
-                  }}
-                />
-              ))}
-            </div>
-          ) : !isPdfLoading && (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--text-secondary)", fontSize: "14px" }}>
-              Нет превью
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Floating Bottom Action Bar — Forced Light Theme */}
-      {selectedInvoice && (
-        <div style={{
-          position: "fixed",
-          bottom: 0, left: 0, right: 0,
-          background: "#fff",
-          borderTop: "1px solid #eee",
-          padding: "12px 16px",
-          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-          display: "flex",
-          gap: "8px",
-          zIndex: 100,
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
-        }}>
-          {selectedInvoice.status !== "paid" && (
-            <button
-              onClick={() => markInvoicePaid(selectedInvoice.id)}
-              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-            >
-              <Icon name="check_circle" /> Оплачен
-            </button>
-          )}
-
-          {selectedInvoice.status === "draft" && (
-            <button
-              onClick={() => markInvoiceSent(selectedInvoice.id)}
-              style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-            >
-              <Icon name="send" /> Отправлен
-            </button>
-          )}
-        </div>
-      )}
-    </>
-  );
-
-
-
-  /* ═══ MAIN RENDER ═══ */
-  // Sub-view routing
-  let subViewContent = subView === "invoiceForm" ? invoiceFormView
-    : subView === "addClient" ? addClientView
-      : subView === "addItem" ? addItemView
-        : subView === "viewDocument" ? viewDocumentView
-          : subView === "addClientBankAccount" ? addClientBankAccountView
-            : subView === "addClientContact" ? addClientContactView
-              : null;
-
-  if (subView === "editRequisites") {
+  let subViewContent: React.ReactNode = null;
+  if (subView === "invoiceForm") {
+    subViewContent = (
+      <InvoiceFormView
+        invoice={invHook.invoice}
+        setInvoice={invHook.setInvoice}
+        setSubView={setSubView}
+        selectedDocId={invHook.selectedDocId}
+        selectedInvoiceId={invHook.selectedInvoiceId}
+        saveInvoice={() => invHook.saveInvoice(loadData, setDocuments)}
+        busy={busy}
+        invoiceClientSearch={invHook.invoiceClientSearch}
+        setInvoiceClientSearch={invHook.setInvoiceClientSearch}
+        filteredClients={clients.filter((c) => !invHook.invoiceClientSearch || c.name.toLowerCase().includes(invHook.invoiceClientSearch.toLowerCase()) || c.bin_iin.includes(invHook.invoiceClientSearch))}
+        selectClient={invHook.selectClient}
+        bankAccounts={bankAccounts}
+        changeQuantity={invHook.changeQuantity}
+        removeRow={invHook.removeRow}
+        deleteInvoice={() => invHook.deleteInvoice(setDocuments)}
+        profile={profile}
+        sendInvoice={() => invHook.sendInvoice(chatId)}
+      />
+    );
+  } else if (subView === "viewDocument") {
+    subViewContent = (
+      <ViewDocumentView
+        setSubView={setSubView}
+        selectedInvoice={invHook.invoiceRecords.find(inv => inv.id === invHook.selectedInvoiceId)}
+        selectedDoc={documents.find(d => d.id === invHook.selectedDocId)}
+        isPdfLoading={invHook.isPdfLoading}
+        previewPages={invHook.previewPages}
+        markInvoicePaid={(id) => invHook.markInvoicePaid(id, loadData)}
+        markInvoiceSent={(id) => invHook.markInvoiceSent(id, loadData)}
+      />
+    );
+  } else if (subView === "addClient") {
+    subViewContent = (
+      <AddClientView
+        tab={tab} setSubView={setSubView} selectedCatalogClient={selectedCatalogClient} setSelectedCatalogClient={setSelectedCatalogClient}
+        createClient={() => createClient(tab, invHook.selectClient)} clientBalance={clientBalance} clientDraft={clientDraft as any} setClientDraft={setClientDraft as any}
+        setIsBinLoading={setIsBinLoading} isBinLoading={isBinLoading} setStatus={setStatus} clients={clients} openAddClientBa={openAddClientBa} openAddClientContact={openAddClientContact}
+        deleteClient={() => deleteClient()} busy={busy}
+      />
+    );
+  } else if (subView === "addClientBankAccount") {
+    subViewContent = (
+      <AddClientBankAccountView
+        setSubView={setSubView} clientBaDraft={clientBaDraft} setClientBaDraft={setClientBaDraft} saveClientBa={saveClientBa}
+        editingBaIndex={editingBaIndex} setClientDraft={setClientDraft as any}
+      />
+    );
+  } else if (subView === "addClientContact") {
+    subViewContent = (
+      <AddClientContactView
+        setSubView={setSubView} clientContactDraft={clientContactDraft} setClientContactDraft={setClientContactDraft} saveClientContact={saveClientContact}
+        editingContactIndex={editingContactIndex} setClientDraft={setClientDraft as any}
+      />
+    );
+  } else if (subView === "editRequisites") {
     subViewContent = (
       <EditRequisitesView
-        profile={profile}
-        profileDraft={profileDraft as any}
-        setProfileDraft={setProfileDraft as any}
-        setSubView={setSubView}
-        saveProfile={saveProfile}
-        deleteRequisites={deleteRequisites}
-        busy={busy}
-        isBinLoading={isBinLoading}
-        setIsBinLoading={setIsBinLoading}
-        setStatus={setStatus}
+        profile={profile} profileDraft={profileDraft as any} setProfileDraft={setProfileDraft as any} setSubView={setSubView}
+        saveProfile={saveProfile} deleteRequisites={() => deleteRequisites()} busy={busy}
+        isBinLoading={isBinLoading} setIsBinLoading={setIsBinLoading} setStatus={setStatus}
       />
     );
   } else if (subView === "addBankAccount") {
     subViewContent = (
       <AddBankAccountView
-        profile={profile}
-        profileDraft={profileDraft as any}
-        setProfileDraft={setProfileDraft as any}
-        setSubView={setSubView}
-        saveProfile={saveProfile}
-        deleteBankAccount={deleteBankAccount}
-        busy={busy}
+        profile={profile} profileDraft={profileDraft as any} setProfileDraft={setProfileDraft as any} setSubView={setSubView}
+        saveProfile={saveProfile} deleteBankAccount={() => deleteBankAccount()} busy={busy}
       />
     );
-  }
-
-  // Date Filter Subview
-  if (subView === ("dateFilter" as any)) {
-    subViewContent = <DateFilterView dateFilter={dateFilter as any} setDateFilter={setDateFilter as any} onClose={() => setSubView(null)} />;
-  }
-
-  // Bank Account Picker Subview
-  if (subView === ("bankPicker" as any)) {
+  } else if (subView === "addItem") {
     subViewContent = (
-      <BankPickerView
-        bankAccounts={bankAccounts}
-        selectedBankAccountId={selectedBankAccountId}
-        setSelectedBankAccountId={setSelectedBankAccountId}
-        onClose={() => setSubView(null)}
-        onAddAccount={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}
+      <AddItemView
+        itemDraft={itemDraft as any} setItemDraft={setItemDraft as any} items={items} selectedCatalogItem={selectedCatalogItem}
+        setSelectedCatalogItem={setSelectedCatalogItem} setSubView={setSubView} createItem={() => createItem(tab, invHook.addRow)} deleteItem={() => deleteItem()}
+        busy={busy} tab={tab}
       />
     );
   }
 
-  const isAuthenticated = !!getAuthToken();
-  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
-  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
-
-  /* ── Login screen (shown in browser when no Telegram context) ── */
-  const loginView = (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "24px", padding: "32px" }}>
-      <div style={{ fontSize: "48px" }}><Icon name="description" /></div>
-      <h1 style={{ fontSize: "22px", fontWeight: 700, textAlign: "center", margin: 0 }}>Doc Mini App</h1>
-      <p style={{ color: "var(--text-secondary)", textAlign: "center", fontSize: "15px", margin: 0, maxWidth: "280px" }}>
-        Войдите через Telegram, чтобы управлять документами, клиентами и каталогом.
-      </p>
-      <TelegramLoginButton />
-    </div>
+  if (subView === ("dateFilter" as any)) subViewContent = <DateFilterView dateFilter={dateFilter as any} setDateFilter={setDateFilter as any} onClose={() => setSubView(null)} />;
+  if (subView === ("bankPicker" as any)) subViewContent = (
+    <BankPickerView
+      bankAccounts={bankAccounts} selectedBankAccountId={selectedBankAccountId} setSelectedBankAccountId={setSelectedBankAccountId}
+      onClose={() => setSubView(null)} onAddAccount={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}
+    />
   );
 
   return (
@@ -1400,30 +233,30 @@ export function App() {
               bankAccounts={bankAccounts}
               selectedBankAccountId={selectedBankAccountId}
               profile={profile}
-              dashboardSummary={dashboardSummary}
-              invoiceRecords={invoiceRecords}
+              dashboardSummary={invHook.dashboardSummary}
+              invoiceRecords={invHook.invoiceRecords}
               documents={documents}
               fileInputRef={fileInputRef}
               setProfileDraft={setProfileDraft}
               setSubView={setSubView}
               setTab={setTab}
-              openNewInvoice={openNewInvoice}
-              handleFileUpload={handleFileUpload}
-              loadAndPreviewNewInvoice={loadAndPreviewNewInvoice}
-              loadAndPreviewOldDocument={loadAndPreviewOldDocument}
+              openNewInvoice={() => invHook.openNewInvoice()}
+              handleFileUpload={(e) => handleFileUpload(e, profile.company_iic || "", loadData)}
+              loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
+              loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
             />
           )}
           {tab === "invoices" && (
             <InvoicesListView
-              invoiceRecords={invoiceRecords}
+              invoiceRecords={invHook.invoiceRecords}
               documents={documents}
               docSearch={docSearch}
               setDocSearch={setDocSearch}
               invoiceStatusFilter={invoiceStatusFilter}
               setInvoiceStatusFilter={setInvoiceStatusFilter}
-              openNewInvoice={openNewInvoice}
-              loadAndPreviewNewInvoice={loadAndPreviewNewInvoice}
-              loadAndPreviewOldDocument={loadAndPreviewOldDocument}
+              openNewInvoice={() => invHook.openNewInvoice()}
+              loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
+              loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
             />
           )}
           {tab === "clients" && (
@@ -1457,7 +290,7 @@ export function App() {
               setSubView={setSubView}
               setStatus={setStatus}
               refreshProfileImages={refreshProfileImages}
-              onLogout={() => { setAuthToken(""); setAuthUser(null); window.location.reload(); }}
+              onLogout={logout}
             />
           )}
         </>
@@ -1465,7 +298,7 @@ export function App() {
       {isAuthenticated && !subViewContent && (
         <nav className="tab-bar">
           <div className="tab-bar-inner">
-            {(["home", "clients", "items", "profile"] as TabKey[]).map((t) => (
+            {(["home", "invoices", "clients", "items", "profile"] as TabKey[]).map((t) => (
               <button key={t} className={`tab-btn${t === tab ? " active" : ""}`} onClick={() => setTab(t)}>
                 <Icon name={tabIcons[t]} filled={t === tab} />
                 <span>{tabLabels[t]}</span>
@@ -1477,4 +310,3 @@ export function App() {
     </main>
   );
 }
-
