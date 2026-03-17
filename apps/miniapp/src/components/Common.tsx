@@ -1,8 +1,8 @@
 import React from "react";
 
-export function Icon({ name, filled, className }: { name: string; filled?: boolean; className?: string }) {
+export function Icon({ name, filled, className, style }: { name: string; filled?: boolean; className?: string; style?: React.CSSProperties }) {
     return (
-        <span className={`material-symbols-outlined${filled ? " filled" : ""}${className ? ` ${className}` : ""}`}>
+        <span className={`material-symbols-outlined${filled ? " filled" : ""}${className ? ` ${className}` : ""}`} style={style}>
             {name}
         </span>
     );

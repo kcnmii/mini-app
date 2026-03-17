@@ -42,6 +42,7 @@ export function App() {
   const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument" | "addClientBankAccount" | "addClientContact">(null);
   const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
   const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
+  const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "custom", from?: string, to?: string }>({ type: "month" });
 
   const refreshProfileImages = useCallback(async () => {
     try {
@@ -191,10 +192,37 @@ export function App() {
 
   async function loadData() {
     try {
+      let query = "";
+      if (dateFilter.type !== "month" || dateFilter.from || dateFilter.to) {
+        let from: string | undefined = dateFilter.from;
+        let to: string | undefined = dateFilter.to;
+
+        if (dateFilter.type === "today") {
+          const d = new Date();
+          d.setHours(0, 0, 0, 0);
+          from = d.toISOString();
+        } else if (dateFilter.type === "week") {
+          const d = new Date();
+          d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1)); // Monday
+          d.setHours(0, 0, 0, 0);
+          from = d.toISOString();
+        } else if (dateFilter.type === "month") {
+          const d = new Date();
+          d.setDate(1);
+          d.setHours(0, 0, 0, 0);
+          from = d.toISOString();
+        }
+
+        const params = new URLSearchParams();
+        if (from) params.set("from_date", from);
+        if (to) params.set("to_date", to);
+        query = "?" + params.toString();
+      }
+
       const [c, i, d, p, summary, invRecords] = await Promise.all([
         request<Client[]>("/clients"), request<CatalogItem[]>("/catalog/items"),
         request<DocumentRecord[]>("/documents/recent"), request<SupplierProfileData>("/profile"),
-        request<DashboardSummary>("/dashboard/summary").catch(() => ({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 })),
+        request<DashboardSummary>(`/dashboard/summary${query}`).catch(() => ({ awaiting: 0, overdue: 0, paid_this_month: 0, invoices_count: 0, overdue_count: 0 })),
         request<InvoiceRecord[]>("/invoices").catch(() => []),
       ]);
       setClients(c); setItems(i); setDocuments(d); setProfile(p); setProfileDraft(p);
@@ -226,6 +254,11 @@ export function App() {
       }
     };
   }, []);
+  useEffect(() => {
+    if (!!getAuthToken()) {
+      loadData();
+    }
+  }, [dateFilter]);
 
   useEffect(() => {
     webApp?.ready?.();
@@ -690,7 +723,13 @@ export function App() {
 
   const homeView = (
     <>
-      <NavBar showProfile tgUser={tgUser} tgName={tgName} />
+      <NavBar
+        showProfile
+        tgUser={tgUser}
+        tgName={tgName}
+        onAction={() => setSubView("dateFilter" as any)}
+        actionIcon="calendar_month"
+      />
       <div className="content-area">
         <Dashboard summary={dashboardSummary} />
 
@@ -1660,12 +1699,8 @@ export function App() {
 
 
   /* ═══ MAIN RENDER ═══ */
-  const isAuthenticated = !!getAuthToken();
-  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
-  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
-
   // Sub-view routing
-  const subViewContent = subView === "invoiceForm" ? invoiceFormView
+  let subViewContent = subView === "invoiceForm" ? invoiceFormView
     : subView === "addClient" ? addClientView
       : subView === "addItem" ? addItemView
         : subView === "editRequisites" ? editRequisitesView
@@ -1674,6 +1709,68 @@ export function App() {
               : subView === "addClientBankAccount" ? addClientBankAccountView
                 : subView === "addClientContact" ? addClientContactView
                   : null;
+
+  // Date Filter Subview
+  if (subView === ("dateFilter" as any)) {
+    subViewContent = (
+      <div className="sub-view">
+        <NavBar title="Период" onBack={() => setSubView(null)} />
+        <div className="content-area">
+          <div className="ios-group">
+            <button className="ios-row" onClick={() => { setDateFilter({ type: "today" }); setSubView(null); }}>
+              <div className="ios-row-content"><div className="ios-row-title">Сегодня</div></div>
+              {dateFilter.type === "today" && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
+            <button className="ios-row" onClick={() => { setDateFilter({ type: "week" }); setSubView(null); }}>
+              <div className="ios-row-content"><div className="ios-row-title">Неделя</div></div>
+              {dateFilter.type === "week" && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
+            <button className="ios-row" onClick={() => { setDateFilter({ type: "month" }); setSubView(null); }}>
+              <div className="ios-row-content"><div className="ios-row-title">Месяц</div></div>
+              {dateFilter.type === "month" && !dateFilter.from && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
+            <button className="ios-row" onClick={() => setDateFilter(d => ({ ...d, type: "custom" }))}>
+              <div className="ios-row-content"><div className="ios-row-title">Кастомный период</div></div>
+              {dateFilter.type === "custom" && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
+          </div>
+
+          {dateFilter.type === "custom" && (
+            <>
+              <div className="section-title">Диапазон дат</div>
+              <div className="ios-group">
+                <div className="form-field">
+                  <div className="form-field-label">С</div>
+                  <input
+                    type="date"
+                    className="native-date-input"
+                    value={dateFilter.from?.split("T")[0] || ""}
+                    onChange={(e) => setDateFilter(d => ({ ...d, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <div className="form-field-label">По</div>
+                  <input
+                    type="date"
+                    className="native-date-input"
+                    value={dateFilter.to?.split("T")[0] || ""}
+                    onChange={(e) => setDateFilter(d => ({ ...d, to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
+                  />
+                </div>
+              </div>
+              <div style={{ padding: "16px" }}>
+                <button className="glass-hero-btn" onClick={() => setSubView(null)}>Применить</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const isAuthenticated = !!getAuthToken();
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
+  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
   /* ── Login screen (shown in browser when no Telegram context) ── */
   const loginView = (
