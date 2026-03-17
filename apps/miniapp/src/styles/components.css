@@ -92,6 +92,71 @@
     background: rgba(255, 255, 255, 0.85);
 }
 
+/* ═══ Home Action Buttons (no shadow) ═══ */
+.home-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(0, 123, 255, 0.08);
+    color: var(--primary);
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.home-action-btn:active {
+    background: rgba(0, 123, 255, 0.16);
+    transform: scale(0.97);
+}
+
+.home-action-btn--secondary {
+    background: var(--card, rgba(0, 0, 0, 0.05));
+    color: var(--text-secondary);
+}
+
+.home-action-btn--secondary:active {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* ═══ Status Chips ═══ */
+.status-chips-scroll {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.status-chips-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.status-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    background: var(--card, #F2F2F7);
+    color: var(--text-secondary, #8E8E93);
+    transition: background 0.15s, color 0.15s;
+}
+
+.status-chip.active {
+    background: var(--tg-theme-button-color, #007AFF);
+    color: #fff;
+}
+
+
+
 .glass-stats-wrapper {
     margin-top: 24px;
     background: rgba(255, 255, 255, 0.2);

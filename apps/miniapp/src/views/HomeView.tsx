@@ -64,11 +64,11 @@ export function HomeView({
 
                 {/* ── Create invoice & Import 1C buttons ── */}
                 <div style={{ padding: "16px 16px 0", display: "flex", gap: "10px" }}>
-                    <button className="glass-hero-btn" onClick={openNewInvoice} style={{ flex: 1, padding: "12px 0" }}>
-                        <Icon name="add" /> Создать счёт
+                    <button className="home-action-btn" onClick={openNewInvoice} style={{ flex: 1 }}>
+                        <Icon name="add_circle" /> Выставить счёт
                     </button>
-                    <button className="glass-hero-btn" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: "12px 0", background: "var(--tg-theme-secondary-bg-color, rgba(0,0,0,0.05))", color: "var(--tg-theme-text-color, #000)" }}>
-                        <Icon name="upload_file" /> 1С Выписка
+                    <button className="home-action-btn home-action-btn--secondary" onClick={() => fileInputRef.current?.click()} style={{ flex: 1 }}>
+                        <Icon name="upload" /> Загрузить выписку
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" style={{ display: 'none' }} />
                 </div>
@@ -77,8 +77,8 @@ export function HomeView({
                 {invoiceRecords.length > 0 ? (
                     <>
                         <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
-                            <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние счета</h2>
-                            <button className="view-all-btn-pill" onClick={() => setTab("invoices")}>
+                            <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние</h2>
+                            <button className="nav-bar-pill-btn" style={{ fontSize: "13px", padding: "6px 12px 6px 16px" }} onClick={() => setTab("invoices")}>
                                 Все <Icon name="chevron_right" />
                             </button>
                         </div>

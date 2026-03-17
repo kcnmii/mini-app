@@ -47,7 +47,7 @@ export function InvoicesListView({
 
     return (
         <>
-            <NavBar title="Счета" onAction={openNewInvoice} actionIcon="add" />
+            <NavBar title="Документы" onAction={openNewInvoice} actionIcon="add" />
             <div className="search-bar">
                 <div className="search-input-wrap">
                     <Icon name="search" />
@@ -55,16 +55,12 @@ export function InvoicesListView({
                 </div>
             </div>
             {showNewInvoicesList && (
-                <div style={{ display: "flex", gap: "8px", padding: "8px 16px", overflowX: "auto" }}>
+                <div className="status-chips-scroll">
                     {statusFilters.map((sf) => (
                         <button
                             key={sf}
                             onClick={() => setInvoiceStatusFilter(sf)}
-                            style={{
-                                padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-                                background: invoiceStatusFilter === sf ? "var(--tg-theme-button-color, #007AFF)" : "var(--bg-secondary, #F2F2F7)",
-                                color: invoiceStatusFilter === sf ? "#fff" : "var(--text-secondary, #8E8E93)",
-                            }}
+                            className={`status-chip${invoiceStatusFilter === sf ? " active" : ""}`}
                         >
                             {statusFilterLabels[sf]}
                         </button>

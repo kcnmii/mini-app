@@ -7,12 +7,16 @@ interface DashboardProps {
 }
 
 export function Dashboard({ summary }: DashboardProps) {
+    const allZero = summary.awaiting === 0 && summary.overdue === 0 && summary.paid_this_month === 0;
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "12px 20px 8px" }}>
-            <div>
-                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Ожидается</div>
-                <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.awaiting)} ₸</div>
-            </div>
+            {(summary.awaiting > 0 || allZero) && (
+                <div>
+                    <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Ожидается</div>
+                    <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.awaiting)} ₸</div>
+                </div>
+            )}
 
             {summary.overdue > 0 && (
                 <div>
@@ -21,10 +25,12 @@ export function Dashboard({ summary }: DashboardProps) {
                 </div>
             )}
 
-            <div>
-                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Получено</div>
-                <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.paid_this_month)} ₸</div>
-            </div>
+            {summary.paid_this_month > 0 && (
+                <div>
+                    <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>Получено</div>
+                    <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.paid_this_month)} ₸</div>
+                </div>
+            )}
         </div>
     );
 }

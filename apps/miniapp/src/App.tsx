@@ -107,8 +107,8 @@ export function App() {
     }
   }, [dateFilter]);
 
-  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "receipt_long", clients: "group", items: "inventory_2", profile: "person" };
-  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Счета", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", clients: "group", items: "inventory_2", profile: "person" };
+  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Документы", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
   const loginView = (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "24px", padding: "32px" }}>
