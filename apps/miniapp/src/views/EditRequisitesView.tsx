@@ -84,11 +84,7 @@ export function EditRequisitesView({
                     <div className="form-field"><input placeholder="ФИО (например, Иванов И.И.)" value={profileDraft.executor_name} onChange={(e) => setProfileDraft((c) => ({ ...c, executor_name: e.target.value }))} /></div>
                     <div className="form-field"><input placeholder="Должность (например, Директор)" value={profileDraft.position} onChange={(e) => setProfileDraft((c) => ({ ...c, position: e.target.value }))} /></div>
                 </div>
-                <div className="section-title">Контакты</div>
-                <div className="ios-group">
-                    <div className="form-field"><input placeholder="Телефон (+7...)" value={profileDraft.phone} onChange={(e) => setProfileDraft((c) => ({ ...c, phone: e.target.value }))} /></div>
-                    <div className="form-field"><input placeholder="Email (email@example.com)" value={profileDraft.email} onChange={(e) => setProfileDraft((c) => ({ ...c, email: e.target.value }))} /></div>
-                </div>
+
                 {profile.company_iin && (
                     <div style={{ padding: "24px 16px 8px" }}>
                         <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteRequisites}>
