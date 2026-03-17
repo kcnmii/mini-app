@@ -10,9 +10,10 @@ interface NavBarProps {
     tgUser?: any;
     tgName?: string;
     showProfile?: boolean;
+    actionType?: "icon" | "circle";
 }
 
-export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile }: NavBarProps) {
+export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile, actionType = "icon" }: NavBarProps) {
     return (
         <div className="nav-bar">
             <div className="nav-bar-inner">
@@ -46,7 +47,7 @@ export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, sh
                 </div>
 
                 {onAction && actionIcon && (
-                    <button className="nav-bar-btn" onClick={onAction}>
+                    <button className={actionType === "circle" ? "nav-bar-btn-circle" : "nav-bar-btn"} onClick={onAction}>
                         <Icon name={actionIcon} />
                     </button>
                 )}

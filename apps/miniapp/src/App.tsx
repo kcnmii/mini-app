@@ -42,7 +42,7 @@ export function App() {
   const [subView, setSubView] = useState<null | "invoiceForm" | "addClient" | "addItem" | "editRequisites" | "addBankAccount" | "viewDocument" | "addClientBankAccount" | "addClientContact">(null);
   const [clientBaDraft, setClientBaDraft] = useState<ClientBankAccount>({ iic: "", bank_name: "", bic: "", kbe: "", is_main: false });
   const [clientContactDraft, setClientContactDraft] = useState<ClientContact>({ name: "", phone: "", email: "" });
-  const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "custom", from?: string, to?: string }>({ type: "month" });
+  const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "all" | "custom", from?: string, to?: string }>({ type: "month" });
 
   const refreshProfileImages = useCallback(async () => {
     try {
@@ -194,6 +194,7 @@ export function App() {
     try {
       let query = "";
       if (dateFilter.type !== "month" || dateFilter.from || dateFilter.to) {
+        const params = new URLSearchParams();
         let from: string | undefined = dateFilter.from;
         let to: string | undefined = dateFilter.to;
 
@@ -211,9 +212,10 @@ export function App() {
           d.setDate(1);
           d.setHours(0, 0, 0, 0);
           from = d.toISOString();
+        } else if (dateFilter.type === "all") {
+          params.set("all_time", "true");
         }
 
-        const params = new URLSearchParams();
         if (from) params.set("from_date", from);
         if (to) params.set("to_date", to);
         query = "?" + params.toString();
@@ -724,11 +726,10 @@ export function App() {
   const homeView = (
     <>
       <NavBar
-        showProfile
-        tgUser={tgUser}
-        tgName={tgName}
+        title="Главная"
         onAction={() => setSubView("dateFilter" as any)}
         actionIcon="calendar_month"
+        actionType="circle"
       />
       <div className="content-area">
         <Dashboard summary={dashboardSummary} />
@@ -1092,7 +1093,22 @@ export function App() {
   const profileView = (
     <>
       <div className="nav-bar">
-        <div className="nav-bar-inner"><h1 className="nav-bar-title">Профиль</h1><div /></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0 10px" }}>
+          <div className="user-avatar" style={{
+            width: "80px", height: "80px",
+            background: tgUser?.photo_url ? "transparent" : getAvatarColor(tgName),
+            color: "white", fontSize: "32px", fontWeight: 700,
+            marginBottom: "12px"
+          }}>
+            {tgUser?.photo_url ? (
+              <img src={tgUser.photo_url} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              tgName.charAt(0).toUpperCase()
+            )}
+          </div>
+          <h1 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 4px" }}>{tgName}</h1>
+          {tgUser?.username && <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>@{tgUser.username}</span>}
+        </div>
       </div>
       <div className="content-area">
         <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты</div>
@@ -1729,6 +1745,10 @@ export function App() {
               <div className="ios-row-content"><div className="ios-row-title">Месяц</div></div>
               {dateFilter.type === "month" && !dateFilter.from && <Icon name="check" style={{ color: "var(--primary)" }} />}
             </button>
+            <button className="ios-row" onClick={() => { setDateFilter({ type: "all" as any }); setSubView(null); }}>
+              <div className="ios-row-content"><div className="ios-row-title">За все время</div></div>
+              {dateFilter.type === ("all" as any) && <Icon name="check" style={{ color: "var(--primary)" }} />}
+            </button>
             <button className="ios-row" onClick={() => setDateFilter(d => ({ ...d, type: "custom" }))}>
               <div className="ios-row-content"><div className="ios-row-title">Кастомный период</div></div>
               {dateFilter.type === "custom" && <Icon name="check" style={{ color: "var(--primary)" }} />}
@@ -1739,8 +1759,8 @@ export function App() {
             <>
               <div className="section-title">Диапазон дат</div>
               <div className="ios-group">
-                <label className="form-field" style={{ cursor: "pointer" }}>
-                  <div className="form-field-label">Начало</div>
+                <div className="form-field">
+                  <span className="form-field-label">Начало</span>
                   <input
                     type="date"
                     className="native-date-input"
@@ -1748,10 +1768,10 @@ export function App() {
                     value={dateFilter.from?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, from: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
-                  <Icon name="chevron_right" className="form-field-icon" style={{ marginLeft: "8px" }} />
-                </label>
-                <label className="form-field" style={{ cursor: "pointer" }}>
-                  <div className="form-field-label">Конец</div>
+                </div>
+                <div className="field-divider" />
+                <div className="form-field">
+                  <span className="form-field-label">Конец</span>
                   <input
                     type="date"
                     className="native-date-input"
@@ -1759,8 +1779,7 @@ export function App() {
                     value={dateFilter.to?.split("T")[0] || ""}
                     onChange={(e) => setDateFilter(d => ({ ...d, to: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
                   />
-                  <Icon name="chevron_right" className="form-field-icon" style={{ marginLeft: "8px" }} />
-                </label>
+                </div>
               </div>
               <div style={{ padding: "24px 16px" }}>
                 <button className="action-btn-main" onClick={() => setSubView(null)}>Применить</button>

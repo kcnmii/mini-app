@@ -18,6 +18,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 async def get_dashboard_summary(
     from_date: str | None = None,
     to_date: str | None = None,
+    all_time: bool = False,
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> DashboardSummary:
@@ -85,7 +86,7 @@ async def get_dashboard_summary(
     
     if start_dt:
         paid_query = paid_query.filter(Payment.created_at >= start_dt)
-    elif not to_date:
+    elif not to_date and not all_time:
         # Default to current month if no filter at all
         first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         paid_query = paid_query.filter(Payment.created_at >= first_of_month)
