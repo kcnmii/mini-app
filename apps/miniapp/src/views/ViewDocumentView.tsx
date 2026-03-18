@@ -41,7 +41,7 @@ export function ViewDocumentView({
                 </div>
             </header>
 
-            <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: (selectedInvoice && selectedInvoice.status !== "paid") ? "80px" : "0", overflow: "hidden" }}>
+            <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: (selectedInvoice && (selectedInvoice.status as string) !== "paid") ? "80px" : "0", overflow: "hidden" }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
                     <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
@@ -101,7 +101,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Floating Bottom Action Bar — Forced Light Theme */}
-            {(selectedInvoice && selectedInvoice.status !== "paid") && (
+            {(selectedInvoice && (selectedInvoice.status as string) !== "paid") && (
                 <div style={{
                     position: "fixed",
                     bottom: 0, left: 0, right: 0,
