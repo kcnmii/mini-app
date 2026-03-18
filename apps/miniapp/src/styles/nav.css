@@ -3,10 +3,24 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgba(242, 242, 247, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: transparent;
     padding: 16px 16px 8px;
+}
+
+.nav-bar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: -24px;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgba(242, 242, 247, 0.95) 50%, rgba(242, 242, 247, 0) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    pointer-events: none;
 }
 
 .nav-bar-inner {
@@ -69,18 +83,34 @@
     justify-content: space-between;
     height: 64px;
     padding: 0 8px;
-    background: rgba(242, 242, 247, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: transparent;
     position: sticky;
     top: 0;
     z-index: 50;
 }
 
+.nav-bar-detail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: -24px;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgba(242, 242, 247, 0.95) 50%, rgba(242, 242, 247, 0) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    pointer-events: none;
+}
+
+.nav-bar .nav-bar-detail::before {
+    display: none;
+}
+
 .nav-bar .nav-bar-detail {
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    padding: 0;
 }
 
 .nav-bar-back {
