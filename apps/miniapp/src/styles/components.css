@@ -159,12 +159,16 @@
 }
 
 .status-chip {
-    padding: 6px 14px;
+    height: 36px;
+    padding: 0 16px;
     border-radius: 20px;
     border: none;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     white-space: nowrap;
     background: var(--card, #F2F2F7);
     color: var(--text-secondary, #8E8E93);
@@ -172,7 +176,7 @@
 }
 
 .status-chip.active {
-    background: var(--tg-theme-button-color, #007AFF);
+    background: var(--primary, #007bff);
     color: #fff;
 }
 

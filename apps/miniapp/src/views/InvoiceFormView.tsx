@@ -47,7 +47,7 @@ export function InvoiceFormView({
     return (
         <>
             <div className="nav-bar">
-                <div className="nav-bar-detail">
+                <div className="nav-bar-detail" style={{ padding: 0 }}>
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
                     </button>

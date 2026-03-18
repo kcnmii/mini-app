@@ -78,7 +78,7 @@ export function HomeView({
                     <>
                         <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
                             <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние</h2>
-                            <button className="nav-bar-pill-btn" style={{ fontSize: "13px", height: "36px", padding: "0 12px 0 16px" }} onClick={() => setTab("invoices")}>
+                            <button className="nav-bar-pill-btn" style={{ fontSize: "14px", height: "36px", padding: "0 12px 0 16px" }} onClick={() => setTab("invoices")}>
                                 Все <Icon name="chevron_right" />
                             </button>
                         </div>
