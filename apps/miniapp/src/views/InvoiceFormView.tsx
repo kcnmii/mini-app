@@ -101,7 +101,7 @@ export function InvoiceFormView({
                                 }}>
                                     <div className="ios-row-content">
                                         <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
-                                        <div className="ios-row-subtitle">{ba.account_number}</div>
+                                        <div className="ios-row-subtitle" style={{ textTransform: "uppercase" }}>{ba.account_number}</div>
                                     </div>
                                     {invoice.COMPANY_IIC === ba.account_number && <Icon name="check" style={{ color: "var(--primary)" }} />}
                                 </button>

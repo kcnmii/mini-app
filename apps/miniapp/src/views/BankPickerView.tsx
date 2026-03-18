@@ -39,7 +39,7 @@ export function BankPickerView({
                         <button className="ios-row" key={ba.id} onClick={() => { setSelectedBankAccountId(ba.id); onClose(); }}>
                             <div className="ios-row-content">
                                 <div className="ios-row-title">{ba.bank_name || ba.account_number}</div>
-                                <div className="ios-row-subtitle">{ba.account_number}</div>
+                                <div className="ios-row-subtitle" style={{ textTransform: "uppercase" }}>{ba.account_number}</div>
                             </div>
                             {selectedBankAccountId === ba.id && <Icon name="check" style={{ color: "var(--primary)" }} />}
                         </button>

@@ -34,6 +34,20 @@
 .native-date-input {
     width: 100%;
     text-align: right;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: none;
+}
+
+.native-date-input::-webkit-date-and-time-value {
+    text-align: right;
+}
+
+.native-date-input::-webkit-datetime-edit {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0;
 }
 
 .form-field-icon .material-symbols-outlined {
