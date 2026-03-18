@@ -118,6 +118,19 @@
     transform: scale(0.97);
 }
 
+.home-action-btn--primary {
+    background: var(--primary, #007bff);
+    color: #fff;
+}
+
+.home-action-btn--primary .material-symbols-outlined {
+    color: #fff;
+}
+
+.home-action-btn--primary:active {
+    background: rgba(0, 123, 255, 0.8);
+}
+
 .home-action-btn--secondary {
     background: var(--card, #fff);
     color: var(--text-secondary);

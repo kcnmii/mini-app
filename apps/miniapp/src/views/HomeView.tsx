@@ -63,11 +63,11 @@ export function HomeView({
                 <Dashboard summary={dashboardSummary} />
 
                 {/* ── Create invoice & Import 1C buttons ── */}
-                <div style={{ padding: "16px 16px 0", display: "flex", gap: "10px" }}>
-                    <button className="home-action-btn" onClick={openNewInvoice} style={{ flex: 1 }}>
+                <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <button className="home-action-btn home-action-btn--primary" onClick={openNewInvoice}>
                         <Icon name="add_circle" /> Выставить счёт
                     </button>
-                    <button className="home-action-btn home-action-btn--secondary" onClick={() => fileInputRef.current?.click()} style={{ flex: 1 }}>
+                    <button className="home-action-btn home-action-btn--secondary" onClick={() => fileInputRef.current?.click()}>
                         <Icon name="upload" /> Загрузить выписку
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" style={{ display: 'none' }} />
@@ -78,7 +78,7 @@ export function HomeView({
                     <>
                         <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
                             <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние</h2>
-                            <button className="nav-bar-pill-btn" style={{ fontSize: "13px", padding: "6px 12px 6px 16px" }} onClick={() => setTab("invoices")}>
+                            <button className="nav-bar-pill-btn" style={{ fontSize: "13px", height: "36px", padding: "0 12px 0 16px" }} onClick={() => setTab("invoices")}>
                                 Все <Icon name="chevron_right" />
                             </button>
                         </div>
