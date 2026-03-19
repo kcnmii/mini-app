@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { request, makeInitialInvoice } from "../utils";
+import { request, makeInitialInvoice, buildInvoicePatch } from "../utils";
 import type { DocumentRecord, SupplierProfileData, InvoiceForm } from "../types";
 
 export function useDocuments(setStatus: (s: string) => void, setBusy: (b: any) => void, profile: SupplierProfileData, setSubView: (v: any) => void) {
@@ -22,18 +22,21 @@ export function useDocuments(setStatus: (s: string) => void, setBusy: (b: any) =
                 const items = (doc as any).reconstructed_items.map((it: any, idx: number) => ({
                     number: idx + 1,
                     name: it.name,
-                    quantity: it.quantity,
+                    quantity: String(it.quantity),
                     unit: it.unit,
-                    price: it.price,
-                    total: it.total,
+                    price: String(it.price),
+                    total: String(it.total),
                     code: it.code || ""
                 }));
                 const reconstructed = makeInitialInvoice(profile);
                 reconstructed.CLIENT_NAME = doc.client_name;
-                reconstructed.TOTAL_SUM = doc.total_sum;
                 reconstructed.items = items;
                 const numMatch = doc.title.match(/(?:№|N)\s*([^\s]+)/);
                 if (numMatch) reconstructed.INVOICE_NUMBER = numMatch[1];
+
+                // Sync with calculated totals (Items line, Sum in words, etc.)
+                Object.assign(reconstructed, buildInvoicePatch(reconstructed.items));
+
                 setInvoice(reconstructed);
                 setInvoiceClientSearch(doc.client_name);
             }

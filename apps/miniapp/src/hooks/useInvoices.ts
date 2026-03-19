@@ -95,17 +95,21 @@ export function useInvoices(setStatus: (s: string) => void, setBusy: (b: any) =>
             reconstructed.CLIENT_NAME = inv.client_name;
             reconstructed.CLIENT_IIN = inv.client_bin;
             reconstructed.DEAL_REFERENCE = inv.deal_reference;
+            reconstructed.CONTRACT = inv.deal_reference || "Договор без номера";
             reconstructed.PAYMENT_CODE = inv.payment_code;
-            reconstructed.TOTAL_SUM = String(inv.total_amount);
             reconstructed.items = inv.line_items.map((it, idx) => ({
                 number: idx + 1,
                 name: it.name,
                 quantity: String(it.quantity),
                 unit: it.unit,
-                price: String(it.price),
-                total: String(it.total),
+                price: formatMoney(it.price),
+                total: formatMoney(it.total),
                 code: it.code || ""
             }));
+
+            // Sync with calculated totals (Items line, Sum in words, etc.)
+            Object.assign(reconstructed, buildInvoicePatch(reconstructed.items));
+
             setInvoice(reconstructed);
             setInvoiceClientSearch(inv.client_name);
             setSubView("viewDocument");
@@ -230,7 +234,15 @@ export function useInvoices(setStatus: (s: string) => void, setBusy: (b: any) =>
     const sendInvoice = useCallback(async (chatId: string) => {
         setBusy("send");
         try {
-            await request("/telegram/send-invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: Number(chatId), payload: invoice }) });
+            // Build a rich caption with invoice details
+            const parts: string[] = [];
+            parts.push(`📄 Счет ${invoice.INVOICE_NUMBER}`);
+            if (invoice.CLIENT_NAME) parts.push(`👤 ${invoice.CLIENT_NAME}`);
+            if (invoice.INVOICE_DATE) parts.push(`📅 от ${invoice.INVOICE_DATE}`);
+            if (invoice.TOTAL_SUM && invoice.TOTAL_SUM !== "0") parts.push(`💰 ${invoice.TOTAL_SUM} ₸`);
+            const caption = parts.join("\n");
+
+            await request("/telegram/send-invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: Number(chatId), payload: invoice, caption }) });
             setStatus("Отправлено в Telegram");
         } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка отправки"); } finally { setBusy("idle"); }
     }, [invoice, setBusy, setStatus]);
