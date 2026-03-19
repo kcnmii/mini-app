@@ -155,6 +155,8 @@ export function App() {
         previewPages={invHook.previewPages}
         markInvoicePaid={(id) => invHook.markInvoicePaid(id, loadData)}
         markInvoiceSent={(id) => invHook.markInvoiceSent(id, loadData)}
+        sendInvoice={() => invHook.sendInvoice(chatId)}
+        busy={busy}
       />
     );
   } else if (subView === "addClient") {

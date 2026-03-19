@@ -11,6 +11,8 @@ interface ViewDocumentViewProps {
     previewPages: string[];
     markInvoicePaid: (id: number) => void;
     markInvoiceSent: (id: number) => void;
+    sendInvoice: () => void;
+    busy: string;
 }
 
 export function ViewDocumentView({
@@ -20,28 +22,32 @@ export function ViewDocumentView({
     isPdfLoading,
     previewPages,
     markInvoicePaid,
-    markInvoiceSent
+    markInvoiceSent,
+    sendInvoice,
+    busy
 }: ViewDocumentViewProps) {
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
     const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
     return (
         <>
-            <header className="nav-bar" style={{ background: "#fff", borderBottom: "1px solid #e5e5ea" }}>
-                <div className="nav-bar-detail" style={{ background: "#fff" }}>
-                    <button className="nav-bar-btn-circle" onClick={() => setSubView(null)} style={{ background: "#f0f0f0" }}>
+            <div className="nav-bar">
+                <div className="nav-bar-detail">
+                    <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
                     </button>
-                    <span className="nav-bar-title-center" style={{ color: "#000" }}>{selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}</span>
+                    <span className="nav-bar-title-center">
+                        {selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}
+                    </span>
                     <div className="nav-bar-right">
-                        <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")} style={{ background: "#f0f0f0" }}>
+                        <button className="nav-bar-btn-circle" onClick={() => setSubView("invoiceForm")}>
                             <Icon name="edit" />
                         </button>
                     </div>
                 </div>
-            </header>
+            </div>
 
-            <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", paddingBottom: (selectedInvoice && (selectedInvoice.status as string) !== "paid") ? "80px" : "0", overflow: "hidden" }}>
+            <div className="content-area has-footer" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden" }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
                     <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
@@ -100,39 +106,36 @@ export function ViewDocumentView({
                 </div>
             </div>
 
-            {/* Floating Bottom Action Bar — Forced Light Theme */}
-            {(selectedInvoice && (selectedInvoice.status as string) !== "paid") && (
-                <div style={{
-                    position: "fixed",
-                    bottom: 0, left: 0, right: 0,
-                    background: "#fff",
-                    borderTop: "1px solid #eee",
-                    padding: "12px 16px",
-                    paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-                    display: "flex",
-                    gap: "8px",
-                    zIndex: 100,
-                    boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
-                }}>
-                    {selectedInvoice.status !== "paid" && (
-                        <button
-                            onClick={() => markInvoicePaid(selectedInvoice.id)}
-                            style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                        >
-                            <Icon name="check_circle" /> Оплачен
-                        </button>
-                    )}
+            {/* Bottom Action Bar — Styled like Invoice Footer */}
+            <div className="invoice-footer" style={{ background: "#fff", borderTop: "1px solid #eee" }}>
+                <div className="invoice-footer-inner">
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                        {(selectedInvoice && (selectedInvoice.status as string) !== "paid") && (
+                            <>
+                                <button
+                                    onClick={() => markInvoicePaid(selectedInvoice!.id)}
+                                    style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                                >
+                                    <Icon name="check_circle" /> Оплачен
+                                </button>
 
-                    {selectedInvoice.status === "draft" && (
-                        <button
-                            onClick={() => markInvoiceSent(selectedInvoice.id)}
-                            style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                        >
-                            <Icon name="send" /> Отправлен
-                        </button>
-                    )}
+                                {selectedInvoice.status === "draft" && (
+                                    <button
+                                        onClick={() => markInvoiceSent(selectedInvoice!.id)}
+                                        style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#FF9500", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                                    >
+                                        <Icon name="send" /> Отправлен
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    <button className="invoice-send-btn" onClick={sendInvoice} disabled={busy !== "idle"}>
+                        <Icon name="send" />{busy === "send" ? "Отправка..." : "Отправить"}
+                    </button>
                 </div>
-            )}
+            </div>
         </>
     );
 }
