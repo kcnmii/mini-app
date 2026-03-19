@@ -47,7 +47,7 @@ export function ViewDocumentView({
                 </div>
             </div>
 
-            <div className="content-area has-footer" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden" }}>
+            <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
                     <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
@@ -82,7 +82,7 @@ export function ViewDocumentView({
                     )}
 
                     {previewPages.length > 0 ? (
-                        <div style={{ padding: "8px" }}>
+                        <div style={{ padding: "8px", paddingBottom: "160px" }}>
                             {previewPages.map((src, i) => (
                                 <img
                                     key={i}
