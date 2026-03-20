@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     service_password_gotenberg: str = ""
     sqlite_path: str = "./data/docmini.sqlite3"
     database_url: str = ""
+    s3_endpoint: str = "http://localhost:9000"
+    s3_access_key: str = "minio"
+    s3_secret_key: str = "miniosecret"
+    s3_bucket: str = "doc-mini"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
