@@ -8,20 +8,25 @@ from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboar
 from app.core.config import settings
 
 
-def build_launch_keyboard() -> InlineKeyboardMarkup | None:
-    if not settings.telegram_app_url.startswith("https://"):
-        return None
+def build_launch_keyboard(docx_filename: str | None = None) -> InlineKeyboardMarkup | None:
+    buttons = []
+    
+    if docx_filename:
+        # We store the callback data as docx:<filename> to fetch it later
+        buttons.append([InlineKeyboardButton(text="Скачать в Word", callback_data=f"docx:{docx_filename}")])
 
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Открыть приложение",
-                    web_app=WebAppInfo(url=settings.telegram_app_url),
-                )
-            ]
-        ]
-    )
+    if settings.telegram_app_url.startswith("https://"):
+        buttons.append([
+            InlineKeyboardButton(
+                text="Открыть приложение",
+                web_app=WebAppInfo(url=settings.telegram_app_url),
+            )
+        ])
+        
+    if not buttons:
+        return None
+        
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 class TelegramBotClient:
@@ -66,20 +71,13 @@ class TelegramBotClient:
         caption: str | None,
     ) -> int:
         if not self.enabled: return 0
-        # Send PDF first
+        # Send ONLY PDF, keep docx behind an inline button
         pdf_doc = BufferedInputFile(pdf_bytes, filename=f"{filename_prefix}.pdf")
         msg = await self.bot.send_document(
             chat_id=chat_id,
             document=pdf_doc,
             caption=caption,
-        )
-        
-        # Send DOCX second with the launch keyboard
-        docx_doc = BufferedInputFile(docx_bytes, filename=f"{filename_prefix}.docx")
-        await self.bot.send_document(
-            chat_id=chat_id,
-            document=docx_doc,
-            reply_markup=build_launch_keyboard(),
+            reply_markup=build_launch_keyboard(f"{filename_prefix}.docx"),
         )
         return msg.message_id
 

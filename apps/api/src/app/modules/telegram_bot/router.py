@@ -22,6 +22,9 @@ async def send_invoice_to_telegram(
 
     try:
         docx_bytes = await render_service.render_invoice_docx(invoice_payload, user_id)
+        # Store for telegram callback
+        render_service.persist_debug_output(filename.replace(".pdf", ".docx"), docx_bytes)
+        
         pdf_bytes = await render_service.convert_docx_to_pdf(
             filename.replace(".pdf", ".docx"),
             docx_bytes,
