@@ -165,18 +165,24 @@
 .hidden-input {
     display: none;
 }
+
 .animate-slide-up {
-    animation: slideUpScreen 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    animation: slideUpScreen 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 @keyframes slideUpScreen {
-    from { transform: translateY(100vh); }
-    to { transform: translateY(0); }
+    from {
+        transform: translateY(100vh);
+    }
+
+    to {
+        transform: translateY(0);
+    }
 }
 
 /* Animations for adding positions/contacts */
 .animate-fade-in-up {
-    animation: fadeInUpItem 0.35s ease-out;
+    animation: fadeInUpItem 0.45s ease-out;
 }
 
 @keyframes fadeInUpItem {
@@ -184,6 +190,7 @@
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
