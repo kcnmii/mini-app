@@ -235,74 +235,79 @@ export function App() {
         </div>
       ) : !isAuthenticated ? (
         loginView
-      ) : subViewContent ? (
-        subViewContent
       ) : (
         <>
-          {tab === "home" && (
-            <HomeView
-              bankAccounts={bankAccounts}
-              selectedBankAccountId={selectedBankAccountId}
-              profile={profile}
-              dashboardSummary={invHook.dashboardSummary}
-              invoiceRecords={invHook.invoiceRecords}
-              documents={documents}
-              fileInputRef={fileInputRef}
-              setProfileDraft={setProfileDraft}
-              setSubView={setSubView}
-              setTab={setTab}
-              openNewInvoice={() => invHook.openNewInvoice()}
-              handleFileUpload={(e) => handleFileUpload(e, profile.company_iic || "", loadData)}
-              loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
-              loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
-            />
-          )}
-          {tab === "invoices" && (
-            <InvoicesListView
-              invoiceRecords={invHook.invoiceRecords}
-              documents={documents}
-              docSearch={docSearch}
-              setDocSearch={setDocSearch}
-              invoiceStatusFilter={invoiceStatusFilter}
-              setInvoiceStatusFilter={setInvoiceStatusFilter}
-              openNewInvoice={() => invHook.openNewInvoice()}
-              loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
-              loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
-            />
-          )}
-          {tab === "clients" && (
-            <ClientsView
-              clients={clients}
-              clientSearch={clientSearch}
-              setClientSearch={setClientSearch}
-              setSubView={setSubView}
-              setSelectedCatalogClient={setSelectedCatalogClient}
-              setClientDraft={setClientDraft}
-              loadClientBalance={loadClientBalance}
-            />
-          )}
-          {tab === "items" && (
-            <ItemsView
-              items={items}
-              itemSearch={itemSearch}
-              setItemSearch={setItemSearch}
-              setSubView={setSubView}
-              setSelectedCatalogItem={setSelectedCatalogItem}
-              setItemDraft={setItemDraft}
-            />
-          )}
-          {tab === "profile" && (
-            <ProfileView
-              tgUser={tgUser}
-              tgName={tgName}
-              profile={profile}
-              webAppInitData={!!webApp?.initData}
-              setProfileDraft={setProfileDraft}
-              setSubView={setSubView}
-              setStatus={setStatus}
-              refreshProfileImages={refreshProfileImages}
-              onLogout={logout}
-            />
+          <div className="main-tabs" aria-hidden={!!subViewContent} style={{ position: "relative" }}>
+            {tab === "home" && (
+              <HomeView
+                bankAccounts={bankAccounts}
+                selectedBankAccountId={selectedBankAccountId}
+                profile={profile}
+                dashboardSummary={invHook.dashboardSummary}
+                invoiceRecords={invHook.invoiceRecords}
+                documents={documents}
+                fileInputRef={fileInputRef}
+                setProfileDraft={setProfileDraft}
+                setSubView={setSubView}
+                setTab={setTab}
+                openNewInvoice={() => invHook.openNewInvoice()}
+                handleFileUpload={(e) => handleFileUpload(e, profile.company_iic || "", loadData)}
+                loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
+                loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
+              />
+            )}
+            {tab === "invoices" && (
+              <InvoicesListView
+                invoiceRecords={invHook.invoiceRecords}
+                documents={documents}
+                docSearch={docSearch}
+                setDocSearch={setDocSearch}
+                invoiceStatusFilter={invoiceStatusFilter}
+                setInvoiceStatusFilter={setInvoiceStatusFilter}
+                openNewInvoice={() => invHook.openNewInvoice()}
+                loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
+                loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
+              />
+            )}
+            {tab === "clients" && (
+              <ClientsView
+                clients={clients}
+                clientSearch={clientSearch}
+                setClientSearch={setClientSearch}
+                setSubView={setSubView}
+                setSelectedCatalogClient={setSelectedCatalogClient}
+                setClientDraft={setClientDraft}
+                loadClientBalance={loadClientBalance}
+              />
+            )}
+            {tab === "items" && (
+              <ItemsView
+                items={items}
+                itemSearch={itemSearch}
+                setItemSearch={setItemSearch}
+                setSubView={setSubView}
+                setSelectedCatalogItem={setSelectedCatalogItem}
+                setItemDraft={setItemDraft}
+              />
+            )}
+            {tab === "profile" && (
+              <ProfileView
+                tgUser={tgUser}
+                tgName={tgName}
+                profile={profile}
+                webAppInitData={!!webApp?.initData}
+                setProfileDraft={setProfileDraft}
+                setSubView={setSubView}
+                setStatus={setStatus}
+                refreshProfileImages={refreshProfileImages}
+                onLogout={logout}
+              />
+            )}
+          </div>
+          {subViewContent && (
+            <div className="slide-up-fullscreen">
+              {subViewContent}
+            </div>
           )}
         </>
       )}
