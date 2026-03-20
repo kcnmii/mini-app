@@ -21,7 +21,7 @@ export function AddClientContactView({
 }: AddClientContactViewProps) {
     return (
         <>
-            <header className="nav-bar">
+            <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
                         <Icon name="close" />
@@ -32,7 +32,7 @@ export function AddClientContactView({
                     </button>
                 </div>
             </header>
-            <div className="content-area-scroll">
+            <div className="content-area animate-slide-up">
                 <div className="ios-group" style={{ marginTop: 16 }}>
                     <div className="form-field"><input placeholder="Имя" value={clientContactDraft.name} onChange={(e) => setClientContactDraft(c => ({ ...c, name: e.target.value }))} /></div>
                     <div className="form-field"><input placeholder="Телефон" value={clientContactDraft.phone} onChange={(e) => setClientContactDraft(c => ({ ...c, phone: e.target.value }))} /></div>

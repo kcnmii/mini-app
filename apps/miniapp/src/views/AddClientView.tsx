@@ -43,7 +43,7 @@ export function AddClientView({
 }: AddClientViewProps) {
     return (
         <>
-            <header className="nav-bar">
+            <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogClient(null); }}>
                         <Icon name="close" />
@@ -54,7 +54,7 @@ export function AddClientView({
                     </button>
                 </div>
             </header>
-            <div className="content-area-scroll">
+            <div className="content-area animate-slide-up">
                 {selectedCatalogClient && clientBalance && (
                     <div style={{ padding: "16px 16px 8px" }}>
                         <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>
@@ -135,7 +135,7 @@ export function AddClientView({
                 {clientDraft.accounts.length > 0 && (
                     <div className="ios-group">
                         {clientDraft.accounts.map((acc, idx) => (
-                            <div className="ios-row clickable" key={idx} onClick={() => openAddClientBa(idx)}>
+                            <div className="ios-row clickable animate-fade-in-up" key={idx} onClick={() => openAddClientBa(idx)}>
                                 <div className="ios-row-content">
                                     <div className="ios-row-title">{acc.bank_name || "Новый счет"}</div>
                                     <div className="ios-row-subtitle">{acc.iic || "Без номера"}{acc.is_main ? " (Основной)" : ""}</div>
@@ -155,7 +155,7 @@ export function AddClientView({
                 {clientDraft.contacts.length > 0 && (
                     <div className="ios-group">
                         {clientDraft.contacts.map((con, idx) => (
-                            <div className="ios-row clickable" key={idx} onClick={() => openAddClientContact(idx)}>
+                            <div className="ios-row clickable animate-fade-in-up" key={idx} onClick={() => openAddClientContact(idx)}>
                                 <div className="ios-row-content">
                                     <div className="ios-row-title">{con.name || "Новый контакт"}</div>
                                     <div className="ios-row-subtitle">{con.phone || "Без телефона"}</div>

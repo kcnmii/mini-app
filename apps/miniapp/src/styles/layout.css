@@ -38,14 +38,6 @@
     padding-bottom: 220px;
 }
 
-.content-area-scroll {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 220px;
-}
-
 /* ═══ Bottom Tab Bar (Glassy) ═══ */
 .tab-bar {
     position: fixed;
@@ -127,48 +119,6 @@
     }
 }
 
-.slide-up-fullscreen {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    animation: slideUpFull 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-    padding-bottom: env(safe-area-inset-bottom, 24px);
-}
-
-.slide-up-nested {
-    position: fixed;
-    inset: 0;
-    z-index: 150;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    animation: slideUpFull 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
-
-@keyframes slideUpFull {
-    from {
-        transform: translateY(100%);
-    }
-
-    to {
-        transform: translateY(0);
-    }
-}
-
-.main-tabs {
-    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease;
-    will-change: transform, opacity;
-}
-
-.main-tabs[aria-hidden="true"] {
-    transform: scale(0.96);
-    opacity: 0.5;
-    pointer-events: none;
-}
-
 .modal-header {
     display: flex;
     align-items: center;
@@ -214,4 +164,28 @@
 /* ═══ Utility ═══ */
 .hidden-input {
     display: none;
+}
+.animate-slide-up {
+    animation: slideUpScreen 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes slideUpScreen {
+    from { transform: translateY(100vh); }
+    to { transform: translateY(0); }
+}
+
+/* Animations for adding positions/contacts */
+.animate-fade-in-up {
+    animation: fadeInUpItem 0.35s ease-out;
+}
+
+@keyframes fadeInUpItem {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -32,7 +32,7 @@ export function ProfileView({
     onLogout
 }: ProfileViewProps) {
     return (
-        <div className="content-area-scroll">
+        <div className="content-area">
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 16px 16px" }}>
                 <div className="user-avatar" style={{
                     width: "80px", height: "80px",

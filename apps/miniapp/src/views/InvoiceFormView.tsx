@@ -46,7 +46,7 @@ export function InvoiceFormView({
 
     return (
         <>
-            <div className="nav-bar">
+            <div className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
@@ -59,7 +59,7 @@ export function InvoiceFormView({
                     </div>
                 </div>
             </div>
-            <div className="content-area-scroll">
+            <div className="content-area has-footer animate-slide-up">
                 <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
                 <div className="ios-group">
                     <div className="form-field">
@@ -147,7 +147,7 @@ export function InvoiceFormView({
                 {invoice.items.length > 0 && (
                     <div className="ios-group">
                         {invoice.items.map((it, idx) => (
-                            <div className="ios-row item-row" key={`inv-${it.number}-${idx}`}>
+                            <div className="ios-row item-row animate-fade-in-up" key={`inv-${it.number}-${idx}`}>
                                 <div className="ios-row-content">
                                     <div className="ios-row-title">{it.name || "Без названия"}</div>
                                     <div className="ios-row-subtitle">
@@ -197,7 +197,7 @@ export function InvoiceFormView({
                 )}
                 <div className="spacer-24" />
             </div>
-            <div className="invoice-footer">
+            <div className="invoice-footer animate-slide-up">
                 <div className="invoice-footer-inner">
                     <div className="invoice-total-row">
                         <span className="invoice-total-label">Общая сумма</span>

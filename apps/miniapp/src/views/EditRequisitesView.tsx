@@ -30,7 +30,7 @@ export function EditRequisitesView({
 }: EditRequisitesViewProps) {
     return (
         <>
-            <header className="nav-bar">
+            <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
@@ -41,7 +41,7 @@ export function EditRequisitesView({
                     </button>
                 </div>
             </header>
-            <div className="content-area-scroll">
+            <div className="content-area animate-slide-up">
                 <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты организации</div>
                 <div className="ios-group">
                     <div className="form-field" style={{ position: "relative" }}>
