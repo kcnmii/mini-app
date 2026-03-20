@@ -138,21 +138,6 @@ class BankAccount(Base):
     is_default = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())
 
-class BankTransaction(Base):
-    __tablename__ = "bank_transactions"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(BigInteger, nullable=False, index=True)
-    bank_account_id = Column(Integer, ForeignKey("bank_accounts.id", ondelete="CASCADE"), nullable=False)
-    date = Column(DateTime, nullable=False)
-    amount = Column(Float, nullable=False)
-    sender_name = Column(Text, default="")
-    sender_bin = Column(Text, default="")
-    description = Column(Text, default="")
-    matched_invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True)
-    is_income = Column(Integer, default=1) # 1 = Income, 0 = Expense
-    doc_num = Column(Text, default="")
-    is_processed = Column(Integer, default=0)
-    created_at = Column(DateTime, server_default=func.now())
 
 class SupplierProfile(Base):
     __tablename__ = "supplier_profile"

@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from typing import List
 import re
 
-from app.core.db import get_db, BankAccount, BankTransaction, Invoice, Payment, Client
+from app.core.db import get_db, BankAccount, Invoice, Payment, Client
 from app.core.auth import get_current_user_id
-from app.schemas.bank import BankAccountSchema, BankStatementImportPayload, ImportResponse, MatchResult, BankTransactionSchema
+from app.schemas.bank import (
+    BankAccountSchema, ImportResponse, AutoMatchedInvoice, 
+    NeedsAttentionItem, CandidateInvoice, ManualMatchRequest, ManualMatchResponse
+)
 from app.modules.telegram_bot.service import TelegramBotClient
 from app.core.parsers.parser1c import parse_1c_statement, ParseError
 
@@ -27,7 +30,6 @@ async def create_account(
     db: Session = Depends(get_db),
 ):
     """Create or update bank account via payload matching"""
-    # Try to find by account_number
     acc = db.query(BankAccount).filter(
         BankAccount.user_id == user_id, 
         BankAccount.account_number == payload.account_number
@@ -48,13 +50,26 @@ async def create_account(
     db.refresh(acc)
     return acc
 
+
 @router.post("/upload-1c", response_model=ImportResponse)
 async def upload_1c_statement(
     file: UploadFile = File(...),
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Import statement transactions from a 1C format text file."""
+    """
+    Upload a 1C bank statement file.
+    
+    Logic:
+    1. Parse file in memory (nothing stored yet)
+    2. Keep only incoming payments (is_income=True), discard expenses
+    3. For each income:
+       a) Try auto-match: BIN+Amount or invoice number in description → mark invoice as paid
+       b) If BIN is known (exists in clients) but no exact match → "needs_attention"
+       c) If BIN is unknown → ignore completely
+    4. Nothing from the raw statement is stored in DB. Only Payment records are created for matched invoices.
+    """
+    # ── Parse file ──
     content = await file.read()
     try:
         text_content = content.decode("utf-8")
@@ -62,139 +77,205 @@ async def upload_1c_statement(
         try:
             text_content = content.decode("windows-1251")
         except UnicodeDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid file encoding. Must be UTF-8 or Windows-1251.")
+            raise HTTPException(status_code=400, detail="Неверная кодировка файла. Поддерживается UTF-8 и Windows-1251.")
 
     try:
         payload = parse_1c_statement(text_content)
     except ParseError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # 1. Ensure account exists
+    # ── Ensure bank account exists (auto-create from statement header) ──
     acc = db.query(BankAccount).filter(
-        BankAccount.user_id == user_id, 
+        BankAccount.user_id == user_id,
         BankAccount.account_number == payload.account_number
     ).first()
 
     if not acc:
+        existing_count = db.query(BankAccount).filter(BankAccount.user_id == user_id).count()
         acc = BankAccount(
             user_id=user_id,
             account_number=payload.account_number,
             bank_name=payload.bank_name,
+            is_default=1 if existing_count == 0 else 0
         )
         db.add(acc)
-        db.commit()
-        db.refresh(acc)
-
-    # 2. Iterate transactions
-    added_count = 0
-    matched_count = 0
-    matches = []
-
-    for item in payload.transactions:
-        # Deduplication check
-        existing_tx = db.query(BankTransaction).filter(
-            BankTransaction.user_id == user_id,
-            BankTransaction.bank_account_id == acc.id,
-            BankTransaction.amount == item.amount,
-            BankTransaction.is_income == int(item.is_income),
-            BankTransaction.doc_num == item.doc_num,
-            # We assume day match + amount + type + doc_num is unique
-        ).first()
-
-        if existing_tx:
-            continue
-
-        new_tx = BankTransaction(
-            user_id=user_id,
-            bank_account_id=acc.id,
-            date=item.date,
-            amount=item.amount,
-            sender_name=item.sender_name,
-            sender_bin=item.sender_bin,
-            description=item.description,
-            is_income=int(item.is_income),
-            doc_num=item.doc_num,
-            is_processed=0,
-        )
-
-        db.add(new_tx)
         db.flush()
-        added_count += 1
-        # Match strategy:
-        # Only income can pay an invoice
-        if item.is_income:
-            # Look for an unpaid invoice where the BIN matches + Amount matches
-            candidate_invoice = None
-            if item.sender_bin:
-                candidate_invoice = db.query(Invoice).outerjoin(Client, Invoice.client_id == Client.id).filter(
-                    Invoice.user_id == user_id,
-                    Invoice.status.in_(["draft", "sent", "overdue"]),
-                    Invoice.total_amount == float(item.amount)
-                ).filter(
-                    (Client.bin_iin == item.sender_bin) | (Invoice.client_bin == item.sender_bin)
-                ).first()
 
-            # If no BIN match, look for "счет №NNN" in description regex
-            if not candidate_invoice:
-                match = re.search(r'(?i)счет[а-я]?\s*(?:(?:на\s+оплату|№|N)\s*)?([A-Za-z0-9-]+)', item.description)
-                if match:
-                    possible_invoice_num = match.group(1).strip()
-                    candidate_invoice = db.query(Invoice).filter(
-                        Invoice.user_id == user_id,
-                        Invoice.status.in_(["draft", "sent", "overdue"]),
-                        Invoice.number == possible_invoice_num,
-                        Invoice.total_amount == float(item.amount)
-                    ).first()
+    # ── Pre-load user's clients for BIN lookups ──
+    user_clients = db.query(Client).filter(Client.user_id == user_id, Client.bin_iin != "").all()
+    known_bins = {c.bin_iin: c for c in user_clients}
 
-            if candidate_invoice:
-                # Mark as Paid
-                candidate_invoice.status = "paid"
-                # Link
-                new_tx.matched_invoice_id = candidate_invoice.id
-                new_tx.is_processed = 1
-                
-                # Add Payment record
-                payment = Payment(
-                    user_id=user_id,
-                    invoice_id=candidate_invoice.id,
-                    amount=item.amount,
-                    date=item.date,
-                    source="bank_import",
-                    bank_transaction_id=new_tx.id,
-                    note=f"С выписки 1С (док. {item.doc_num})"
+    # ── Pre-load unpaid invoices ──
+    unpaid_invoices = db.query(Invoice).filter(
+        Invoice.user_id == user_id,
+        Invoice.status.in_(["draft", "sent", "overdue"])
+    ).all()
+
+    # Build lookup structures
+    # bin → list of invoices (via client_bin or client.bin_iin)
+    invoices_by_bin: dict[str, list] = {}
+    for inv in unpaid_invoices:
+        bins_for_inv = set()
+        if inv.client_bin:
+            bins_for_inv.add(inv.client_bin)
+        if inv.client_id:
+            client = next((c for c in user_clients if c.id == inv.client_id), None)
+            if client and client.bin_iin:
+                bins_for_inv.add(client.bin_iin)
+        for b in bins_for_inv:
+            invoices_by_bin.setdefault(b, []).append(inv)
+
+    # ── Process only incomes ──
+    incomes = [tx for tx in payload.transactions if tx.is_income]
+    
+    auto_matched: list[AutoMatchedInvoice] = []
+    needs_attention: list[NeedsAttentionItem] = []
+    ignored_count = 0
+    already_matched_invoice_ids: set[int] = set()  # prevent double-matching
+
+    for tx in incomes:
+        # ── Strategy 1: Exact match by BIN + Amount ──
+        matched_invoice = None
+        
+        if tx.sender_bin and tx.sender_bin in invoices_by_bin:
+            candidates = invoices_by_bin[tx.sender_bin]
+            for inv in candidates:
+                if inv.id not in already_matched_invoice_ids and abs(inv.total_amount - tx.amount) < 0.01:
+                    matched_invoice = inv
+                    break
+
+        # ── Strategy 2: Invoice number in payment description ──
+        if not matched_invoice:
+            m = re.search(r'(?i)(?:счет[а-яё]*|сч\.?)\s*(?:на\s+оплату\s*)?(?:№|N|#)?\s*([A-Za-z0-9/_-]+)', tx.description)
+            if m:
+                possible_num = m.group(1).strip()
+                for inv in unpaid_invoices:
+                    if inv.id not in already_matched_invoice_ids and inv.number == possible_num and abs(inv.total_amount - tx.amount) < 0.01:
+                        matched_invoice = inv
+                        break
+
+        if matched_invoice:
+            # ── Auto-match: mark invoice as paid, create Payment ──
+            matched_invoice.status = "paid"
+            already_matched_invoice_ids.add(matched_invoice.id)
+
+            payment = Payment(
+                user_id=user_id,
+                invoice_id=matched_invoice.id,
+                amount=tx.amount,
+                date=tx.date,
+                source="bank_import",
+                note=f"Из выписки 1С (док. {tx.doc_num})"
+            )
+            db.add(payment)
+
+            auto_matched.append(AutoMatchedInvoice(
+                invoice_id=matched_invoice.id,
+                invoice_number=matched_invoice.number,
+                client_name=matched_invoice.client_name or "",
+                amount=tx.amount,
+                sender_name=tx.sender_name,
+                payment_description=tx.description
+            ))
+
+        elif tx.sender_bin and tx.sender_bin in known_bins:
+            # ── Known client, but no exact match → needs attention ──
+            # Find their unpaid invoices for manual selection
+            client_unpaid = [
+                inv for inv in unpaid_invoices
+                if inv.id not in already_matched_invoice_ids and (
+                    inv.client_bin == tx.sender_bin or
+                    (inv.client_id and any(c.id == inv.client_id and c.bin_iin == tx.sender_bin for c in user_clients))
                 )
-                db.add(payment)
-                db.flush()
+            ]
 
-                matched_count += 1
-                matches.append(MatchResult(
-                    transaction_id=new_tx.id,
-                    matched=True,
-                    invoice_id=candidate_invoice.id,
-                    invoice_number=candidate_invoice.number,
-                    client_name=candidate_invoice.client_name,
-                ))
+            candidate_list = [
+                CandidateInvoice(
+                    invoice_id=inv.id,
+                    invoice_number=inv.number,
+                    total_amount=inv.total_amount,
+                    date=inv.date,
+                    client_name=inv.client_name or ""
+                )
+                for inv in client_unpaid
+            ]
 
-                # Telegram notification
-                bot = TelegramBotClient()
-                try:
-                    msg = (
-                        f"✅ <b>Оплата получена!</b>\n\n"
-                        f"Счет: <code>{candidate_invoice.number}</code>\n"
-                        f"Клиент: <code>{candidate_invoice.client_name}</code>\n"
-                        f"Сумма: <b>{item.amount:,.2f} ₸</b>\n\n"
-                        f"<i>Автоматически разнесено из банковской выписки.</i>"
-                    )
-                    await bot.send_message(chat_id=user_id, text=msg)
-                except Exception as e:
-                    print(f"Failed to send telegram notification: {e}")
-                finally:
-                    await bot.close()
+            needs_attention.append(NeedsAttentionItem(
+                sender_name=tx.sender_name,
+                sender_bin=tx.sender_bin,
+                amount=tx.amount,
+                date=tx.date,
+                description=tx.description,
+                doc_num=tx.doc_num,
+                candidate_invoices=candidate_list
+            ))
+        else:
+            # ── Unknown BIN → ignore completely, nothing stored ──
+            ignored_count += 1
 
     db.commit()
 
+    # ── Send Telegram notification for auto-matched invoices ──
+    if auto_matched:
+        bot = TelegramBotClient()
+        try:
+            lines = [f"✅ <b>Выписка загружена!</b>\n"]
+            lines.append(f"Автоматически оплачено: <b>{len(auto_matched)}</b> счёт(ов)\n")
+            for am in auto_matched[:10]:  # limit to 10 in notification
+                lines.append(f"• <code>{am.invoice_number}</code> — {am.client_name} — <b>{am.amount:,.0f} ₸</b>")
+            if len(auto_matched) > 10:
+                lines.append(f"\n...и ещё {len(auto_matched) - 10}")
+            await bot.send_message(chat_id=user_id, text="\n".join(lines))
+        except Exception as e:
+            print(f"Failed to send telegram notification: {e}")
+        finally:
+            await bot.close()
+
     return ImportResponse(
-        added_count=added_count,
-        matched_count=matched_count,
-        matches=matches
+        total_incomes=len(incomes),
+        auto_matched_count=len(auto_matched),
+        ignored_count=ignored_count,
+        auto_matched=auto_matched,
+        needs_attention=needs_attention
+    )
+
+
+@router.post("/manual-match", response_model=ManualMatchResponse)
+async def manual_match(
+    payload: ManualMatchRequest,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually confirm a match between a bank payment and an invoice.
+    Called from the "Needs Attention" UI when user selects an invoice for an unmatched payment.
+    """
+    invoice = db.query(Invoice).filter(
+        Invoice.id == payload.invoice_id,
+        Invoice.user_id == user_id,
+        Invoice.status.in_(["draft", "sent", "overdue"])
+    ).first()
+
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Счёт не найден или уже оплачен.")
+
+    # Mark as paid
+    invoice.status = "paid"
+
+    payment = Payment(
+        user_id=user_id,
+        invoice_id=invoice.id,
+        amount=payload.amount,
+        date=payload.date,
+        source="bank_import",
+        note=f"Ручное сопоставление из выписки 1С (док. {payload.doc_num})"
+    )
+    db.add(payment)
+    db.commit()
+
+    return ManualMatchResponse(
+        invoice_id=invoice.id,
+        invoice_number=invoice.number,
+        client_name=invoice.client_name or "",
+        success=True
     )

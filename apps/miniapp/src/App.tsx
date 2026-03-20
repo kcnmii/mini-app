@@ -211,6 +211,7 @@ export function App() {
       <ImportSuccessView
         result={importResult}
         onClose={() => setSubView(null)}
+        onRefresh={loadData}
       />
     );
   }

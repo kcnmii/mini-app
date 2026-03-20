@@ -105,7 +105,6 @@ def upgrade() -> None:
         sa.Column("client_name", sa.Text(), server_default=""),
         sa.Column("client_bin", sa.Text(), server_default=""),
         sa.Column("deal_reference", sa.Text(), server_default=""),
-        sa.Column("payment_code", sa.Text(), server_default=""),
         sa.Column("status", sa.Text(), server_default="draft"),
         sa.Column("total_amount", sa.Float(), server_default="0.0"),
         sa.Column("pdf_path", sa.Text(), server_default=""),

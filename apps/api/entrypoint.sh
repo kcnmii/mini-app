@@ -7,9 +7,14 @@ if echo "$@" | grep -q "telegram_bot_runner"; then
     exec "$@"
 fi
 
-echo "Running Alembic migrations..."
+echo "Running Alembic migrations & self-healing missing legacy tables..."
 
-# Check if alembic_version table exists (i.e., Alembic was used before)
+# 1. Unconditionally create any newly added tables missing in legacy Prod DB.
+# This prevents crashes if tables like 'bank_accounts' were added to models 
+# but missed by Alembic because Prod was already stamped as baseline.
+uv run python -c "from app.core.db import engine, Base; Base.metadata.create_all(engine)"
+
+# 2. Check if alembic_version table exists (i.e., Alembic was used before)
 ALEMBIC_EXISTS=$(uv run python -c "
 from app.core.db import engine
 from sqlalchemy import inspect
@@ -32,7 +37,7 @@ print('yes' if 'clients' in insp.get_table_names() else 'no')
     fi
 fi
 
-# Now run any pending migrations
+# 3. Now run any pending migrations
 uv run alembic upgrade head
 
 echo "Migrations complete. Starting server..."

@@ -26,7 +26,7 @@ export function useBanks(setStatus: (s: string) => void, setBusy: (b: any) => vo
 
             setImportResult(res);
 
-            if (res.matched_count > 0 || res.added_count > 0) {
+            if (res.auto_matched_count > 0) {
                 refreshAll();
             }
         } catch (error) {
