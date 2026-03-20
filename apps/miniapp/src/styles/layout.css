@@ -167,7 +167,7 @@
 }
 
 .animate-slide-up {
-    animation: slideUpScreen 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+    animation: slideUpScreen 0.6s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
 @keyframes slideUpScreen {
@@ -182,7 +182,7 @@
 
 /* Animations for adding positions/contacts */
 .animate-fade-in-up {
-    animation: fadeInUpItem 0.45s ease-out;
+    animation: fadeInUpItem 0.6s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
 @keyframes fadeInUpItem {
