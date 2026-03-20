@@ -67,7 +67,7 @@ export function InvoicesListView({
                     ))}
                 </div>
             )}
-            <div className="content-area">
+            <div className="content-area-scroll">
                 {showNewInvoicesList ? (
                     filteredInvoices.length === 0 ? (
                         <div className="empty-state full-height">

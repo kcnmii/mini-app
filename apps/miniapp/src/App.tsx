@@ -123,6 +123,9 @@ export function App() {
   const tgUser = authUser || webApp?.initDataUnsafe?.user;
   const tgName = [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(" ") || "Пользователь";
 
+  const nestedSubViews = ["addItem", "addClientBankAccount", "addClientContact", "bankPicker", "dateFilter"];
+  const isNestedSubView = subView && nestedSubViews.includes(subView as string);
+
   let subViewContent: React.ReactNode = null;
   if (subView === "invoiceForm") {
     subViewContent = (
@@ -224,6 +227,18 @@ export function App() {
     />
   );
 
+  const mainSubViewContent = subViewContent && !isNestedSubView ? (
+    <div className="slide-up-fullscreen">
+      {subViewContent}
+    </div>
+  ) : null;
+
+  const nestedSubViewContent = subViewContent && isNestedSubView ? (
+    <div className="slide-up-nested">
+      {subViewContent}
+    </div>
+  ) : null;
+
   return (
     <main className="app-shell">
       <div className={`status-banner${status ? " visible" : ""}`}>{status}</div>
@@ -304,11 +319,8 @@ export function App() {
               />
             )}
           </div>
-          {subViewContent && (
-            <div className="slide-up-fullscreen">
-              {subViewContent}
-            </div>
-          )}
+          {mainSubViewContent}
+          {nestedSubViewContent}
         </>
       )}
       {isAuthenticated && !subViewContent && (

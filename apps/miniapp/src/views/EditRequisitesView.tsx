@@ -41,7 +41,7 @@ export function EditRequisitesView({
                     </button>
                 </div>
             </header>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 <div className="section-title" style={{ paddingTop: 8 }}>Реквизиты организации</div>
                 <div className="ios-group">
                     <div className="form-field" style={{ position: "relative" }}>

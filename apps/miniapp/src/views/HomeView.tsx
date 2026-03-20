@@ -59,7 +59,7 @@ export function HomeView({
                     </button>
                 </div>
             </div>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 <Dashboard summary={dashboardSummary} />
 
                 {/* ── Create invoice & Import 1C buttons ── */}

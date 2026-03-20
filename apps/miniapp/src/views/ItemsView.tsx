@@ -36,7 +36,7 @@ export function ItemsView({
                     <input placeholder="Поиск..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} />
                 </div>
             </div>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 {filteredItemsList.length === 0 ? (
                     <div className="empty-state full-height">
                         <div className="empty-state-icon"><Icon name="inventory_2" /></div>

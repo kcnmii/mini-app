@@ -34,7 +34,7 @@ export function AddClientBankAccountView({
                     </button>
                 </div>
             </header>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 <div className="ios-group" style={{ marginTop: 16 }}>
                     <div className="form-field">
                         <input

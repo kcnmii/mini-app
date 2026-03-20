@@ -54,7 +54,7 @@ export function AddClientView({
                     </button>
                 </div>
             </header>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 {selectedCatalogClient && clientBalance && (
                     <div style={{ padding: "16px 16px 8px" }}>
                         <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>

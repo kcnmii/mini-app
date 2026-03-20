@@ -38,6 +38,14 @@
     padding-bottom: 220px;
 }
 
+.content-area-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 220px;
+}
+
 /* ═══ Bottom Tab Bar (Glassy) ═══ */
 .tab-bar {
     position: fixed;
@@ -124,10 +132,20 @@
     inset: 0;
     z-index: 100;
     background: var(--bg);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    animation: slideUpFull 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    animation: slideUpFull 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+}
+
+.slide-up-nested {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    animation: slideUpFull 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
 @keyframes slideUpFull {
@@ -141,7 +159,7 @@
 }
 
 .main-tabs {
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease;
     will-change: transform, opacity;
 }
 

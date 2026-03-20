@@ -38,7 +38,7 @@ export function ClientsView({
                     <input placeholder="Поиск..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} />
                 </div>
             </div>
-            <div className="content-area">
+            <div className="content-area-scroll">
                 {filteredClientsList.length === 0 ? (
                     <div className="empty-state full-height">
                         <div className="empty-state-icon"><Icon name="group" /></div>

@@ -59,7 +59,7 @@ export function InvoiceFormView({
                     </div>
                 </div>
             </div>
-            <div className="content-area has-footer">
+            <div className="content-area-scroll">
                 <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
                 <div className="ios-group">
                     <div className="form-field">
