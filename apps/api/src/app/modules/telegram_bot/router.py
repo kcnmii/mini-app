@@ -23,7 +23,7 @@ async def send_invoice_to_telegram(
     try:
         docx_bytes = await render_service.render_invoice_docx(invoice_payload, user_id)
         # Store for telegram callback
-        render_service.persist_debug_output(filename.replace(".pdf", ".docx"), docx_bytes)
+        await render_service.save_file(filename.replace(".pdf", ".docx"), docx_bytes, user_id=user_id)
         
         pdf_bytes = await render_service.convert_docx_to_pdf(
             filename.replace(".pdf", ".docx"),
@@ -41,6 +41,7 @@ async def send_invoice_to_telegram(
             pdf_bytes=pdf_bytes,
             docx_bytes=docx_bytes,
             caption=payload.caption,
+            user_id=user_id,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"telegram_send_error: {exc}") from exc

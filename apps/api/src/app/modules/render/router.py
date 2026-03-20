@@ -72,7 +72,7 @@ async def render_invoice_docx(
         raise HTTPException(status_code=502, detail=f"docgen_error: {exc}") from exc
 
     filename = _safe_filename("invoice", payload.invoice_number, "docx")
-    service.persist_debug_output(filename, docx_bytes)
+    await service.save_file(filename, docx_bytes, user_id=0)
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -98,9 +98,9 @@ async def render_invoice_pdf(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
 
-    service.persist_debug_output(filename, docx_bytes)
+    await service.save_file(filename, docx_bytes, user_id=0)
     pdf_name = filename.replace(".docx", ".pdf")
-    pdf_path = service.persist_debug_output(pdf_name, pdf_bytes)
+    pdf_path = await service.save_file(pdf_name, pdf_bytes, user_id=0)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -129,8 +129,8 @@ async def render_invoice_debug(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
 
-    docx_path = service.persist_debug_output(filename, docx_bytes)
-    pdf_path = service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
+    docx_path = await service.save_file(filename, docx_bytes, user_id=0)
+    pdf_path = await service.save_file(filename.replace(".docx", ".pdf"), pdf_bytes, user_id=0)
     return JSONResponse(
         {
             "template_key": "invoice-kz",

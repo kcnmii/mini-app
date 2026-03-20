@@ -101,14 +101,19 @@ async def get_document_pdf(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    from fastapi.responses import Response
+    from app.core import s3
+
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    # If file exists on disk — return immediately
-    if doc.pdf_path and os.path.exists(doc.pdf_path):
-        filename = os.path.basename(doc.pdf_path)
-        return FileResponse(doc.pdf_path, media_type="application/pdf", filename=filename)
+    # If file exists on S3 — return immediately
+    if doc.pdf_path:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
+        if pdf_bytes:
+            filename = os.path.basename(doc.pdf_path)
+            return Response(pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
     # Auto-regenerate from payload_json if available
     if not doc.payload_json:
@@ -127,15 +132,15 @@ async def get_document_pdf(
         docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
         pdf_bytes = await render_service.convert_docx_to_pdf(fname, docx_bytes)
 
-        pdf_path = render_service.persist_debug_output(fname.replace(".docx", ".pdf"), pdf_bytes)
-        docx_path = render_service.persist_debug_output(fname, docx_bytes)
+        pdf_path = await render_service.save_file(fname.replace(".docx", ".pdf"), pdf_bytes, user_id=user_id)
+        docx_path = await render_service.save_file(fname, docx_bytes, user_id=user_id)
 
         # Update record with new persistent paths
         doc.pdf_path = pdf_path
         doc.docx_path = docx_path
         db.commit()
 
-        return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
+        return Response(pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{os.path.basename(pdf_path)}"'})
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
 
@@ -155,8 +160,8 @@ async def save_invoice_document(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"render_pipeline_error: {exc}") from exc
 
-    pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
-    docx_path = render_service.persist_debug_output(filename, docx_bytes)
+    pdf_path = await render_service.save_file(filename.replace(".docx", ".pdf"), pdf_bytes, user_id=user_id)
+    docx_path = await render_service.save_file(filename, docx_bytes, user_id=user_id)
 
     # Parse total amount from string
     try:

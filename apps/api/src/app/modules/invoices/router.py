@@ -242,8 +242,8 @@ async def get_invoice_pdf(
     db: Session = Depends(get_db),
 ):
     """Serve PDF for an invoice. Auto-regenerates if file is missing from disk."""
-    import os
     import json
+    from app.core import s3
     from app.modules.render.service import RenderService
     from app.schemas.render import InvoiceRenderPayload
 
@@ -257,9 +257,11 @@ async def get_invoice_pdf(
         Document.title.like(f"%{inv.number}%")
     ).order_by(Document.id.desc()).first()
 
-    # If document exists and PDF file is on disk — return it immediately
-    if doc and doc.pdf_path and os.path.exists(doc.pdf_path):
-        return FileResponse(doc.pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
+    # If document exists and PDF file is in S3 — return it immediately
+    if doc and doc.pdf_path:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
+        if pdf_bytes:
+            return Response(pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="invoice_{inv.number}.pdf"'})
 
     # Otherwise, regenerate PDF from stored payload_json
     payload_json = doc.payload_json if doc and doc.payload_json else None
@@ -277,8 +279,8 @@ async def get_invoice_pdf(
         docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
         pdf_bytes = await render_service.convert_docx_to_pdf(filename, docx_bytes)
 
-        pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
-        docx_path = render_service.persist_debug_output(filename, docx_bytes)
+        pdf_path = await render_service.save_file(filename.replace(".docx", ".pdf"), pdf_bytes, user_id=user_id)
+        docx_path = await render_service.save_file(filename, docx_bytes, user_id=user_id)
 
         # Update document record with new paths
         if doc:
@@ -286,7 +288,7 @@ async def get_invoice_pdf(
             doc.docx_path = docx_path
             db.commit()
 
-        return FileResponse(pdf_path, media_type="application/pdf", filename=f"invoice_{inv.number}.pdf")
+        return Response(pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="invoice_{inv.number}.pdf"'})
 
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
@@ -299,10 +301,10 @@ async def get_invoice_preview(
     db: Session = Depends(get_db),
 ):
     """Convert invoice PDF pages to PNG images for mobile-friendly viewing."""
-    import os
     import json
     import base64
     import fitz  # PyMuPDF
+    from app.core import s3
     from app.modules.render.service import RenderService
     from app.schemas.render import InvoiceRenderPayload
 
@@ -316,10 +318,12 @@ async def get_invoice_preview(
         Document.title.like(f"%{inv.number}%")
     ).order_by(Document.id.desc()).first()
 
-    pdf_path = doc.pdf_path if doc and doc.pdf_path else None
+    pdf_bytes = None
+    if doc and doc.pdf_path:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
 
     # If PDF file is missing — regenerate it
-    if not pdf_path or not os.path.exists(pdf_path):
+    if not pdf_bytes:
         payload_json = doc.payload_json if doc and doc.payload_json else None
         if not payload_json:
             raise HTTPException(status_code=404, detail="Нет данных для генерации превью")
@@ -335,8 +339,8 @@ async def get_invoice_preview(
             docx_bytes = await render_service.render_invoice_docx(render_payload, user_id)
             pdf_bytes = await render_service.convert_docx_to_pdf(filename, docx_bytes)
 
-            pdf_path = render_service.persist_debug_output(filename.replace(".docx", ".pdf"), pdf_bytes)
-            docx_path = render_service.persist_debug_output(filename, docx_bytes)
+            pdf_path = await render_service.save_file(filename.replace(".docx", ".pdf"), pdf_bytes, user_id=user_id)
+            docx_path = await render_service.save_file(filename, docx_bytes, user_id=user_id)
 
             if doc:
                 doc.pdf_path = pdf_path
@@ -347,7 +351,7 @@ async def get_invoice_preview(
 
     # Convert PDF pages to PNG images using PyMuPDF
     try:
-        pdf_doc = fitz.open(pdf_path)
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         pages = []
         for page_num in range(len(pdf_doc)):
             page = pdf_doc[page_num]

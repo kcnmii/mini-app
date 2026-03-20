@@ -25,20 +25,26 @@ async def on_docx_callback(callback: CallbackQuery) -> None:
         await callback.answer()
         return
 
-    filename = callback.data.split(":", 1)[1]
-    # Re-use the same logic as in persist_debug_output
-    file_path = os.path.join("data/storage", filename)
+    parts = callback.data.split(":")
+    if len(parts) == 3:
+        _, user_id_str, filename = parts
+    else:
+        # Fallback for old buttons
+        _, filename = parts
+        user_id_str = "0"
+        
+    s3_key = f"invoices/{user_id_str}/{filename}"
+    
+    from app.core import s3
+    content = await s3.download_file(s3_key)
 
-    if not os.path.exists(file_path):
+    if not content:
         await callback.answer("Файл не найден. Попробуйте отправить документ заново из приложения.", show_alert=True)
         return
 
     await callback.answer("Отправляем Word файл...")
 
     try:
-        with open(file_path, "rb") as f:
-            content = f.read()
-        
         await callback.message.answer_document(
             document=BufferedInputFile(content, filename=filename),
             caption=f"Word вариант: {filename}"

@@ -10,20 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db, SupplierProfile as SupplierProfileModel
 from app.core.auth import get_current_user_id
+from app.core import s3
 from app.schemas.profile import SupplierProfile, SupplierProfileUpdate
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-UPLOADS_DIR = Path("data/uploads")
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 IMAGE_FIELDS = {"logo", "signature", "stamp"}
-
-
-def _ensure_uploads_dir(user_id: int) -> Path:
-    user_dir = UPLOADS_DIR / str(user_id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir
 
 
 def _get_or_create_profile(db: Session, user_id: int) -> SupplierProfileModel:
@@ -88,18 +82,19 @@ async def upload_image(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail=f"File too large. Max {MAX_FILE_SIZE // 1024 // 1024}MB")
 
-    user_dir = _ensure_uploads_dir(user_id)
     filename = f"{image_type}{ext}"
-    file_path = user_dir / filename
-    file_path.write_bytes(content)
+    s3_key = f"uploads/{user_id}/{filename}"
+    
+    mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(ext, "application/octet-stream")
+    await s3.upload_file(s3_key, content, content_type=mime)
 
     path_column = f"{image_type}_path"
     profile_model = _get_or_create_profile(db, user_id)
 
-    setattr(profile_model, path_column, str(file_path))
+    setattr(profile_model, path_column, s3_key)
     db.commit()
 
-    return JSONResponse({"status": "ok", "path": str(file_path), "image_type": image_type})
+    return JSONResponse({"status": "ok", "path": s3_key, "image_type": image_type})
 
 
 @router.delete("/{image_type}")
@@ -116,9 +111,7 @@ async def delete_image(
     current_path = getattr(profile_model, path_column)
 
     if current_path:
-        p = Path(current_path)
-        if p.exists():
-            p.unlink()
+        await s3.delete_file(current_path)
 
     setattr(profile_model, path_column, "")
     db.commit()
@@ -143,12 +136,11 @@ async def get_image_preview(
     if not current_path:
         return JSONResponse({"has_image": False, "data": ""})
 
-    p = Path(current_path)
-    if not p.exists():
+    raw = await s3.download_file(current_path)
+    if not raw:
         return JSONResponse({"has_image": False, "data": ""})
 
-    raw = p.read_bytes()
-    ext = p.suffix.lower()
+    ext = Path(current_path).suffix.lower()
     mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(ext, "image/png")
     b64 = base64.b64encode(raw).decode("ascii")
 

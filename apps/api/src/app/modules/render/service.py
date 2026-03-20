@@ -5,6 +5,7 @@ from pathlib import Path
 import httpx
 
 from app.core.config import settings
+from app.core import s3
 from app.schemas.render import InvoiceRenderPayload
 
 
@@ -42,9 +43,8 @@ class RenderService:
             response.raise_for_status()
             return response.content
 
-    def persist_debug_output(self, filename: str, content: bytes) -> str:
-        output_dir = Path("data/storage")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / filename
-        output_path.write_bytes(content)
-        return str(output_path.resolve())
+    async def save_file(self, filename: str, content: bytes, user_id: int = 0) -> str:
+        s3_key = f"invoices/{user_id}/{filename}"
+        mime = "application/pdf" if filename.endswith(".pdf") else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        await s3.upload_file(s3_key, content, content_type=mime)
+        return s3_key

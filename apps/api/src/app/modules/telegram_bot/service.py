@@ -8,12 +8,12 @@ from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboar
 from app.core.config import settings
 
 
-def build_launch_keyboard(docx_filename: str | None = None) -> InlineKeyboardMarkup | None:
+def build_launch_keyboard(docx_filename: str | None = None, user_id: int = 0) -> InlineKeyboardMarkup | None:
     buttons = []
     
     if docx_filename:
-        # We store the callback data as docx:<filename> to fetch it later
-        buttons.append([InlineKeyboardButton(text="Скачать в Word", callback_data=f"docx:{docx_filename}")])
+        # We store the callback data as docx:<user_id>:<filename> to fetch it later
+        buttons.append([InlineKeyboardButton(text="Скачать в Word", callback_data=f"docx:{user_id}:{docx_filename}")])
 
     if settings.telegram_app_url.startswith("https://"):
         buttons.append([
@@ -69,6 +69,7 @@ class TelegramBotClient:
         pdf_bytes: bytes,
         docx_bytes: bytes,
         caption: str | None,
+        user_id: int = 0,
     ) -> int:
         if not self.enabled: return 0
         # Send ONLY PDF, keep docx behind an inline button
@@ -77,7 +78,7 @@ class TelegramBotClient:
             chat_id=chat_id,
             document=pdf_doc,
             caption=caption,
-            reply_markup=build_launch_keyboard(f"{filename_prefix}.docx"),
+            reply_markup=build_launch_keyboard(f"{filename_prefix}.docx", user_id=user_id),
         )
         return msg.message_id
 
