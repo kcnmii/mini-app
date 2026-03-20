@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 import re
 
-from app.core.db import get_db, BankAccount, BankTransaction, Invoice, Payment
+from app.core.db import get_db, BankAccount, BankTransaction, Invoice, Payment, Client
 from app.core.auth import get_current_user_id
 from app.schemas.bank import BankAccountSchema, BankStatementImportPayload, ImportResponse, MatchResult, BankTransactionSchema
 from app.modules.telegram_bot.service import TelegramBotClient
+from app.core.parsers.parser1c import parse_1c_statement, ParseError
 
 router = APIRouter(prefix="/banks", tags=["banks"])
 
@@ -47,14 +48,27 @@ async def create_account(
     db.refresh(acc)
     return acc
 
-@router.post("/import", response_model=ImportResponse)
-async def import_statements(
-    payload: BankStatementImportPayload,
+@router.post("/upload-1c", response_model=ImportResponse)
+async def upload_1c_statement(
+    file: UploadFile = File(...),
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Import statement transactions (already parsed from 1C from frontend) to the DB and try matching them to invoices."""
-    
+    """Import statement transactions from a 1C format text file."""
+    content = await file.read()
+    try:
+        text_content = content.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text_content = content.decode("windows-1251")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid file encoding. Must be UTF-8 or Windows-1251.")
+
+    try:
+        payload = parse_1c_statement(text_content)
+    except ParseError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     # 1. Ensure account exists
     acc = db.query(BankAccount).filter(
         BankAccount.user_id == user_id, 
@@ -106,18 +120,18 @@ async def import_statements(
         db.add(new_tx)
         db.flush()
         added_count += 1
-
         # Match strategy:
         # Only income can pay an invoice
         if item.is_income:
             # Look for an unpaid invoice where the BIN matches + Amount matches
             candidate_invoice = None
             if item.sender_bin:
-                candidate_invoice = db.query(Invoice).filter(
+                candidate_invoice = db.query(Invoice).outerjoin(Client, Invoice.client_id == Client.id).filter(
                     Invoice.user_id == user_id,
                     Invoice.status.in_(["draft", "sent", "overdue"]),
-                    Invoice.client_bin == item.sender_bin,
-                    Invoice.total_amount == float(item.amount)  # phase 6 matching: full payment
+                    Invoice.total_amount == float(item.amount)
+                ).filter(
+                    (Client.bin_iin == item.sender_bin) | (Invoice.client_bin == item.sender_bin)
                 ).first()
 
             # If no BIN match, look for "счет №NNN" in description regex

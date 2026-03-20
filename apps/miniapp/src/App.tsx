@@ -19,6 +19,7 @@ import { AddClientBankAccountView } from "./views/AddClientBankAccountView";
 import { AddClientContactView } from "./views/AddClientContactView";
 import { InvoiceFormView } from "./views/InvoiceFormView";
 import { ViewDocumentView } from "./views/ViewDocumentView";
+import { ImportSuccessView } from "./views/ImportSuccessView";
 
 import { useAuth } from "./hooks/useAuth";
 import { useSharedState } from "./hooks/useSharedState";
@@ -57,7 +58,7 @@ export function App() {
 
   const { documents, setDocuments, loadAndPreviewOldDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
 
-  const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload } = useBanks(setStatus, setBusy);
+  const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload, importResult, setImportResult } = useBanks(setStatus, setBusy, setSubView);
 
   const { setInvoice, setDashboardSummary, setInvoiceRecords } = invHook;
 
@@ -203,6 +204,13 @@ export function App() {
         itemDraft={itemDraft as any} setItemDraft={setItemDraft as any} items={items} selectedCatalogItem={selectedCatalogItem}
         setSelectedCatalogItem={setSelectedCatalogItem} setSubView={setSubView} createItem={() => createItem(tab, invHook.addRow)} deleteItem={() => deleteItem()}
         busy={busy} tab={tab}
+      />
+    );
+  } else if (subView === "importSuccess") {
+    subViewContent = (
+      <ImportSuccessView
+        result={importResult}
+        onClose={() => setSubView(null)}
       />
     );
   }
