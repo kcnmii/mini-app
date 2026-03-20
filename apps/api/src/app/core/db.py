@@ -211,7 +211,11 @@ engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db() -> None:
-    # Ensure data directory exists if using SQLite
+    """Initialize database.
+    
+    Schema management is handled by Alembic migrations (run via entrypoint.sh).
+    This function only ensures the data directory exists for SQLite fallback.
+    """
     db_url = settings.database_url or f"sqlite:///{settings.sqlite_path}"
     if db_url.startswith("sqlite"):
         import os
@@ -219,37 +223,8 @@ def init_db() -> None:
         db_dir = os.path.dirname(db_file)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
-
-    # Create tables if they don't exist
-    Base.metadata.create_all(bind=engine)
-    
-    # Manual migration for existing tables (SQLAlchemy create_all doesn't add columns)
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        # Add missing columns to clients
-        for col_name in ["address", "director", "user_id"]:
-            try:
-                col_type = "BIGINT DEFAULT 0" if col_name == "user_id" else "TEXT DEFAULT ''"
-                conn.execute(text(f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
-        # Add user_id to other tables
-        for table_name in ["catalog_items", "documents", "supplier_profile"]:
-            try:
-                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS user_id BIGINT DEFAULT 0"))
-                conn.commit()
-            except Exception:
-                pass
-        
-        # Add docx_path, total_amount, payment_code to documents/invoices
-        try:
-            conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS docx_path TEXT DEFAULT ''"))
-            conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS total_amount DOUBLE PRECISION DEFAULT 0.0"))
-            conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_code TEXT DEFAULT ''"))
-            conn.commit()
-        except Exception:
-            pass
+        # For SQLite (local dev without Alembic), create tables directly
+        Base.metadata.create_all(bind=engine)
 
 def get_db() -> Iterator[Session]:
     db = SessionLocal()

@@ -12,12 +12,21 @@ COPY pyproject.toml ./
 # Install dependencies
 RUN uv sync --no-dev
 
+# Copy Alembic configuration and migrations
+COPY alembic.ini ./
+COPY alembic/ alembic/
+
 # Copy application source
 COPY src/ src/
 
-# Create data directory for SQLite
+# Copy entrypoint script
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
+# Create data directory
 RUN mkdir -p /app/data
 
 EXPOSE 8000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
