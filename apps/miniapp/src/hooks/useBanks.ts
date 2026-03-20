@@ -13,6 +13,9 @@ export function useBanks(setStatus: (s: string) => void, setBusy: (b: any) => vo
 
         try {
             setBusy("save");
+            setImportResult(null);
+            setSubView("importSuccess");
+
             const formData = new FormData();
             formData.append("file", file);
 
@@ -22,7 +25,6 @@ export function useBanks(setStatus: (s: string) => void, setBusy: (b: any) => vo
             });
 
             setImportResult(res);
-            setSubView("importSuccess");
 
             if (res.matched_count > 0 || res.added_count > 0) {
                 refreshAll();
