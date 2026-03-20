@@ -1,6 +1,12 @@
 #!/bin/sh
 set -e
 
+# Skip migrations if running as the bot (not the API server)
+if echo "$@" | grep -q "telegram_bot_runner"; then
+    echo "Bot mode — skipping migrations."
+    exec "$@"
+fi
+
 echo "Running Alembic migrations..."
 
 # Check if alembic_version table exists (i.e., Alembic was used before)
