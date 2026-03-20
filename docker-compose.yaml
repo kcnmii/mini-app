@@ -117,6 +117,7 @@ services:
   # ── MinIO Init (Creates default bucket) ──
   minio-init:
     image: minio/mc:RELEASE.2023-01-28T20-29-38Z
+    restart: "no"
     depends_on:
       minio:
         condition: service_healthy
