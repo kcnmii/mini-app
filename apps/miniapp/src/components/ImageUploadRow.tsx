@@ -10,13 +10,21 @@ interface ImageUploadRowProps {
     onSuccess?: () => void;
 }
 
+const previewCache: Record<string, string> = {};
+
 export function ImageUploadRow({ label, hint, imageType, onStatusChange, onSuccess }: ImageUploadRowProps) {
-    const [preview, setPreview] = useState<string>("");
+    const [preview, setPreview] = useState<string>(previewCache[imageType] || "");
 
     const loadPreview = useCallback(async () => {
+        if (previewCache[imageType]) {
+            setPreview(previewCache[imageType]);
+            return;
+        }
         try {
             const res = await request<{ has_image: boolean; data: string }>(`/profile/${imageType}/preview`);
-            setPreview(res.has_image ? res.data : "");
+            const dataStr = res.has_image ? res.data : "";
+            previewCache[imageType] = dataStr;
+            setPreview(dataStr);
         } catch { setPreview(""); }
     }, [imageType]);
 
@@ -35,6 +43,7 @@ export function ImageUploadRow({ label, hint, imageType, onStatusChange, onSucce
                 body: fd,
                 headers
             });
+            delete previewCache[imageType];
             await loadPreview();
             onStatusChange(`${label} загружен`);
             if (onSuccess) onSuccess();
