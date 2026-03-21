@@ -198,7 +198,12 @@ export function App() {
         deleteInvoice={() => invHook.deleteInvoice(setDocuments)}
         profile={profile}
         sendInvoice={() => invHook.sendInvoice(chatId)}
-        disableAnimation={prevSubView === "addItem"}
+        animationType={prevSubView === "addItem" ? "none" : (invHook.selectedDocId || invHook.selectedInvoiceId) ? "left" : "up"}
+        openAddItem={() => {
+            setSelectedCatalogItem(null);
+            setItemDraft({ name: "", unit: "", price: "", sku: "" } as any);
+            setSubView("addItem");
+        }}
       />
     );
   } else if (subView === "viewDocument") {
@@ -222,7 +227,7 @@ export function App() {
         createClient={() => createClient(tab, invHook.selectClient)} clientBalance={clientBalance} clientDraft={clientDraft as any} setClientDraft={setClientDraft as any}
         setIsBinLoading={setIsBinLoading} isBinLoading={isBinLoading} setStatus={setStatus} clients={clients} openAddClientBa={openAddClientBa} openAddClientContact={openAddClientContact}
         deleteClient={() => deleteClient()} busy={busy}
-        disableAnimation={prevSubView === "addClientBankAccount" || prevSubView === "addClientContact"}
+        animationType={(prevSubView === "addClientBankAccount" || prevSubView === "addClientContact") ? "none" : selectedCatalogClient ? "left" : "up"}
       />
     );
   } else if (subView === "addClientBankAccount") {
@@ -261,6 +266,7 @@ export function App() {
         itemDraft={itemDraft as any} setItemDraft={setItemDraft as any} items={items} selectedCatalogItem={selectedCatalogItem}
         setSelectedCatalogItem={setSelectedCatalogItem} setSubView={setSubView} createItem={() => createItem(tab, invHook.addRow)} deleteItem={() => deleteItem()}
         busy={busy} tab={tab}
+        animationType={selectedCatalogItem ? "left" : "up"}
       />
     );
   } else if (subView === "importSuccess") {

@@ -21,7 +21,7 @@ interface AddClientViewProps {
     openAddClientContact: (idx?: number) => void;
     deleteClient: () => void;
     busy: string;
-    disableAnimation?: boolean;
+    animationType?: "none" | "left" | "up";
 }
 
 export function AddClientView({
@@ -41,10 +41,11 @@ export function AddClientView({
     openAddClientContact,
     deleteClient,
     busy,
-    disableAnimation
+    animationType = "left"
 }: AddClientViewProps) {
-    const animClass = disableAnimation ? "" : "animate-slide-left";
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
     return (
+
         <>
             <header className={`nav-bar ${animClass}`}>
 

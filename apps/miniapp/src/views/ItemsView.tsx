@@ -27,7 +27,11 @@ export function ItemsView({
             <div className="nav-bar">
                 <div className="nav-bar-inner">
                     <h1 className="nav-bar-title">Каталог</h1>
-                    <button className="nav-bar-btn" onClick={() => setSubView("addItem")}><Icon name="add" /></button>
+                    <button className="nav-bar-btn" onClick={() => {
+                        setSelectedCatalogItem(null);
+                        setItemDraft({ name: "", unit: "", price: "", sku: "" } as any);
+                        setSubView("addItem");
+                    }}><Icon name="add" /></button>
                 </div>
             </div>
             <div className="search-bar">

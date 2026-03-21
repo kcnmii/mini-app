@@ -21,7 +21,8 @@ interface InvoiceFormViewProps {
     deleteInvoice: () => void;
     profile: SupplierProfileData;
     sendInvoice: () => void;
-    disableAnimation?: boolean;
+    animationType?: "none" | "left" | "up";
+    openAddItem: () => void;
 }
 
 export function InvoiceFormView({
@@ -42,9 +43,10 @@ export function InvoiceFormView({
     deleteInvoice,
     profile,
     sendInvoice,
-    disableAnimation
+    animationType = "left",
+    openAddItem
 }: InvoiceFormViewProps) {
-    const animClass = disableAnimation ? "" : "animate-slide-left";
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
 
     return (
@@ -173,7 +175,7 @@ export function InvoiceFormView({
                     </div>
                 )}
                 <div style={{ padding: "12px 16px 16px" }}>
-                    <button className="dashed-add-btn" onClick={() => setSubView("addItem")}>
+                    <button className="dashed-add-btn" onClick={openAddItem}>
                         <Icon name="add_circle" /> Добавить позицию
                     </button>
                 </div>

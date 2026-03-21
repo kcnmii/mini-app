@@ -14,6 +14,7 @@ interface AddItemViewProps {
     deleteItem: () => void;
     busy: string;
     tab: string;
+    animationType?: "none" | "left" | "up";
 }
 
 export function AddItemView({
@@ -26,11 +27,13 @@ export function AddItemView({
     createItem,
     deleteItem,
     busy,
-    tab
+    tab,
+    animationType = "left"
 }: AddItemViewProps) {
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
     return (
         <>
-            <header className="nav-bar animate-slide-left">
+            <header className={`nav-bar ${animClass}`}>
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogItem(null); }}>
                         <Icon name="close" />
@@ -41,7 +44,7 @@ export function AddItemView({
                     </button>
                 </div>
             </header>
-            <div className="content-area animate-slide-left">
+            <div className={`content-area ${animClass}`}>
                 <div className="ios-group" style={{ marginTop: 16 }}>
                     <div className="form-field">
                         <input
