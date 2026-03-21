@@ -6,6 +6,7 @@ from typing import Optional
 from aiobotocore.session import get_session
 import botocore.exceptions
 
+import boto3
 from app.core.config import settings
 
 def get_boto_config():
@@ -18,6 +19,21 @@ def get_boto_config():
     if not is_aws and settings.s3_endpoint:
         config["endpoint_url"] = settings.s3_endpoint
     return config
+
+def download_file_sync(key: str) -> Optional[bytes]:
+    """Download a file from S3 synchronously using boto3."""
+    config = get_boto_config()
+    endpoint_url = config.pop("endpoint_url", None)
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        **config
+    )
+    try:
+        response = s3_client.get_object(Bucket=settings.s3_bucket, Key=key)
+        return response["Body"].read()
+    except Exception:
+        return None
 
 async def upload_file(key: str, content: bytes, content_type: str = "application/octet-stream") -> str:
     """Upload a file to S3 and return its key."""

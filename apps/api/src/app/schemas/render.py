@@ -85,8 +85,9 @@ class InvoiceRenderPayload(BaseModel):
 
 
 def _load_image_b64(image_type: str, user_id: int) -> str:
-    """Read uploaded image file and return raw base64 (no data-uri prefix)."""
+    """Read uploaded image file from S3 and return raw base64 (no data-uri prefix)."""
     from app.core.db import SessionLocal, SupplierProfile
+    from app.core import s3
     
     path_column = f"{image_type}_path"
     db = SessionLocal()
@@ -97,10 +98,13 @@ def _load_image_b64(image_type: str, user_id: int) -> str:
         file_path = getattr(profile, path_column)
         if not file_path:
             return ""
-        p = Path(file_path)
-        if not p.exists():
+        
+        # Download from S3 (consistently with preview)
+        raw_data = s3.download_file_sync(file_path)
+        if not raw_data:
             return ""
-        return base64.b64encode(p.read_bytes()).decode("ascii")
+            
+        return base64.b64encode(raw_data).decode("ascii")
     except Exception:
         return ""
     finally:
