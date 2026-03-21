@@ -57,6 +57,10 @@ export function App() {
   const { items, setItems, itemDraft, setItemDraft, selectedCatalogItem, setSelectedCatalogItem, createItem, deleteItem } = useCatalog(setStatus, setBusy, setSubView);
 
   const { documents, setDocuments, loadAndPreviewOldDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
+  // Scroll to top when view changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab, subView]);
 
   const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload, importResult, setImportResult } = useBanks(setStatus, setBusy, setSubView);
 
