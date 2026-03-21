@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Icon } from "../components/Common";
 import { Toggle } from "../components/Common";
 import { ImageUploadRow } from "../components/ImageUploadRow";
@@ -35,6 +35,19 @@ export function ProfileView({
     deleteBankAccount,
     onLogout
 }: ProfileViewProps) {
+    const [theme, setTheme] = useState(localStorage.getItem("theme") || "system");
+
+    const cycleTheme = () => {
+        const nextTheme = theme === "system" ? "light" : theme === "light" ? "dark" : "system";
+        setTheme(nextTheme);
+        localStorage.setItem("theme", nextTheme);
+        if (nextTheme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+        else if (nextTheme === "light") document.documentElement.setAttribute("data-theme", "light");
+        else document.documentElement.removeAttribute("data-theme");
+    };
+
+    const themeLabel = theme === "system" ? "Системное" : theme === "light" ? "Светлое" : "Темное";
+
     return (
         <div className="content-area">
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 16px 16px" }}>
@@ -121,12 +134,12 @@ export function ProfileView({
                     </div>
                     <div className="settings-row-right"><span>Русский</span><Icon name="chevron_right" /></div>
                 </div>
-                <div className="settings-row">
+                <div className="settings-row" onClick={cycleTheme} style={{ cursor: "pointer" }}>
                     <div className="settings-row-left">
                         <div className="settings-icon dark"><Icon name="dark_mode" /></div>
                         <span className="settings-row-label">Оформление</span>
                     </div>
-                    <div className="settings-row-right"><span>Системное</span><Icon name="chevron_right" /></div>
+                    <div className="settings-row-right"><span>{themeLabel}</span><Icon name="change_circle" /></div>
                 </div>
             </div>
             {!webAppInitData && (

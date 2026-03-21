@@ -8,6 +8,7 @@
     --text-secondary: #64748b;
     --text-muted: #8E8E93;
     --separator: rgba(60, 60, 67, 0.12);
+    --active-bg: #f8fafc;
     --ios-green: #34C759;
     --ios-red: #FF3B30;
     --badge-green-bg: #dcfce7;
@@ -17,6 +18,48 @@
     --badge-blue-bg: #eff6ff;
     --badge-blue-text: #007bff;
     color-scheme: light;
+}
+
+[data-theme="dark"] {
+    --primary: #0a84ff;
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #8E8E93;
+    --separator: #38383a;
+    --active-bg: #2c2c2e;
+    --ios-green: #30d158;
+    --ios-red: #ff453a;
+    --badge-green-bg: rgba(48, 209, 88, 0.2);
+    --badge-green-text: #30d158;
+    --badge-gray-bg: rgba(142, 142, 147, 0.2);
+    --badge-gray-text: #98989d;
+    --badge-blue-bg: rgba(10, 132, 255, 0.2);
+    --badge-blue-text: #0a84ff;
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary: #0a84ff;
+        --bg: #000000;
+        --card: #1c1c1e;
+        --text: #f8fafc;
+        --text-secondary: #94a3b8;
+        --text-muted: #8E8E93;
+        --separator: #38383a;
+        --active-bg: #2c2c2e;
+        --ios-green: #30d158;
+        --ios-red: #ff453a;
+        --badge-green-bg: rgba(48, 209, 88, 0.2);
+        --badge-green-text: #30d158;
+        --badge-gray-bg: rgba(142, 142, 147, 0.2);
+        --badge-gray-text: #98989d;
+        --badge-blue-bg: rgba(10, 132, 255, 0.2);
+        --badge-blue-text: #0a84ff;
+        color-scheme: dark;
+    }
 }
 
 * {

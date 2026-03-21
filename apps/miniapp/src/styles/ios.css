@@ -21,11 +21,11 @@
 }
 
 .ios-row:not(:last-child) {
-    border-bottom: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid var(--separator);
 }
 
 .ios-row:active {
-    background: #f8fafc;
+    background: var(--active-bg);
 }
 
 .ios-row-content {
@@ -55,7 +55,7 @@
 }
 
 .ios-row-right .material-symbols-outlined {
-    color: #cbd5e1;
+    color: var(--text-muted);
     font-size: 22px;
 }
 
@@ -70,11 +70,11 @@
 }
 
 .doc-row:not(:last-child) {
-    border-bottom: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid var(--separator);
 }
 
 .doc-row:active {
-    background: #f8fafc;
+    background: var(--active-bg);
 }
 
 .doc-row-left {
@@ -143,5 +143,5 @@
 
 .ios-group.no-border .doc-row,
 .ios-group.no-border .ios-row {
-    border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 0.5px solid var(--separator);
 }
