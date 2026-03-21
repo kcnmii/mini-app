@@ -212,7 +212,12 @@
 .glass-stat-item .material-symbols-outlined {
     font-size: 24px;
     margin-bottom: 4px;
+    vertical-align: middle;
     color: rgba(255, 255, 255, 0.9);
+}
+
+.large-icon {
+    font-size: 28px !important;
 }
 
 .glass-stat-value {

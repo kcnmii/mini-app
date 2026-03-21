@@ -218,6 +218,7 @@ export function App() {
         markInvoiceSent={(id) => invHook.markInvoiceSent(id, loadData)}
         sendInvoice={() => invHook.sendInvoice(chatId)}
         busy={busy}
+        animationType={prevSubView === "invoiceForm" ? "none" : "left"}
       />
     );
   } else if (subView === "addClient") {

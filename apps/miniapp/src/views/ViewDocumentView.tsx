@@ -13,6 +13,7 @@ interface ViewDocumentViewProps {
     markInvoiceSent: (id: number) => void;
     sendInvoice: () => void;
     busy: string;
+    animationType?: "none" | "left" | "up";
 }
 
 export function ViewDocumentView({
@@ -24,17 +25,19 @@ export function ViewDocumentView({
     markInvoicePaid,
     markInvoiceSent,
     sendInvoice,
-    busy
+    busy,
+    animationType = "left"
 }: ViewDocumentViewProps) {
+    const animClass = animationType === "none" ? "" : animationType === "up" ? "animate-slide-up" : "animate-slide-left";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
     const statusColors: Record<string, string> = { draft: "#8E8E93", sent: "#FF9500", paid: "#34C759", overdue: "#FF3B30" };
 
     return (
         <>
-            <div className="nav-bar animate-slide-left">
+            <div className={`nav-bar ${animClass}`}>
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-                        <Icon name="chevron_left" />
+                        <Icon name="chevron_left" className="large-icon" />
                     </button>
                     <span className="nav-bar-title-center">
                         {selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}
@@ -47,7 +50,7 @@ export function ViewDocumentView({
                 </div>
             </div>
 
-            <div className="content-area animate-slide-left" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
+            <div className={`content-area ${animClass}`} style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
                     <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
@@ -107,7 +110,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Bottom Action Bar — Styled like Invoice Footer */}
-            <div className="invoice-footer animate-slide-left" style={{ background: "#fff", borderTop: "1px solid #eee" }}>
+            <div className={`invoice-footer ${animClass}`} style={{ background: "#fff", borderTop: "1px solid #eee" }}>
 
                 <div className="invoice-footer-inner">
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>

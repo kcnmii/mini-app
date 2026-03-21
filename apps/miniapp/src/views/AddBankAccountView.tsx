@@ -38,7 +38,7 @@ export function AddBankAccountView({
             <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(prevSubView === "bankPicker" ? "bankPicker" : null)}>
-                        <Icon name={prevSubView === "bankPicker" ? "chevron_left" : "close"} />
+                        <Icon name="close" />
                     </button>
 
                     <span className="nav-bar-title-center">Добавить счет</span>

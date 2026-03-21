@@ -26,7 +26,7 @@ export function AddClientBankAccountView({
             <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
-                        <Icon name={editingBaIndex !== null ? "chevron_left" : "close"} />
+                        <Icon name="close" />
                     </button>
                     <span className="nav-bar-title-center">Банковский счет</span>
                     <button className="nav-bar-btn-circle" onClick={saveClientBa}>

@@ -55,7 +55,7 @@ export function InvoiceFormView({
 
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => (selectedDocId || selectedInvoiceId) ? setSubView("viewDocument") : setSubView(null)}>
-                        <Icon name={(selectedDocId || selectedInvoiceId) ? "chevron_left" : "close"} />
+                        <Icon name="close" />
                     </button>
                     <span className="nav-bar-title-center">{(selectedDocId || selectedInvoiceId) ? `Счет ${invoice.INVOICE_NUMBER}` : "Новый счет"}</span>
                     <div className="nav-bar-right">

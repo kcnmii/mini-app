@@ -24,7 +24,7 @@ export function AddClientContactView({
             <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView("addClient")}>
-                        <Icon name={editingContactIndex !== null ? "chevron_left" : "close"} />
+                        <Icon name="close" />
                     </button>
                     <span className="nav-bar-title-center">Контакт</span>
                     <button className="nav-bar-btn-circle" onClick={saveClientContact}>
