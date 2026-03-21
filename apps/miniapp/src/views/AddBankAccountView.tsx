@@ -7,12 +7,14 @@ interface AddBankAccountViewProps {
     setSubView: (v: any) => void;
     onAddAccount: (acc: { account_number: string; bank_name: string; bic: string; kbe: string; is_default: boolean }) => Promise<void>;
     busy: string;
+    prevSubView?: string | null;
 }
 
 export function AddBankAccountView({
     setSubView,
     onAddAccount,
-    busy
+    busy,
+    prevSubView
 }: AddBankAccountViewProps) {
     const [account, setAccount] = useState("");
     const [bankName, setBankName] = useState("");
@@ -35,9 +37,10 @@ export function AddBankAccountView({
         <>
             <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
-                    <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-                        <Icon name="close" />
+                    <button className="nav-bar-btn-circle" onClick={() => setSubView(prevSubView === "bankPicker" ? "bankPicker" : null)}>
+                        <Icon name={prevSubView === "bankPicker" ? "chevron_left" : "close"} />
                     </button>
+
                     <span className="nav-bar-title-center">Добавить счет</span>
                     <button className="nav-bar-btn-circle" onClick={handleSave} disabled={busy !== "idle"}>
                         <Icon name="check" />

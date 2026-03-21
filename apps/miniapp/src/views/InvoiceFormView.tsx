@@ -54,8 +54,8 @@ export function InvoiceFormView({
             <div className={`nav-bar ${animClass}`}>
 
                 <div className="nav-bar-detail">
-                    <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-                        <Icon name="close" />
+                    <button className="nav-bar-btn-circle" onClick={() => (selectedDocId || selectedInvoiceId) ? setSubView("viewDocument") : setSubView(null)}>
+                        <Icon name={(selectedDocId || selectedInvoiceId) ? "chevron_left" : "close"} />
                     </button>
                     <span className="nav-bar-title-center">{(selectedDocId || selectedInvoiceId) ? `Счет ${invoice.INVOICE_NUMBER}` : "Новый счет"}</span>
                     <div className="nav-bar-right">

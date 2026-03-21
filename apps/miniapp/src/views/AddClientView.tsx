@@ -51,7 +51,7 @@ export function AddClientView({
 
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogClient(null); }}>
-                        <Icon name="close" />
+                        <Icon name={selectedCatalogClient ? "chevron_left" : "close"} />
                     </button>
                     <span className="nav-bar-title-center">{selectedCatalogClient ? "Клиент" : "Новый клиент"}</span>
                     <button className="nav-bar-btn-circle" onClick={createClient}>

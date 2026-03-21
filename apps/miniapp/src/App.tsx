@@ -258,6 +258,7 @@ export function App() {
         setSubView={setSubView}
         onAddAccount={handleAddBankAccount}
         busy={busy}
+        prevSubView={prevSubView}
       />
     );
   } else if (subView === "addItem") {

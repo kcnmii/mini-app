@@ -33,7 +33,7 @@ export function EditRequisitesView({
             <header className="nav-bar animate-slide-up">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-                        <Icon name="close" />
+                        <Icon name={profile.company_iin ? "chevron_left" : "close"} />
                     </button>
                     <span className="nav-bar-title-center">Реквизиты</span>
                     <button className="nav-bar-btn-circle" onClick={() => { saveProfile(); setSubView(null); }}>

@@ -34,7 +34,7 @@ export function ViewDocumentView({
             <div className="nav-bar animate-slide-left">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
-                        <Icon name="close" />
+                        <Icon name="chevron_left" />
                     </button>
                     <span className="nav-bar-title-center">
                         {selectedInvoice?.number || selectedDoc?.title.replace(/^Счет\s*(№|N)?\s*/i, "") || "Просмотр"}

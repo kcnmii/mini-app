@@ -36,7 +36,7 @@ export function AddItemView({
             <header className={`nav-bar ${animClass}`}>
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogItem(null); }}>
-                        <Icon name="close" />
+                        <Icon name={selectedCatalogItem ? "chevron_left" : "close"} />
                     </button>
                     <span className="nav-bar-title-center">{selectedCatalogItem ? "Товар/Услуга" : "Добавить товар"}</span>
                     <button className="nav-bar-btn-circle" onClick={createItem}>
