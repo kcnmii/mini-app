@@ -21,6 +21,7 @@ interface AddClientViewProps {
     openAddClientContact: (idx?: number) => void;
     deleteClient: () => void;
     busy: string;
+    disableAnimation?: boolean;
 }
 
 export function AddClientView({
@@ -39,11 +40,14 @@ export function AddClientView({
     openAddClientBa,
     openAddClientContact,
     deleteClient,
-    busy
+    busy,
+    disableAnimation
 }: AddClientViewProps) {
+    const animClass = disableAnimation ? "" : "animate-slide-left";
     return (
         <>
-            <header className="nav-bar animate-slide-left">
+            <header className={`nav-bar ${animClass}`}>
+
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => { setSubView(tab === "home" ? "invoiceForm" : null); setSelectedCatalogClient(null); }}>
                         <Icon name="close" />
@@ -54,7 +58,7 @@ export function AddClientView({
                     </button>
                 </div>
             </header>
-            <div className="content-area animate-slide-left">
+            <div className={`content-area ${animClass}`}>
                 {selectedCatalogClient && clientBalance && (
                     <div style={{ padding: "16px 16px 8px" }}>
                         <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>

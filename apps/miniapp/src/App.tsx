@@ -39,7 +39,7 @@ export function App() {
   const [docSearch, setDocSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "all" | "custom", from?: string, to?: string }>({ type: "month" });
 
-  const { status, setStatus, busy, setBusy, subView, setSubView, isBinLoading, setIsBinLoading } = useSharedState();
+  const { status, setStatus, busy, setBusy, subView, setSubView, prevSubView, isBinLoading, setIsBinLoading } = useSharedState();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -198,6 +198,7 @@ export function App() {
         deleteInvoice={() => invHook.deleteInvoice(setDocuments)}
         profile={profile}
         sendInvoice={() => invHook.sendInvoice(chatId)}
+        disableAnimation={prevSubView === "addItem"}
       />
     );
   } else if (subView === "viewDocument") {
@@ -221,6 +222,7 @@ export function App() {
         createClient={() => createClient(tab, invHook.selectClient)} clientBalance={clientBalance} clientDraft={clientDraft as any} setClientDraft={setClientDraft as any}
         setIsBinLoading={setIsBinLoading} isBinLoading={isBinLoading} setStatus={setStatus} clients={clients} openAddClientBa={openAddClientBa} openAddClientContact={openAddClientContact}
         deleteClient={() => deleteClient()} busy={busy}
+        disableAnimation={prevSubView === "addClientBankAccount" || prevSubView === "addClientContact"}
       />
     );
   } else if (subView === "addClientBankAccount") {

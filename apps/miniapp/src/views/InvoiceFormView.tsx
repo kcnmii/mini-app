@@ -21,6 +21,7 @@ interface InvoiceFormViewProps {
     deleteInvoice: () => void;
     profile: SupplierProfileData;
     sendInvoice: () => void;
+    disableAnimation?: boolean;
 }
 
 export function InvoiceFormView({
@@ -40,13 +41,16 @@ export function InvoiceFormView({
     removeRow,
     deleteInvoice,
     profile,
-    sendInvoice
+    sendInvoice,
+    disableAnimation
 }: InvoiceFormViewProps) {
+    const animClass = disableAnimation ? "" : "animate-slide-left";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен" };
 
     return (
         <>
-            <div className="nav-bar animate-slide-left">
+            <div className={`nav-bar ${animClass}`}>
+
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
@@ -59,7 +63,7 @@ export function InvoiceFormView({
                     </div>
                 </div>
             </div>
-            <div className="content-area has-footer animate-slide-left">
+            <div className={`content-area has-footer ${animClass}`}>
                 <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
                 <div className="ios-group">
                     <div className="form-field">
@@ -197,7 +201,7 @@ export function InvoiceFormView({
                 )}
                 <div className="spacer-24" />
             </div>
-            <div className="invoice-footer animate-slide-left">
+            <div className={`invoice-footer ${animClass}`}>
                 <div className="invoice-footer-inner">
                     <div className="invoice-total-row">
                         <span className="invoice-total-label">Общая сумма</span>

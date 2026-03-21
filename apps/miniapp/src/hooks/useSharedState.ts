@@ -6,10 +6,12 @@ export function useSharedState() {
     const [status, setStatus] = useState("");
     const [busy, setBusy] = useState<"idle" | "save" | "send" | "pdf">("idle");
     const [subView, setSubViewRaw] = useState<SubViewType>(null);
+    const [prevSubView, setPrevSubView] = useState<SubViewType>(null);
     const [isBinLoading, setIsBinLoading] = useState(false);
     const rootScrollY = useRef<number>(0);
 
     const setSubView = useCallback((newView: SubViewType) => {
+        setPrevSubView(subView); // Track previous subView
         if (newView !== null) {
             // We're opening a subview
             if (subView === null) {
@@ -35,5 +37,5 @@ export function useSharedState() {
         return () => clearTimeout(t);
     }, [status]);
 
-    return { status, setStatus, busy, setBusy, subView, setSubView, isBinLoading, setIsBinLoading };
+    return { status, setStatus, busy, setBusy, subView, setSubView, prevSubView, isBinLoading, setIsBinLoading };
 }
