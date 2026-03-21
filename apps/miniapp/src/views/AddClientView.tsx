@@ -62,13 +62,13 @@ export function AddClientView({
             <div className={`content-area ${animClass}`}>
                 {selectedCatalogClient && clientBalance && (
                     <div style={{ padding: "16px 16px 8px" }}>
-                        <div style={{ background: "rgba(0,123,255,0.05)", borderRadius: "12px", padding: "16px", border: "1px solid rgba(0,123,255,0.1)" }}>
+                        <div style={{ background: "var(--badge-blue-bg, rgba(0,123,255,0.05))", borderRadius: "12px", padding: "16px", border: "1px solid var(--avatar-border)" }}>
                             <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>Баланс взаиморасчётов</div>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                                 <span style={{ fontSize: "15px" }}>Выставлено:</span>
                                 <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_invoiced)} ₸</span>
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", color: "#34C759" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", color: "var(--ios-green)" }}>
                                 <span style={{ fontSize: "15px" }}>Оплачено:</span>
                                 <span style={{ fontSize: "15px", fontWeight: 600 }}>{formatMoney(clientBalance.total_paid)} ₸</span>
                             </div>
@@ -121,7 +121,7 @@ export function AddClientView({
                         />
                         {isBinLoading && (
                             <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
-                                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                                <div style={{ width: "16px", height: "16px", border: "2px solid var(--primary)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                             </div>
                         )}
                     </div>

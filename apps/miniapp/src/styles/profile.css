@@ -8,11 +8,11 @@
 }
 
 .settings-row:not(:last-child) {
-    border-bottom: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid var(--separator);
 }
 
 .settings-row:active {
-    background: #f8fafc;
+    background: var(--active-bg);
 }
 
 .settings-row-left {
@@ -73,11 +73,11 @@
 }
 
 .upload-row:not(:last-child) {
-    border-bottom: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid var(--separator);
 }
 
 .upload-row:active {
-    background: #f8fafc;
+    background: var(--active-bg);
 }
 
 .upload-row-info {
@@ -104,8 +104,8 @@
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: var(--qty-bg);
+    border: 1px solid var(--separator);
     overflow: hidden;
     display: flex;
     align-items: center;

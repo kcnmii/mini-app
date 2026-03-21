@@ -53,14 +53,14 @@ export function ViewDocumentView({
             <div className={`content-area ${animClass}`} style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
-                    <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
+                    <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--card)", borderBottom: "1px solid var(--separator)", flexShrink: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, color: "#fff", background: statusColors[selectedInvoice.status] || "#8E8E93", textTransform: "uppercase" }}>
                                 {statusLabels[selectedInvoice.status] || selectedInvoice.status}
                             </span>
-                            <span style={{ fontSize: "15px", fontWeight: 700, color: "#000" }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
+                            <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>{formatMoney(selectedInvoice.total_amount)} ₸</span>
                         </div>
-                        <span style={{ fontSize: "13px", color: "#666", fontWeight: 500, maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
+                        <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: 500, maxWidth: "50%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedInvoice.client_name}</span>
                     </div>
                 )}
 
@@ -110,7 +110,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Bottom Action Bar — Styled like Invoice Footer */}
-            <div className={`invoice-footer ${animClass}`} style={{ background: "#fff", borderTop: "1px solid #eee" }}>
+            <div className={`invoice-footer ${animClass}`} style={{ background: "var(--card)", borderTop: "1px solid var(--separator)" }}>
 
                 <div className="invoice-footer-inner">
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>

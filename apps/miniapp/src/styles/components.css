@@ -237,7 +237,7 @@
 .dashed-add-btn {
     width: 100%;
     padding: 12px;
-    background: white;
+    background: var(--card);
     border: 1.5px dashed var(--primary);
     border-radius: 10px;
     color: var(--primary);
@@ -251,13 +251,13 @@
 }
 
 .dashed-add-btn:active {
-    background: #f0f7ff;
+    background: var(--active-bg);
 }
 
 .destructive-btn {
     width: 100%;
     padding: 16px;
-    background: white;
+    background: var(--card);
     color: var(--ios-red);
     font-size: 17px;
     font-weight: 500;
@@ -281,7 +281,7 @@
 
 .segmented-control-inner {
     display: flex;
-    background: rgba(142, 142, 147, 0.12);
+    background: var(--segment-bg);
     border-radius: 8px;
     padding: 2px;
 }
@@ -299,7 +299,7 @@
 }
 
 .segment-btn.active {
-    background: white;
+    background: var(--card);
     color: var(--text);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
 }
@@ -428,8 +428,8 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #e2e8f0;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--avatar-bg);
+    border: 1px solid var(--avatar-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -487,7 +487,7 @@
     color: var(--primary, #007AFF);
     cursor: pointer;
     text-align: center;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    border-bottom: 1px solid var(--separator);
     transition: background 0.15s;
     width: 100%;
 }

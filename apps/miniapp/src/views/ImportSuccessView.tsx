@@ -89,7 +89,7 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
             <div className="content-area" style={{ flex: 1, overflow: "auto", padding: "32px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: "24px" }}>
                 {!result ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "300px", gap: "16px" }}>
-                        <div style={{ width: 40, height: 40, border: "3px solid var(--tg-theme-button-color, #007AFF)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                        <div style={{ width: 40, height: 40, border: "3px solid var(--primary)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                         <div style={{ color: "var(--text-secondary)", fontSize: "16px", fontWeight: 500 }}>Обработка выписки...</div>
                         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                     </div>
@@ -128,12 +128,12 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
                             </div>
                             <div className="ios-cell">
                                 <span style={{ color: "var(--text)" }}>Оплачено автоматически</span>
-                                <span style={{ color: "#34C759", fontWeight: 700 }}>{result.auto_matched_count}</span>
+                                <span style={{ color: "var(--ios-green)", fontWeight: 700 }}>{result.auto_matched_count}</span>
                             </div>
                             {result.needs_attention.length > 0 && (
                                 <div className="ios-cell">
                                     <span style={{ color: "var(--text)" }}>Требует внимания</span>
-                                    <span style={{ color: "#FF9500", fontWeight: 700 }}>{result.needs_attention.length}</span>
+                                    <span style={{ color: "var(--badge-gray-text)", fontWeight: 700 }}>{result.needs_attention.length}</span>
                                 </div>
                             )}
                             <div className="ios-cell">
@@ -151,7 +151,7 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
                                         <div key={idx} className="ios-cell" style={{ flexDirection: "column", alignItems: "flex-start", gap: "4px", padding: "12px 16px" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                                                 <span style={{ fontWeight: 600, fontSize: "15px" }}>Счёт №{m.invoice_number}</span>
-                                                <span style={{ color: "#34C759", fontWeight: 600, fontSize: "15px" }}>{formatMoney(m.amount)} ₸</span>
+                                                <span style={{ color: "var(--ios-green)", fontWeight: 600, fontSize: "15px" }}>{formatMoney(m.amount)} ₸</span>
                                             </div>
                                             <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>{m.client_name}</span>
                                         </div>
@@ -163,12 +163,12 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
                         {/* Needs attention list */}
                         {result.needs_attention.length > 0 && (
                             <div style={{ alignSelf: "stretch", marginTop: "8px" }}>
-                                <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "#FF9500", textTransform: "none", letterSpacing: "normal" }}>⚠️ Требует внимания</h3>
+                                <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "var(--badge-gray-text)", textTransform: "none", letterSpacing: "normal" }}>⚠️ Требует внимания</h3>
                                 <div className="ios-group">
                                     {result.needs_attention.map((item, idx) => (
                                         <div key={idx} style={{ padding: "12px 16px", borderBottom: idx < result.needs_attention.length - 1 ? "1px solid var(--border)" : "none" }}>
                                             {manuallyMatched.has(idx) ? (
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#34C759" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--ios-green)" }}>
                                                     <Icon name="task_alt" style={{ fontSize: "20px" }} />
                                                     <span style={{ fontWeight: 600 }}>Привязано!</span>
                                                 </div>
@@ -193,12 +193,12 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
                                                                     style={{
                                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
                                                                         padding: "10px 12px", borderRadius: "10px",
-                                                                        border: "1px solid var(--border)", background: "var(--bg-secondary, #f5f5f5)",
+                                                                        border: "1px solid var(--input-border)", background: "var(--qty-bg)",
                                                                         cursor: "pointer", fontSize: "14px", width: "100%"
                                                                     }}
                                                                 >
                                                                     <span>№{ci.invoice_number} — {formatMoney(ci.total_amount)} ₸</span>
-                                                                    <Icon name="link" style={{ fontSize: "18px", color: "var(--tg-theme-button-color, #007aff)" }} />
+                                                                    <Icon name="link" style={{ fontSize: "18px", color: "var(--primary)" }} />
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -222,7 +222,7 @@ export function ImportSuccessView({ result, onClose, onRefresh }: ImportSuccessV
 
             {/* Bottom Action Bar */}
             {result && (
-                <div className="invoice-footer" style={{ background: "#fff", borderTop: "1px solid #eee", marginTop: "auto" }}>
+                <div className="invoice-footer" style={{ background: "var(--card)", borderTop: "1px solid var(--separator)", marginTop: "auto" }}>
                     <div className="invoice-footer-inner">
                         <button className="invoice-send-btn" onClick={onClose} style={{ width: "100%" }}>
                             Отлично

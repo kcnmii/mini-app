@@ -59,7 +59,7 @@ export function AddItemView({
                                 <div className="ios-row" key={it.id} onClick={() => {
                                     setItemDraft({ name: it.name, unit: it.unit, price: String(it.price) as any, sku: it.sku || "" });
                                     setSelectedCatalogItem(it);
-                                }} style={{ cursor: "pointer", background: "rgba(0,123,255,0.05)" }}>
+                                }} style={{ cursor: "pointer", background: "var(--badge-blue-bg)" }}>
                                     <div className="ios-row-content">
                                         <div className="ios-row-title">{it.name}</div>
                                         <div className="ios-row-subtitle">{formatMoney(it.price)} ₸ / {it.unit}</div>

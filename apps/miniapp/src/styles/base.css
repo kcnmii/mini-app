@@ -17,6 +17,16 @@
     --badge-gray-text: #475569;
     --badge-blue-bg: #eff6ff;
     --badge-blue-text: #007bff;
+    --tab-bar-bg: rgba(255, 255, 255, 0.75);
+    --tab-bar-border: rgba(255, 255, 255, 0.4);
+    --input-bg-filled: #f8fafc;
+    --input-border: #f1f5f9;
+    --avatar-bg: #e2e8f0;
+    --avatar-border: rgba(0, 0, 0, 0.05);
+    --segment-bg: rgba(142, 142, 147, 0.12);
+    --qty-bg: #f1f5f9;
+    --btn-circle-bg: #DFE8F8;
+    --btn-circle-active: #CFDDF4;
     color-scheme: light;
 }
 
@@ -37,6 +47,16 @@
     --badge-gray-text: #98989d;
     --badge-blue-bg: rgba(10, 132, 255, 0.2);
     --badge-blue-text: #0a84ff;
+    --tab-bar-bg: rgba(28, 28, 30, 0.75);
+    --tab-bar-border: rgba(255, 255, 255, 0.15);
+    --input-bg-filled: #2c2c2e;
+    --input-border: #38383a;
+    --avatar-bg: #2c2c2e;
+    --avatar-border: rgba(255, 255, 255, 0.1);
+    --segment-bg: rgba(118, 118, 128, 0.24);
+    --qty-bg: #2c2c2e;
+    --btn-circle-bg: #004080;
+    --btn-circle-active: #003366;
     color-scheme: dark;
 }
 
@@ -58,6 +78,16 @@
         --badge-gray-text: #98989d;
         --badge-blue-bg: rgba(10, 132, 255, 0.2);
         --badge-blue-text: #0a84ff;
+        --tab-bar-bg: rgba(28, 28, 30, 0.75);
+        --tab-bar-border: rgba(255, 255, 255, 0.15);
+        --input-bg-filled: #2c2c2e;
+        --input-border: #38383a;
+        --avatar-bg: #2c2c2e;
+        --avatar-border: rgba(255, 255, 255, 0.1);
+        --segment-bg: rgba(118, 118, 128, 0.24);
+        --qty-bg: #2c2c2e;
+        --btn-circle-bg: #0A84FF20;
+        --btn-circle-active: #0A84FF40;
         color-scheme: dark;
     }
 }

@@ -75,7 +75,7 @@ export function EditRequisitesView({
                         />
                         {isBinLoading && (
                             <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
-                                <div style={{ width: "16px", height: "16px", border: "2px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                                <div style={{ width: "16px", height: "16px", border: "2px solid var(--primary)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                             </div>
                         )}
                     </div>

@@ -7,7 +7,7 @@
 }
 
 .position-row-edit:not(:last-child) {
-    border-bottom: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid var(--separator);
 }
 
 .position-edit-fields {
@@ -23,7 +23,7 @@
     color: var(--text);
     background: transparent;
     border: none;
-    border-bottom: 1px dashed #e2e8f0;
+    border-bottom: 1px dashed var(--separator);
     padding-bottom: 4px;
     width: 100%;
     border-radius: 0;
@@ -56,8 +56,8 @@
 .position-input-group input {
     font-size: 15px;
     color: var(--text);
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
+    background: var(--input-bg-filled);
+    border: 1px solid var(--input-border);
     border-radius: 8px;
     padding: 6px 8px;
     width: 100%;
@@ -65,7 +65,7 @@
 }
 
 .position-input-group input:focus {
-    background: #fff;
+    background: var(--card);
     border-color: var(--primary);
     outline: none;
 }
@@ -134,7 +134,7 @@
 }
 
 .add-position-btn:active {
-    background: #f8fafc;
+    background: var(--active-bg);
 }
 
 /* ═══ Invoice Footer ═══ */
@@ -144,7 +144,7 @@
     left: 0;
     right: 0;
     background: var(--card);
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--separator);
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 8px));
     z-index: 50;
     box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.04);
