@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Icon } from "./Common";
 import { API_BASE_URL, request, getAuthToken } from "../utils";
 
@@ -14,6 +14,8 @@ const previewCache: Record<string, string> = {};
 
 export function ImageUploadRow({ label, hint, imageType, onStatusChange, onSuccess }: ImageUploadRowProps) {
     const [preview, setPreview] = useState<string>(previewCache[imageType] || "");
+    const [showSheet, setShowSheet] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const loadPreview = useCallback(async () => {
         if (previewCache[imageType]) {
@@ -31,6 +33,7 @@ export function ImageUploadRow({ label, hint, imageType, onStatusChange, onSucce
     useEffect(() => { loadPreview(); }, [loadPreview]);
 
     async function handleUpload(file: File) {
+        setShowSheet(false);
         try {
             const fd = new FormData();
             fd.append("file", file);
@@ -50,25 +53,65 @@ export function ImageUploadRow({ label, hint, imageType, onStatusChange, onSucce
         } catch { onStatusChange(`Ошибка загрузки: ${label}`); }
     }
 
+    async function handleDelete() {
+        setShowSheet(false);
+        try {
+            await request(`/profile/${imageType}`, { method: "DELETE" });
+            delete previewCache[imageType];
+            setPreview("");
+            onStatusChange(`${label} удален`);
+            if (onSuccess) onSuccess();
+        } catch { onStatusChange(`Ошибка удаления: ${label}`); }
+    }
+
     return (
-        <label className="upload-row">
-            <div className="upload-row-info">
-                <span className="upload-row-title">{label}</span>
-                <span className="upload-row-hint">{hint}</span>
+        <>
+            <div className="upload-row" onClick={() => setShowSheet(true)} style={{ cursor: "pointer" }}>
+                <div className="upload-row-info">
+                    <span className="upload-row-title">{label}</span>
+                    <span className="upload-row-hint">{hint}</span>
+                </div>
+                <div className="upload-row-action">
+                    {preview ? (
+                        <div className="upload-preview-thumb"><img src={preview} alt={label} /></div>
+                    ) : (
+                        <Icon name="cloud_upload" />
+                    )}
+                </div>
             </div>
-            <div className="upload-row-action">
-                {preview ? (
-                    <div className="upload-preview-thumb"><img src={preview} alt={label} /></div>
-                ) : (
-                    <Icon name="cloud_upload" />
-                )}
-            </div>
+
             <input
                 type="file"
                 className="hidden-input"
                 accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }}
+                ref={fileInputRef}
+                onChange={(e) => { 
+                    const f = e.target.files?.[0]; 
+                    if (f) handleUpload(f); 
+                }}
             />
-        </label>
+
+            {showSheet && (
+                <div className="action-sheet-overlay" onClick={() => setShowSheet(false)}>
+                    <div className="action-sheet" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-sheet-group">
+                            <button className="action-sheet-btn" onClick={() => { setShowSheet(false); fileInputRef.current?.click(); }}>
+                                Загрузить фото
+                            </button>
+                            {preview && (
+                                <button className="action-sheet-btn danger" onClick={handleDelete}>
+                                    Удалить фото
+                                </button>
+                            )}
+                        </div>
+                        <div className="action-sheet-group">
+                            <button className="action-sheet-btn bold" onClick={() => setShowSheet(false)}>
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
