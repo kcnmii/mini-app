@@ -1,28 +1,36 @@
-import React from "react";
+import React, { useState } from "react";
 import { Icon } from "../components/Common";
 import { getBankByIIK } from "../utils/bankAutofill";
 import { Toggle } from "../components/Common";
-import type { SupplierProfileData } from "../types";
 
 interface AddBankAccountViewProps {
-    profile: SupplierProfileData;
-    profileDraft: SupplierProfileData;
-    setProfileDraft: React.Dispatch<React.SetStateAction<SupplierProfileData>>;
     setSubView: (v: any) => void;
-    saveProfile: () => void;
-    deleteBankAccount: () => void;
+    onAddAccount: (acc: { account_number: string; bank_name: string; bic: string; kbe: string; is_default: boolean }) => Promise<void>;
     busy: string;
 }
 
 export function AddBankAccountView({
-    profile,
-    profileDraft,
-    setProfileDraft,
     setSubView,
-    saveProfile,
-    deleteBankAccount,
+    onAddAccount,
     busy
 }: AddBankAccountViewProps) {
+    const [account, setAccount] = useState("");
+    const [bankName, setBankName] = useState("");
+    const [bic, setBic] = useState("");
+    const [kbe, setKbe] = useState("19"); // "19" is a common default for KBe in Kazakhstan (private companies)
+    const [isDefault, setIsDefault] = useState(true);
+
+    const handleSave = async () => {
+        if (!account) return;
+        await onAddAccount({
+            account_number: account,
+            bank_name: bankName,
+            bic: bic,
+            kbe: kbe,
+            is_default: isDefault
+        });
+    };
+
     return (
         <>
             <header className="nav-bar animate-slide-up">
@@ -31,7 +39,7 @@ export function AddBankAccountView({
                         <Icon name="close" />
                     </button>
                     <span className="nav-bar-title-center">Добавить счет</span>
-                    <button className="nav-bar-btn-circle" onClick={() => { saveProfile(); setSubView(null); }}>
+                    <button className="nav-bar-btn-circle" onClick={handleSave} disabled={busy !== "idle"}>
                         <Icon name="check" />
                     </button>
                 </div>
@@ -42,39 +50,30 @@ export function AddBankAccountView({
                     <div className="form-field">
                         <input
                             placeholder="IBAN (Например, KZ...)"
-                            value={profileDraft.company_iic}
+                            value={account}
                             onChange={(e) => {
                                 const val = e.target.value;
                                 const info = getBankByIIK(val);
-                                setProfileDraft(c => ({
-                                    ...c,
-                                    company_iic: val,
-                                    company_bic: info ? info.bik : c.company_bic,
-                                    beneficiary_bank: info ? info.name : c.beneficiary_bank
-                                }));
+                                setAccount(val);
+                                if (info) {
+                                    setBic(info.bik);
+                                    setBankName(info.name);
+                                }
                             }}
                         />
                     </div>
-                    <div className="form-field"><input placeholder="БИК банка" value={profileDraft.company_bic} onChange={(e) => setProfileDraft((c) => ({ ...c, company_bic: e.target.value }))} /></div>
-                    <div className="form-field"><input placeholder="Название банка" value={profileDraft.beneficiary_bank} onChange={(e) => setProfileDraft((c) => ({ ...c, beneficiary_bank: e.target.value }))} /></div>
-                    <div className="form-field"><input placeholder="Кбе" value={profileDraft.company_kbe} onChange={(e) => setProfileDraft((c) => ({ ...c, company_kbe: e.target.value }))} /></div>
-                    <div className="form-field"><input placeholder="Код назначения платежа (КНП)" value={profileDraft.payment_code} onChange={(e) => setProfileDraft((c) => ({ ...c, payment_code: e.target.value }))} inputMode="numeric" /></div>
+                    <div className="form-field"><input placeholder="БИК банка" value={bic} onChange={(e) => setBic(e.target.value)} /></div>
+                    <div className="form-field"><input placeholder="Название банка" value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+                    <div className="form-field"><input placeholder="Кбе" value={kbe} onChange={(e) => setKbe(e.target.value)} /></div>
                 </div>
                 <div className="section-title">Состояние</div>
                 <div className="ios-group">
                     <div className="toggle-row">
                         <span className="toggle-row-label">Сделать основным</span>
-                        <Toggle checked={true} onChange={() => { }} />
+                        <Toggle checked={isDefault} onChange={() => setIsDefault(!isDefault)} />
                     </div>
                 </div>
-                <div className="form-hint">Этот счет будет использоваться по умолчанию для всех новых счетов-фактур.</div>
-                {profile.company_iic && (
-                    <div style={{ padding: "24px 16px 8px" }}>
-                        <button className="destructive-btn" disabled={busy !== "idle"} onClick={deleteBankAccount}>
-                            Удалить счет
-                        </button>
-                    </div>
-                )}
+                <div className="form-hint">Этот счет будет отображаться во всех новых выставляемых вами счетах-фактурах.</div>
             </div>
         </>
     );

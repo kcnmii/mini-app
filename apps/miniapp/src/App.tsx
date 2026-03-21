@@ -108,7 +108,61 @@ export function App() {
     }
   }, [dateFilter]);
 
+  const handleAddBankAccount = async (acc: { account_number: string; bank_name: string; bic: string; kbe: string; is_default: boolean }) => {
+    setBusy("save");
+    try {
+      if (acc.is_default) {
+        // Update profile too
+        const updatedProfile = { ...profile, company_iic: acc.account_number, company_bic: acc.bic, beneficiary_bank: acc.bank_name, company_kbe: acc.kbe };
+        await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedProfile) });
+        setProfile(updatedProfile);
+        setProfileDraft(updatedProfile);
+        setInvoice(makeInitialInvoice(updatedProfile));
+      }
+      
+      await request("/banks/accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account_number: acc.account_number, bank_name: acc.bank_name, currency: "KZT" })
+      });
+      
+      setStatus("Счет успешно добавлен");
+      setSubView(null);
+      await loadData();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setBusy("idle");
+    }
+  };
+
+  const handleDeleteBankAccount = async (id: number) => {
+    const acc = bankAccounts.find(ba => ba.id === id);
+    if (!acc) return;
+    if (!window.confirm("Удалить этот счет?")) return;
+    
+    setBusy("save");
+    try {
+      await request(`/banks/accounts/${id}`, { method: "DELETE" });
+      setBankAccounts(prev => prev.filter(ba => ba.id !== id));
+      
+      if (acc.account_number === profile.company_iic) {
+          const cleared = { ...profile, company_iic: "", company_bic: "", beneficiary_bank: "", company_kbe: "" };
+          await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cleared) });
+          setProfile(cleared);
+          setProfileDraft(cleared);
+          setInvoice(makeInitialInvoice(cleared));
+      }
+      setStatus("Счет удален");
+    } catch {
+      setStatus("Ошибка при удалении счета");
+    } finally {
+      setBusy("idle");
+    }
+  };
+
   const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", clients: "group", items: "inventory_2", profile: "person" };
+
   const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Документы", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
 
   const loginView = (
@@ -194,8 +248,9 @@ export function App() {
   } else if (subView === "addBankAccount") {
     subViewContent = (
       <AddBankAccountView
-        profile={profile} profileDraft={profileDraft as any} setProfileDraft={setProfileDraft as any} setSubView={setSubView}
-        saveProfile={saveProfile} deleteBankAccount={() => deleteBankAccount()} busy={busy}
+        setSubView={setSubView}
+        onAddAccount={handleAddBankAccount}
+        busy={busy}
       />
     );
   } else if (subView === "addItem") {
@@ -302,7 +357,7 @@ export function App() {
               setSubView={setSubView}
               setStatus={setStatus}
               refreshProfileImages={refreshProfileImages}
-              deleteBankAccount={deleteBankAccount}
+              deleteBankAccount={handleDeleteBankAccount}
               onLogout={logout}
             />
           )}

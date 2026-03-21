@@ -38,19 +38,5 @@ export function useBanks(setStatus: (s: string) => void, setBusy: (b: any) => vo
         }
     }, [setBusy, setStatus, setSubView]);
 
-    const deleteBankAccount = useCallback(async (id: number) => {
-        if (!window.confirm("Удалить этот счет?")) return;
-        try {
-            setBusy("save");
-            await request(`/banks/accounts/${id}`, { method: "DELETE" });
-            setBankAccounts(prev => prev.filter(ba => ba.id !== id));
-            setStatus("Счет удален");
-        } catch (e) {
-            setStatus("Ошибка при удалении счета");
-        } finally {
-            setBusy("idle");
-        }
-    }, [setBusy, setStatus]);
-
-    return { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload, importResult, setImportResult, deleteBankAccount };
+    return { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload, importResult, setImportResult };
 }
