@@ -196,3 +196,21 @@
         transform: translateY(0);
     }
 }
+
+.animate-slide-left {
+    animation: slideLeftScreen 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+@keyframes slideLeftScreen {
+    from {
+        transform: translateX(100vw);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

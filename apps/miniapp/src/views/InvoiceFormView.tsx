@@ -46,7 +46,7 @@ export function InvoiceFormView({
 
     return (
         <>
-            <div className="nav-bar animate-slide-up">
+            <div className="nav-bar animate-slide-left">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
@@ -59,7 +59,7 @@ export function InvoiceFormView({
                     </div>
                 </div>
             </div>
-            <div className="content-area has-footer animate-slide-up">
+            <div className="content-area has-footer animate-slide-left">
                 <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
                 <div className="ios-group">
                     <div className="form-field">
@@ -197,7 +197,7 @@ export function InvoiceFormView({
                 )}
                 <div className="spacer-24" />
             </div>
-            <div className="invoice-footer animate-slide-up">
+            <div className="invoice-footer animate-slide-left">
                 <div className="invoice-footer-inner">
                     <div className="invoice-total-row">
                         <span className="invoice-total-label">Общая сумма</span>

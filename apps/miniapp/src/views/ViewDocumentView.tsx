@@ -31,7 +31,7 @@ export function ViewDocumentView({
 
     return (
         <>
-            <div className="nav-bar">
+            <div className="nav-bar animate-slide-left">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
                         <Icon name="close" />
@@ -47,7 +47,7 @@ export function ViewDocumentView({
                 </div>
             </div>
 
-            <div className="content-area" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
+            <div className="content-area animate-slide-left" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", overflow: "hidden", paddingBottom: 0 }}>
                 {/* Compact Info Bar — Forced Light Theme for contrast */}
                 {selectedInvoice && (
                     <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdfdfd", borderBottom: "1px solid #eee", flexShrink: 0 }}>
@@ -76,9 +76,9 @@ export function ViewDocumentView({
                             display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
                             backgroundColor: "rgba(255,255,255,0.9)", zIndex: 10
                         }}>
-                            <div style={{ width: "32px", height: "32px", border: "3px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "12px" }} />
-                            <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Загрузка документа...</div>
+                            <div style={{ width: "32px", height: "32px", border: "3px solid #007AFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                         </div>
+
                     )}
 
                     {previewPages.length > 0 ? (
@@ -107,7 +107,8 @@ export function ViewDocumentView({
             </div>
 
             {/* Bottom Action Bar — Styled like Invoice Footer */}
-            <div className="invoice-footer" style={{ background: "#fff", borderTop: "1px solid #eee" }}>
+            <div className="invoice-footer animate-slide-left" style={{ background: "#fff", borderTop: "1px solid #eee" }}>
+
                 <div className="invoice-footer-inner">
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                         {(selectedInvoice && (selectedInvoice.status as string) !== "paid") && (
