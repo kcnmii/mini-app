@@ -12,11 +12,13 @@ interface ProfileViewProps {
     tgUser: any;
     tgName: string;
     profile: SupplierProfileData;
+    bankAccounts: any[];
     webAppInitData: boolean;
     setProfileDraft: (p: SupplierProfileData) => void;
     setSubView: (v: any) => void;
     setStatus: (msg: string) => void;
     refreshProfileImages: () => void;
+    deleteBankAccount: (id: number) => void;
     onLogout: () => void;
 }
 
@@ -24,11 +26,13 @@ export function ProfileView({
     tgUser,
     tgName,
     profile,
+    bankAccounts,
     webAppInitData,
     setProfileDraft,
     setSubView,
     setStatus,
     refreshProfileImages,
+    deleteBankAccount,
     onLogout
 }: ProfileViewProps) {
     return (
@@ -69,27 +73,32 @@ export function ProfileView({
                 </div>
             )}
             <div className="section-title">Банковские счета</div>
-            {profile.company_iic ? (
-                <>
-                    <div className="ios-group">
-                        <div className="ios-row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <span style={{ fontSize: 15, fontWeight: 600 }}>{profile.company_iic}</span>
-                                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Банк: {profile.beneficiary_bank}</span>
-                                <div><span className="badge badge-blue">Основной</span></div>
-                            </div>
-                            <button className="requisites-card-edit" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="edit" /></button>
+            <div className="ios-group">
+                {bankAccounts.length === 0 && (
+                    <div style={{ padding: "12px 16px", textAlign: "center", color: "var(--text-secondary)", fontSize: 14 }}>
+                        Счета не добавлены
+                    </div>
+                )}
+                {bankAccounts.map(ba => (
+                    <div className="ios-row" key={ba.id} style={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600 }}>{ba.bank_name || "Без названия"}</span>
+                            <span style={{ fontSize: 13, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{ba.account_number}</span>
+                            {ba.account_number === profile.company_iic && <div><span className="badge badge-blue">Основной</span></div>}
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button className="requisites-card-edit" style={{ background: "rgba(255, 59, 48, 0.1)", color: "#ff3b30", width: 32, height: 32, borderRadius: 16 }} onClick={() => deleteBankAccount(ba.id)}>
+                                <Icon name="delete" />
+                            </button>
                         </div>
                     </div>
-                    <div style={{ padding: "12px 16px 0" }}>
-                        <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="add_circle" /> Добавить счет</button>
-                    </div>
-                </>
-            ) : (
-                <div style={{ padding: "0 16px", marginBottom: 20 }}>
-                    <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}><Icon name="add_circle" /> Добавить счет</button>
-                </div>
-            )}
+                ))}
+            </div>
+            <div style={{ padding: "12px 16px 20px" }}>
+                <button className="dashed-add-btn" onClick={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}>
+                    <Icon name="add_circle" /> Добавить счет
+                </button>
+            </div>
             <div className="section-title">Оформление документов</div>
             <div className="ios-group">
                 <ImageUploadRow label="Логотип" hint="PNG или JPG, макс. 2МБ" imageType="logo" onStatusChange={setStatus} onSuccess={refreshProfileImages} />

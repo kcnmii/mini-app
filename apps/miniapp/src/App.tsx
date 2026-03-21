@@ -296,11 +296,13 @@ export function App() {
               tgUser={tgUser}
               tgName={tgName}
               profile={profile}
+              bankAccounts={bankAccounts}
               webAppInitData={!!webApp?.initData}
               setProfileDraft={setProfileDraft}
               setSubView={setSubView}
               setStatus={setStatus}
               refreshProfileImages={refreshProfileImages}
+              deleteBankAccount={deleteBankAccount}
               onLogout={logout}
             />
           )}

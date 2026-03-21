@@ -85,21 +85,26 @@ async def upload_1c_statement(
         raise HTTPException(status_code=400, detail=str(e))
 
     # ── Ensure bank account exists (auto-create from statement header) ──
+    # Clean up account number for robust matching
+    acc_number_clean = payload.account_number.strip() if payload.account_number else ""
+    
     acc = db.query(BankAccount).filter(
         BankAccount.user_id == user_id,
-        BankAccount.account_number == payload.account_number
+        func.lower(BankAccount.account_number) == acc_number_clean.lower()
     ).first()
 
     if not acc:
         existing_count = db.query(BankAccount).filter(BankAccount.user_id == user_id).count()
         acc = BankAccount(
             user_id=user_id,
-            account_number=payload.account_number,
+            account_number=acc_number_clean,
             bank_name=payload.bank_name,
             is_default=1 if existing_count == 0 else 0
         )
         db.add(acc)
         db.flush()
+    # If account exists but name is generic, we could update it, 
+    # but usually user's Manual name is better than technical sender name from 1C.
 
     # ── Pre-load user's clients for BIN lookups ──
     user_clients = db.query(Client).filter(Client.user_id == user_id, Client.bin_iin != "").all()
@@ -279,3 +284,17 @@ async def manual_match(
         client_name=invoice.client_name or "",
         success=True
     )
+
+@router.delete("/accounts/{account_id}")
+async def delete_account(
+    account_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Delete a bank account"""
+    acc = db.query(BankAccount).filter(BankAccount.id == account_id, BankAccount.user_id == user_id).first()
+    if not acc:
+        raise HTTPException(status_code=404, detail="Счет не найден")
+    db.delete(acc)
+    db.commit()
+    return {"status": "ok"}
