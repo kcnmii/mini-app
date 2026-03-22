@@ -17,8 +17,7 @@
     --badge-gray-text: #475569;
     --badge-blue-bg: #eff6ff;
     --badge-blue-text: #007bff;
-    --nav-bg: rgba(242, 242, 247, 0.85);
-    --nav-bg-transparent: rgba(242, 242, 247, 0);
+    --nav-bg: rgba(242, 242, 247, 0.65);
     --tab-bar-bg: rgba(255, 255, 255, 0.75);
     --tab-bar-border: rgba(255, 255, 255, 0.4);
     --input-bg-filled: #f8fafc;
@@ -49,8 +48,7 @@
     --badge-gray-text: #98989d;
     --badge-blue-bg: rgba(10, 132, 255, 0.2);
     --badge-blue-text: #0a84ff;
-    --nav-bg: rgba(0, 0, 0, 0.75);
-    --nav-bg-transparent: rgba(0, 0, 0, 0);
+    --nav-bg: rgba(0, 0, 0, 0.55);
     --tab-bar-bg: rgba(28, 28, 30, 0.75);
     --tab-bar-border: rgba(255, 255, 255, 0.15);
     --input-bg-filled: #2c2c2e;
@@ -82,8 +80,7 @@
         --badge-gray-text: #98989d;
         --badge-blue-bg: rgba(10, 132, 255, 0.2);
         --badge-blue-text: #0a84ff;
-        --nav-bg: rgba(0, 0, 0, 0.75);
-        --nav-bg-transparent: rgba(0, 0, 0, 0);
+        --nav-bg: rgba(0, 0, 0, 0.55);
         --tab-bar-bg: rgba(28, 28, 30, 0.75);
         --tab-bar-border: rgba(255, 255, 255, 0.15);
         --input-bg-filled: #2c2c2e;

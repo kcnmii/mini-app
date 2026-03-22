@@ -15,11 +15,11 @@
     right: 0;
     bottom: -24px;
     z-index: -1;
-    background: linear-gradient(to bottom, var(--nav-bg) 0%, var(--nav-bg) 60%, var(--nav-bg-transparent) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+    background: var(--nav-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    -webkit-mask-image: linear-gradient(to bottom, black 25%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 25%, transparent 100%);
     pointer-events: none;
 }
 
@@ -97,11 +97,11 @@
     right: 0;
     bottom: -24px;
     z-index: -1;
-    background: linear-gradient(to bottom, var(--nav-bg) 0%, var(--nav-bg) 60%, var(--nav-bg-transparent) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+    background: var(--nav-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    -webkit-mask-image: linear-gradient(to bottom, black 25%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 25%, transparent 100%);
     pointer-events: none;
 }
 
