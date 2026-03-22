@@ -28,6 +28,7 @@
     --qty-bg: #f1f5f9;
     --btn-circle-bg: #DFE8F8;
     --btn-circle-active: #CFDDF4;
+    --btn-border: rgba(0, 123, 255, 0.15);
     color-scheme: light;
 }
 
@@ -57,8 +58,9 @@
     --avatar-border: rgba(255, 255, 255, 0.1);
     --segment-bg: rgba(118, 118, 128, 0.24);
     --qty-bg: #2c2c2e;
-    --btn-circle-bg: #004080;
-    --btn-circle-active: #003366;
+    --btn-circle-bg: #1c2c3e;
+    --btn-circle-active: #152233;
+    --btn-border: rgba(10, 132, 255, 0.2);
     color-scheme: dark;
 }
 
@@ -89,8 +91,9 @@
         --avatar-border: rgba(255, 255, 255, 0.1);
         --segment-bg: rgba(118, 118, 128, 0.24);
         --qty-bg: #2c2c2e;
-        --btn-circle-bg: #0A84FF20;
-        --btn-circle-active: #0A84FF40;
+        --btn-circle-bg: #1c2c3e;
+        --btn-circle-active: #152233;
+        --btn-border: rgba(10, 132, 255, 0.2);
         color-scheme: dark;
     }
 }
