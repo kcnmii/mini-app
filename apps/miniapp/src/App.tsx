@@ -43,7 +43,7 @@ export function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount } = useProfile(setStatus, setBusy, (i) => invHook.setInvoice(i), setSubView);
+  const { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount, toggleNotifications } = useProfile(setStatus, setBusy, (i) => invHook.setInvoice(i), setSubView);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -397,6 +397,7 @@ export function App() {
               setStatus={setStatus}
               refreshProfileImages={refreshProfileImages}
               deleteBankAccount={handleDeleteBankAccount}
+              toggleNotifications={toggleNotifications}
               onLogout={logout}
             />
           )}

@@ -6,7 +6,7 @@ export const DEFAULT_TEST_CHAT_ID = import.meta.env.VITE_TELEGRAM_TEST_CHAT_ID ?
 export const emptyProfile: SupplierProfileData = {
     company_name: "", company_iin: "", company_iic: "", company_bic: "", company_kbe: "",
     beneficiary_bank: "", payment_code: "", supplier_name: "", supplier_iin: "",
-    supplier_address: "", executor_name: "", position: "", phone: "", email: "",
+    supplier_address: "", executor_name: "", position: "", phone: "", email: "", notifications_enabled: true,
     logo_path: "", signature_path: "", stamp_path: "",
 };
 

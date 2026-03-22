@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Iterator
-from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, BigInteger, String, func
+from sqlalchemy import create_engine, Column, Integer, Text, Float, DateTime, ForeignKey, BigInteger, String, func, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from app.core.config import settings
 
@@ -144,6 +144,7 @@ class SupplierProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(BigInteger, nullable=False, unique=True, index=True)
     company_name = Column(Text, default="")
+    notifications_enabled = Column(Boolean, default=True)
     company_iin = Column(Text, default="")
     company_iic = Column(Text, default="")
     company_bic = Column(Text, default="")
@@ -157,6 +158,7 @@ class SupplierProfile(Base):
     position = Column(Text, default="")
     phone = Column(Text, default="")
     email = Column(Text, default="")
+    notifications_enabled = Column(Boolean, default=True)
     logo_path = Column(Text, default="")
     signature_path = Column(Text, default="")
     stamp_path = Column(Text, default="")

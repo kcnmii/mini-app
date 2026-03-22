@@ -133,5 +133,5 @@ export type SupplierProfileData = {
     company_bic: string; company_kbe: string; beneficiary_bank: string;
     payment_code: string; supplier_name: string; supplier_iin: string;
     supplier_address: string; executor_name: string; position: string;
-    phone: string; email: string; logo_path: string; signature_path: string; stamp_path: string;
+    phone: string; email: string; notifications_enabled: boolean; logo_path: string; signature_path: string; stamp_path: string;
 };

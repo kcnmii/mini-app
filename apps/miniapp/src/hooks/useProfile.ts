@@ -71,5 +71,20 @@ export function useProfile(setStatus: (s: string) => void, setBusy: (b: any) => 
         }
     }, [profile, setBusy, setStatus, setInvoice, setSubView]);
 
-    return { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount };
+    const toggleNotifications = useCallback(async (enabled: boolean) => {
+        setBusy("save");
+        try {
+            const updated = { ...profile, notifications_enabled: enabled };
+            const s = await request<SupplierProfileData>("/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+            setProfile(s);
+            setProfileDraft(s);
+            // setStatus("Настройки сохранены");
+        } catch (e) {
+            setStatus(e instanceof Error ? e.message : "Ошибка");
+        } finally {
+            setBusy("idle");
+        }
+    }, [profile, setBusy, setStatus]);
+
+    return { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount, toggleNotifications };
 }

@@ -19,6 +19,7 @@ interface ProfileViewProps {
     setStatus: (msg: string) => void;
     refreshProfileImages: () => void;
     deleteBankAccount: (id: number) => void;
+    toggleNotifications: (enabled: boolean) => void;
     onLogout: () => void;
 }
 
@@ -33,6 +34,7 @@ export function ProfileView({
     setStatus,
     refreshProfileImages,
     deleteBankAccount,
+    toggleNotifications,
     onLogout
 }: ProfileViewProps) {
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -124,7 +126,7 @@ export function ProfileView({
                         <div className="settings-icon red"><Icon name="notifications" filled /></div>
                         <span className="settings-row-label">Уведомления</span>
                     </div>
-                    <Toggle checked={true} onChange={() => { }} />
+                    <Toggle checked={profile.notifications_enabled} onChange={(v) => toggleNotifications(v)} />
                 </div>
                 <div className="settings-row">
                     <div className="settings-row-left">

@@ -17,6 +17,7 @@ class SupplierProfile(BaseModel):
     position: str = ""
     phone: str = ""
     email: str = ""
+    notifications_enabled: bool = True
     logo_path: str = ""
     signature_path: str = ""
     stamp_path: str = ""
@@ -37,3 +38,4 @@ class SupplierProfileUpdate(BaseModel):
     position: str = ""
     phone: str = ""
     email: str = ""
+    notifications_enabled: bool = True

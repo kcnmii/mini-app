@@ -16,7 +16,7 @@ from typing import Iterator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.db import SessionLocal, Invoice, Payment
+from app.core.db import SessionLocal, Invoice, Payment, SupplierProfile
 from app.core.config import settings
 from app.modules.telegram_bot.service import TelegramBotClient
 
@@ -39,6 +39,14 @@ def get_session() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def _is_notifications_enabled(db: Session, user_id: int) -> bool:
+    """Check if the user has notifications enabled in their profile."""
+    profile = db.query(SupplierProfile).filter_by(user_id=user_id).first()
+    if profile:
+        return profile.notifications_enabled
+    return True  # Default to True if no profile exists
 
 
 # ─── Daily overdue check ─────────────────────────────────────────────────────
@@ -71,6 +79,9 @@ async def check_overdue_invoices() -> None:
         user_ids = _all_user_ids(db)
         
         for user_id in user_ids:
+            if not _is_notifications_enabled(db, user_id):
+                continue
+                
             overdue_invoices = (
                 db.query(Invoice)
                 .filter(
@@ -126,6 +137,9 @@ async def send_weekly_digest() -> None:
         user_ids = _all_user_ids(db)
         
         for user_id in user_ids:
+            if not _is_notifications_enabled(db, user_id):
+                continue
+                
             # Stats for the week
             new_invoices_count = (
                 db.query(func.count(Invoice.id))
@@ -207,6 +221,11 @@ async def notify_status_change(user_id: int, invoice: Invoice, new_status: str) 
     msg = status_messages.get(new_status)
     if not msg:
         return  # paid already handled in mark_invoice_paid
+
+    # Only send if enabled
+    with get_session() as db:
+        if not _is_notifications_enabled(db, user_id):
+            return
     
     bot = TelegramBotClient()
     try:
