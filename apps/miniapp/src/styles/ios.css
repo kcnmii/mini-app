@@ -195,20 +195,25 @@
     width: 0;
     overflow: hidden;
     opacity: 0;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+    transition: width 0.42s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease 0.05s;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .selectable-row-container.edit-mode .selectable-checkbox-wrap {
-    width: 40px;
+    width: 52px;
     opacity: 1;
+}
+
+/* Animate doc-row padding change for smooth content slide */
+.selectable-row-container .doc-row {
+    transition: padding-left 0.42s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* In edit mode: reduce doc-row left padding so total indent stays balanced */
 .selectable-row-container.edit-mode .doc-row {
-    padding-left: 0;
+    padding-left: 4px;
 }
 
 /* Disable tap highlight on the row itself in edit mode */
