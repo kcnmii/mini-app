@@ -166,58 +166,64 @@ button {
 }
 
 /* ═══ Hero Gradient Background ═══ */
-body.has-hero-gradient::before {
+body.has-hero-gradient .app-shell {
+    position: relative;
+}
+
+body.has-hero-gradient .app-shell::before {
     content: "";
-    position: fixed;
+    position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 420px;
-    background: linear-gradient(180deg, #1a6dff 0%, #4a9aff 40%, var(--bg) 100%);
-    z-index: -1;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 280px;
+    background: radial-gradient(at 50% 0%, #1a6dff 0%, #4a9aff 40%, var(--bg) 90%);
+    z-index: 0;
     pointer-events: none;
 }
 
-[data-theme="dark"] body.has-hero-gradient::before,
-body.has-hero-gradient[data-theme="dark"]::before {
-    background: linear-gradient(180deg, #0a1e3d 0%, #0d2d5c 35%, #000000 100%);
+[data-theme="dark"] body.has-hero-gradient .app-shell::before {
+    background: radial-gradient(at 50% 0%, #0d2d5c 0%, #0a1e3d 40%, #000000 90%);
 }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) body.has-hero-gradient::before {
+    :root:not([data-theme="light"]) body.has-hero-gradient .app-shell::before {
         background: linear-gradient(180deg, #0a1e3d 0%, #0d2d5c 35%, #000000 100%);
     }
 }
 
-/* Hero gradient text/button overrides */
+/* Hero gradient text/button overrides — !important to beat inline styles */
 body.has-hero-gradient .nav-bar {
     --nav-bg: rgba(0, 80, 200, 0.25);
 }
 
 body.has-hero-gradient .nav-bar-title {
-    color: #fff;
+    color: #fff !important;
 }
 
 body.has-hero-gradient .nav-bar-btn-circle {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #fff !important;
 }
 
 body.has-hero-gradient .nav-bar-btn-circle:active {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-body.has-hero-gradient .dashboard-hero {
-    color: #fff;
+    background: rgba(255, 255, 255, 0.3) !important;
 }
 
 body.has-hero-gradient .dashboard-hero .dashboard-label {
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.75) !important;
 }
 
 body.has-hero-gradient .dashboard-hero .dashboard-value {
-    color: #fff;
+    color: #fff !important;
+}
+
+/* Fix for any secondary subtitles in nav or hero */
+body.has-hero-gradient .nav-bar-subtitle,
+body.has-hero-gradient .nav-bar p {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* Dark theme hero — text stays as-is (already light) */
@@ -226,7 +232,7 @@ body.has-hero-gradient .dashboard-hero .dashboard-value {
 }
 
 [data-theme="dark"] body.has-hero-gradient .nav-bar-btn-circle {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
 }
