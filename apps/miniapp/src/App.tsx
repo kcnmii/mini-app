@@ -45,6 +45,15 @@ export function App() {
 
   const { profile, setProfile, profileDraft, setProfileDraft, refreshProfileImages, saveProfile, deleteRequisites, deleteBankAccount } = useProfile(setStatus, setBusy, (i) => invHook.setInvoice(i), setSubView);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      document.documentElement.style.setProperty("--scroll-y", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const invHook = useInvoices(setStatus, setBusy, profile, setSubView);
 
   const {
