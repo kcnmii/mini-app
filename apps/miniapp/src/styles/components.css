@@ -132,9 +132,8 @@
 }
 
 .home-action-btn--secondary {
-    background: var(--active-bg);
+    background: var(--card, #fff);
     color: var(--text-secondary);
-    box-shadow: none;
 }
 
 .home-action-btn--secondary .material-symbols-outlined {

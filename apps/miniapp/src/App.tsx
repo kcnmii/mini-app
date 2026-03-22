@@ -113,7 +113,7 @@ export function App() {
   }, [dateFilter]);
 
   useEffect(() => {
-    const show = !subView && (tab === "home" || tab === "profile");
+    const show = !subView && tab === "home" && document.documentElement.getAttribute("data-theme") === "dark";
     if (show) document.body.classList.add("has-hero-gradient");
     else document.body.classList.remove("has-hero-gradient");
     return () => document.body.classList.remove("has-hero-gradient");

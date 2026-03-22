@@ -166,33 +166,30 @@ button {
 }
 
 /* ═══ Hero Gradient Background ═══ */
-body.has-hero-gradient {
-    background: #fff;
+body.has-hero-gradient .app-shell {
+    position: relative;
 }
 
 body.has-hero-gradient .app-shell::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 310px;
-    background: linear-gradient(180deg, #1a6dff 0%, #3b8bff 45%, #99c4ff 70%, #ffffff 100%);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 280px;
+    background: radial-gradient(at 50% 0%, #1a6dff 0%, #4a9aff 40%, var(--bg) 90%);
     z-index: -1;
     pointer-events: none;
 }
 
-[data-theme="dark"] body.has-hero-gradient {
-    background: #000;
-}
-
 [data-theme="dark"] body.has-hero-gradient .app-shell::before {
-    background: linear-gradient(180deg, #0d2d5c 0%, #0a1e3d 50%, #000000 100%);
+    background: radial-gradient(at 50% 0%, #0d2d5c 0%, #0a1e3d 40%, #000000 90%);
 }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) body.has-hero-gradient .app-shell::before {
-        background: linear-gradient(180deg, #0d2d5c 0%, #0a1e3d 50%, #000000 100%);
+        background: linear-gradient(180deg, #0a1e3d 0%, #0d2d5c 35%, #000000 100%);
     }
 }
 
@@ -206,20 +203,13 @@ body.has-hero-gradient .nav-bar-title {
 }
 
 body.has-hero-gradient .nav-bar-btn-circle {
-    background: var(--btn-circle-bg) !important;
-    border-color: var(--btn-border) !important;
-    color: var(--primary) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #fff !important;
 }
 
 body.has-hero-gradient .nav-bar-btn-circle:active {
-    background: var(--btn-circle-active) !important;
-}
-
-/* Make lists and secondary buttons gray to contrast with white background */
-body.has-hero-gradient .ios-group,
-body.has-hero-gradient .home-action-btn--secondary {
-    background: var(--bg) !important;
-    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.3) !important;
 }
 
 body.has-hero-gradient .dashboard-hero .dashboard-label {
