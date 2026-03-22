@@ -383,39 +383,40 @@
     gap: 8px;
 }
 
-/* ═══ iOS Scroll Animations ═══ */
+/* ═══ iOS Scroll Animations (ULTRA-SMOOTH) ═══ */
 .search-header-anim {
-    --scroll-clamp: clamp(0, var(--scroll-y, 0) / 40, 1);
-    --scale: calc(1 - var(--scroll-clamp));
+    --nav-h: 56px; 
+    --search-h: 44px;
+    
+    position: sticky;
+    top: var(--nav-h);
+    z-index: 10;
+    height: var(--search-h);
+    background: var(--bg);
     
     /* 
-       Native-like 'Sliding' collapse:
-       We use height + overflow: hidden to squeeze the space.
-       We remove transform to avoid '3D' or 'rotation' artifacts.
+       THE PHYSICS:
+       We clip exactly the amount we scrolled. 
+       This makes the bottom boundary stay perfectly on top of the list.
     */
-    height: calc(44px * var(--scale));
-    opacity: var(--scale);
-    margin-bottom: calc(8px * var(--scale));
-    overflow: hidden;
-    will-change: height, opacity;
+    --clip: clamp(0px, var(--scroll-y, 0) * 1px, var(--search-h));
+    clip-path: inset(0 0 var(--clip) 0);
+    
+    /* Fade out slightly towards the end */
+    opacity: clamp(0, 1 - (var(--scroll-y, 0) - 20) / 24, 1);
+    
+    pointer-events: auto;
+    will-change: clip-path, opacity;
 }
 
-/* 
-   Keep the search input stable inside the shrinking container 
-   to create a 'cropping' effect rather than a 'scaling' one.
-*/
 .search-header-anim .search-input-wrap {
-    opacity: var(--scale);
-    /* No scale here for a cleaner desktop-like crop */
+    /* Gentle counter-scroll to keep content centered while clipping */
+    transform: translateY(calc(clamp(0, var(--scroll-y, 0), 44) * -0.5px));
 }
 
-/* 
-   Status chips fade out normally without complex transitions 
-   to maintain 60fps performance on mobile.
-*/
 .status-chips-scroll {
-    --chips-clamp: clamp(0, (var(--scroll-y, 0) - 10) / 30, 1);
-    opacity: calc(1 - var(--chips-clamp));
+    /* Chips follow the list normally, just fade them out */
+    opacity: clamp(0, 1 - (var(--scroll-y, 0) - 10) / 30, 1);
 }
 
 .search-input-wrap .material-symbols-outlined {
