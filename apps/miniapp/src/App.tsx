@@ -113,9 +113,10 @@ export function App() {
   }, [dateFilter]);
 
   useEffect(() => {
-    const isGradientTab = !subView && (tab === "home" || tab === "profile");
-    if (isGradientTab) document.body.classList.add("has-gradient-bg");
-    else document.body.classList.remove("has-gradient-bg");
+    const show = !subView && (tab === "home" || tab === "profile");
+    if (show) document.body.classList.add("has-hero-gradient");
+    else document.body.classList.remove("has-hero-gradient");
+    return () => document.body.classList.remove("has-hero-gradient");
   }, [tab, subView]);
 
   const handleAddBankAccount = async (acc: { account_number: string; bank_name: string; bic: string; kbe: string; is_default: boolean }) => {
