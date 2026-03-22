@@ -13,7 +13,7 @@ interface NavBarProps {
     actionType?: "icon" | "circle";
 }
 
-export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile, actionType = "icon" }: NavBarProps) {
+export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile, actionType = "circle" }: NavBarProps) {
     return (
         <div className="nav-bar">
             <div className="nav-bar-inner">

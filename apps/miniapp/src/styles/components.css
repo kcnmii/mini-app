@@ -103,7 +103,7 @@
     font-size: 14px;
     font-weight: 600;
     background: var(--card, #fff);
-    color: #000;
+    color: #000 !important;
     border: none;
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
@@ -119,12 +119,12 @@
 }
 
 [data-theme="dark"] .home-action-btn:not(.home-action-btn--primary) {
-    color: #fff;
+    color: #fff !important;
 }
 
 .home-action-btn--primary {
     background: var(--primary, #007bff);
-    color: #fff;
+    color: #fff !important;
 }
 
 .home-action-btn--primary .material-symbols-outlined {
@@ -330,6 +330,10 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 16px;
+}
+
+[data-theme="dark"] .empty-state-icon {
+    color: rgba(255, 255, 255, 0.15);
 }
 
 .empty-state-icon .material-symbols-outlined {

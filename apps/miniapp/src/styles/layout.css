@@ -68,7 +68,12 @@
     padding: 4px 8px;
     background: transparent;
     border: none;
-    transition: color 0.15s;
+    transition: color 0.15s, transform 0.1s cubic-bezier(0.2, 0, 0, 1);
+    cursor: pointer;
+}
+
+.tab-btn:active {
+    transform: scale(0.92);
 }
 
 .tab-btn .material-symbols-outlined {

@@ -29,7 +29,7 @@ export function ClientsView({
             <div className="nav-bar">
                 <div className="nav-bar-inner">
                     <h1 className="nav-bar-title">Клиенты</h1>
-                    <button className="nav-bar-btn" onClick={() => {
+                    <button className="nav-bar-btn-circle" onClick={() => {
                         setSelectedCatalogClient(null);
                         setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [] } as any);
                         setSubView("addClient");
