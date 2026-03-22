@@ -112,6 +112,12 @@ export function App() {
     }
   }, [dateFilter]);
 
+  useEffect(() => {
+    const isGradientTab = !subView && (tab === "home" || tab === "profile");
+    if (isGradientTab) document.body.classList.add("has-gradient-bg");
+    else document.body.classList.remove("has-gradient-bg");
+  }, [tab, subView]);
+
   const handleAddBankAccount = async (acc: { account_number: string; bank_name: string; bic: string; kbe: string; is_default: boolean }) => {
     setBusy("save");
     try {
@@ -294,7 +300,7 @@ export function App() {
   );
 
   return (
-    <main className={`app-shell ${(!subView && (tab === "home" || tab === "profile")) ? "has-gradient-bg" : ""}`}>
+    <main className="app-shell">
       <div className={`status-banner${status ? " visible" : ""}`}>{status}</div>
       {!isAppReady ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "16px" }}>

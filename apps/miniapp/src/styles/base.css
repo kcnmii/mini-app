@@ -4,9 +4,9 @@
     --primary: #007bff;
     --bg: #F2F2F7;
     --bg-gradient: 
-        radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0%, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(0, 199, 190, 0.1) 0%, transparent 50%),
-        radial-gradient(at 50% 0%, rgba(10, 132, 255, 0.1) 0%, transparent 70%),
+        radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.25) 0%, transparent 60%),
+        radial-gradient(at 100% 0%, rgba(0, 199, 190, 0.22) 0%, transparent 60%),
+        radial-gradient(at 50% 0%, rgba(10, 132, 255, 0.2) 0%, transparent 80%),
         #F2F2F7;
     --card: #FFFFFF;
     --text: #0f172a;
@@ -144,7 +144,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-.has-gradient-bg {
+body.has-gradient-bg {
     background-image: var(--bg-gradient) !important;
     background-attachment: fixed;
     background-size: cover;
