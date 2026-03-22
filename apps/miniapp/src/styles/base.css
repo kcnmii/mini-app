@@ -206,13 +206,20 @@ body.has-hero-gradient .nav-bar-title {
 }
 
 body.has-hero-gradient .nav-bar-btn-circle {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #fff !important;
+    background: var(--btn-circle-bg) !important;
+    border-color: var(--btn-border) !important;
+    color: var(--primary) !important;
 }
 
 body.has-hero-gradient .nav-bar-btn-circle:active {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: var(--btn-circle-active) !important;
+}
+
+/* Make lists and secondary buttons gray to contrast with white background */
+body.has-hero-gradient .ios-group,
+body.has-hero-gradient .home-action-btn--secondary {
+    background: var(--bg) !important;
+    box-shadow: none !important;
 }
 
 body.has-hero-gradient .dashboard-hero .dashboard-label {
