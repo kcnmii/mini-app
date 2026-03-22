@@ -29,10 +29,27 @@ export function ItemsView({
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+    const [scrollOffset, setScrollOffset] = useState(0);
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            const offset = window.scrollY;
+            if (offset < 100) {
+                setScrollOffset(offset);
+            } else if (scrollOffset !== 100) {
+                setScrollOffset(100);
+            }
+        };
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [scrollOffset]);
+
+    const searchScale = Math.max(0, 1 - scrollOffset / 60);
+    const searchHeight = Math.max(0, 44 * searchScale);
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
@@ -69,12 +86,26 @@ export function ItemsView({
                 }}
                 actionIcon={isEditMode ? "delete" : "add"}
             />
-            <div className="search-bar">
-                <div className="search-input-wrap">
-                    <Icon name="search" />
-                    <input placeholder="Поиск..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} />
+            
+            <div className="search-header-anim" style={{ 
+                height: `${searchHeight}px`, 
+                opacity: searchScale,
+                overflow: "hidden",
+                transform: `scaleY(${searchScale})`,
+                transformOrigin: "top",
+                marginBottom: searchScale > 0 ? "8px" : "0"
+            }}>
+                <div className="search-bar" style={{ padding: "0 16px" }}>
+                    <div className="search-input-wrap" style={{ 
+                        opacity: searchScale * searchScale,
+                        height: "36px"
+                    }}>
+                        <Icon name="search" />
+                        <input placeholder="Поиск..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} />
+                    </div>
                 </div>
             </div>
+
             <div className="content-area">
                 {filteredItemsList.length === 0 ? (
                     <div className="empty-state full-height">

@@ -41,10 +41,30 @@ export function InvoicesListView({
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+    const [scrollOffset, setScrollOffset] = useState(0);
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            const offset = window.scrollY;
+            if (offset < 100) {
+                setScrollOffset(offset);
+            } else if (scrollOffset !== 100) {
+                setScrollOffset(100);
+            }
+        };
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [scrollOffset]);
+
+    // Calculate animation values based on scroll
+    // Search bar begins to shrink immediately and disappears by 60px
+    const searchScale = Math.max(0, 1 - scrollOffset / 60);
+    const searchHeight = Math.max(0, 44 * searchScale);
+    const chipsOpacity = Math.max(0, 1 - (scrollOffset - 30) / 40); // Chips start fading a bit later
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
@@ -92,14 +112,32 @@ export function InvoicesListView({
                 onAction={isEditMode ? () => setIsActionSheetOpen(true) : openNewInvoice} 
                 actionIcon={isEditMode ? "delete" : "add"} 
             />
-            <div className="search-bar">
-                <div className="search-input-wrap">
-                    <Icon name="search" />
-                    <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
+            
+            <div className="search-header-anim" style={{ 
+                height: `${searchHeight}px`, 
+                opacity: searchScale,
+                overflow: "hidden",
+                transform: `scaleY(${searchScale})`,
+                transformOrigin: "top",
+                marginBottom: searchScale > 0 ? "8px" : "0"
+            }}>
+                <div className="search-bar" style={{ padding: "0 16px" }}>
+                    <div className="search-input-wrap" style={{ 
+                        opacity: searchScale * searchScale,
+                        height: "36px"
+                    }}>
+                        <Icon name="search" />
+                        <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
+                    </div>
                 </div>
             </div>
+
             {showNewInvoicesList && (
-                <div className="status-chips-scroll">
+                <div className="status-chips-scroll" style={{ 
+                    opacity: chipsOpacity,
+                    transform: `translateY(${(1 - chipsOpacity) * -10}px)`,
+                    pointerEvents: chipsOpacity < 0.2 ? "none" : "auto"
+                }}>
                     {statusFilters.map((sf) => (
                         <button
                             key={sf}
@@ -111,6 +149,7 @@ export function InvoicesListView({
                     ))}
                 </div>
             )}
+
             <div className="content-area">
                 {showNewInvoicesList ? (
                     filteredInvoices.length === 0 ? (
