@@ -226,13 +226,7 @@ body.has-hero-gradient .nav-bar p {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* Dark theme hero — text stays as-is (already light) */
+/* Dark theme hero — text stays as-is (already light), buttons follow standard theme for consistency */
 [data-theme="dark"] body.has-hero-gradient .nav-bar {
     --nav-bg: rgba(0, 0, 0, 0.35);
-}
-
-[data-theme="dark"] body.has-hero-gradient .nav-bar-btn-circle {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
-    color: #fff !important;
 }
