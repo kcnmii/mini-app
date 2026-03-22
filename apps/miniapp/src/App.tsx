@@ -337,7 +337,9 @@ export function App() {
           {tab === "invoices" && (
             <InvoicesListView
               invoiceRecords={invHook.invoiceRecords}
+              setInvoiceRecords={invHook.setInvoiceRecords}
               documents={documents}
+              setDocuments={setDocuments}
               docSearch={docSearch}
               setDocSearch={setDocSearch}
               invoiceStatusFilter={invoiceStatusFilter}
@@ -345,27 +347,32 @@ export function App() {
               openNewInvoice={() => invHook.openNewInvoice()}
               loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
               loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
+              setStatus={setStatus}
             />
           )}
           {tab === "clients" && (
             <ClientsView
               clients={clients}
+              setClients={setClients}
               clientSearch={clientSearch}
               setClientSearch={setClientSearch}
               setSubView={setSubView}
               setSelectedCatalogClient={setSelectedCatalogClient}
               setClientDraft={setClientDraft}
               loadClientBalance={loadClientBalance}
+              setStatus={setStatus}
             />
           )}
           {tab === "items" && (
             <ItemsView
               items={items}
+              setItems={setItems}
               itemSearch={itemSearch}
               setItemSearch={setItemSearch}
               setSubView={setSubView}
               setSelectedCatalogItem={setSelectedCatalogItem}
               setItemDraft={setItemDraft}
+              setStatus={setStatus}
             />
           )}
           {tab === "profile" && (

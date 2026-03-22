@@ -11,20 +11,24 @@ interface NavBarProps {
     tgName?: string;
     showProfile?: boolean;
     actionType?: "icon" | "circle";
+    leftAction?: React.ReactNode;
+    titleCenter?: boolean;
 }
 
-export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile, actionType = "circle" }: NavBarProps) {
+export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, showProfile, actionType = "circle", leftAction, titleCenter }: NavBarProps) {
     return (
         <div className="nav-bar">
             <div className="nav-bar-inner">
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: "80px" }}>
                     {onBack && (
                         <button className="nav-bar-btn" onClick={onBack} style={{ marginRight: "4px" }}>
                             <Icon name="arrow_back" />
                         </button>
                     )}
 
-                    {showProfile && tgName && (
+                    {leftAction}
+
+                    {!titleCenter && showProfile && tgName && (
                         <>
                             <div className="user-avatar" style={{
                                 background: tgUser?.photo_url ? "transparent" : getAvatarColor(tgName),
@@ -43,14 +47,22 @@ export function NavBar({ title, onBack, onAction, actionIcon, tgUser, tgName, sh
                         </>
                     )}
 
-                    {title && <h1 className="nav-bar-title">{title}</h1>}
+                    {!titleCenter && title && <h1 className="nav-bar-title">{title}</h1>}
                 </div>
 
-                {onAction && actionIcon && (
-                    <button className={actionType === "circle" ? "nav-bar-btn-circle" : "nav-bar-btn"} onClick={onAction}>
-                        <Icon name={actionIcon} />
-                    </button>
-                )}
+                {titleCenter && title && <span className="nav-bar-title-center" style={{ fontSize: "17px", fontWeight: 600 }}>{title}</span>}
+
+                <div className="nav-bar-right" style={{ minWidth: "80px", justifyContent: "flex-end" }}>
+                    {onAction && actionIcon && (
+                        <button 
+                            className={actionType === "circle" ? "nav-bar-btn-circle" : "nav-bar-btn"} 
+                            onClick={onAction}
+                            style={actionIcon === "delete" ? { color: "var(--ios-red)", borderColor: "rgba(255, 59, 48, 0.2)" } : {}}
+                        >
+                            <Icon name={actionIcon} />
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
