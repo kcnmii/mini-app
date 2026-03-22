@@ -297,6 +297,7 @@ export function App() {
     <BankPickerView
       bankAccounts={bankAccounts} selectedBankAccountId={selectedBankAccountId} setSelectedBankAccountId={setSelectedBankAccountId}
       onClose={() => setSubView(null)} onAddAccount={() => { setProfileDraft(profile); setSubView("addBankAccount"); }}
+      animationType={prevSubView === "addBankAccount" ? "none" : "up"}
     />
   );
 
