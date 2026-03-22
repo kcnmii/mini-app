@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Icon, ActionSheet } from "../components/Common";
 import { NavBar } from "../components/NavBar";
 import { InvoiceRow } from "../components/InvoiceRow";
@@ -41,22 +41,6 @@ export function InvoicesListView({
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
-    const [isSearchVisible, setIsSearchVisible] = useState(true);
-
-    useEffect(() => {
-        let lastScrollY = window.scrollY;
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > 20 && currentScrollY > lastScrollY) {
-                setIsSearchVisible(false);
-            } else if (currentScrollY < lastScrollY || currentScrollY < 10) {
-                setIsSearchVisible(true);
-            }
-            lastScrollY = currentScrollY;
-        };
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -108,27 +92,25 @@ export function InvoicesListView({
                 onAction={isEditMode ? () => setIsActionSheetOpen(true) : openNewInvoice} 
                 actionIcon={isEditMode ? "delete" : "add"} 
             />
-            <div className={`search-bar-container ${isSearchVisible ? "visible" : "hidden"}`}>
-                <div className="search-bar">
-                    <div className="search-input-wrap">
-                        <Icon name="search" />
-                        <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
-                    </div>
+            <div className="search-bar">
+                <div className="search-input-wrap">
+                    <Icon name="search" />
+                    <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
                 </div>
-                {showNewInvoicesList && (
-                    <div className="status-chips-scroll">
-                        {statusFilters.map((sf) => (
-                            <button
-                                key={sf}
-                                onClick={() => setInvoiceStatusFilter(sf)}
-                                className={`status-chip${invoiceStatusFilter === sf ? " active" : ""}`}
-                            >
-                                {statusFilterLabels[sf]}
-                            </button>
-                        ))}
-                    </div>
-                )}
             </div>
+            {showNewInvoicesList && (
+                <div className="status-chips-scroll">
+                    {statusFilters.map((sf) => (
+                        <button
+                            key={sf}
+                            onClick={() => setInvoiceStatusFilter(sf)}
+                            className={`status-chip${invoiceStatusFilter === sf ? " active" : ""}`}
+                        >
+                            {statusFilterLabels[sf]}
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className="content-area">
                 {showNewInvoicesList ? (
                     filteredInvoices.length === 0 ? (
