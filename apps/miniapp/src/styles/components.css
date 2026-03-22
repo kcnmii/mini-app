@@ -385,7 +385,7 @@
 
 /* ═══ iOS Scroll Animations (ULTRA-SMOOTH) ═══ */
 .search-header-anim {
-    --nav-h: 56px; 
+    --nav-h: 72px; 
     --search-h: 44px;
     
     position: sticky;

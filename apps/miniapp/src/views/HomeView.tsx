@@ -51,7 +51,8 @@ export function HomeView({
                 alignItems: "center", 
                 justifyContent: "space-between", 
                 padding: "16px 16px 8px",
-                gap: "12px"
+                gap: "12px",
+                height: "72px"
             }}>
                 <button 
                     className="nav-bar-btn-circle" 
