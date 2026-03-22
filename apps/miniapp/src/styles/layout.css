@@ -47,7 +47,6 @@
     background: var(--tab-bar-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--tab-bar-border);
     padding: 12px 8px calc(12px + env(safe-area-inset-bottom, 24px));
     z-index: 50;
 }
