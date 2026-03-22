@@ -49,22 +49,22 @@ export function InvoicesListView({
 
     React.useEffect(() => {
         const handleScroll = () => {
-            const offset = window.scrollY;
+            // Clamp scrollY to 0 to avoid stretches during overscroll on iOS
+            const offset = Math.max(0, window.scrollY);
             if (offset < 100) {
                 setScrollOffset(offset);
-            } else if (scrollOffset !== 100) {
+            } else {
                 setScrollOffset(100);
             }
         };
         window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
-    }, [scrollOffset]);
+    }, []);
 
-    // Calculate animation values based on scroll
-    // Search bar begins to shrink immediately and disappears by 60px
-    const searchScale = Math.max(0, 1 - scrollOffset / 60);
-    const searchHeight = Math.max(0, 44 * searchScale);
-    const chipsOpacity = Math.max(0, 1 - (scrollOffset - 30) / 40); // Chips start fading a bit later
+    // Calculate animation values based on scroll (strictly clamped 0 to 1)
+    const searchScale = Math.min(1, Math.max(0, 1 - scrollOffset / 50));
+    const searchHeight = 44 * searchScale;
+    const chipsOpacity = Math.min(1, Math.max(0, 1 - (scrollOffset - 20) / 40));
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
@@ -119,12 +119,14 @@ export function InvoicesListView({
                 overflow: "hidden",
                 transform: `scaleY(${searchScale})`,
                 transformOrigin: "top",
-                marginBottom: searchScale > 0 ? "8px" : "0"
+                marginBottom: `${Math.max(0, 8 * searchScale)}px`,
+                pointerEvents: searchScale < 0.2 ? "none" : "auto"
             }}>
                 <div className="search-bar" style={{ padding: "0 16px" }}>
                     <div className="search-input-wrap" style={{ 
                         opacity: searchScale * searchScale,
-                        height: "36px"
+                        height: "36px",
+                        transform: `scale(${0.9 + 0.1 * searchScale})`
                     }}>
                         <Icon name="search" />
                         <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
@@ -135,8 +137,9 @@ export function InvoicesListView({
             {showNewInvoicesList && (
                 <div className="status-chips-scroll" style={{ 
                     opacity: chipsOpacity,
-                    transform: `translateY(${(1 - chipsOpacity) * -10}px)`,
-                    pointerEvents: chipsOpacity < 0.2 ? "none" : "auto"
+                    transform: `translateY(${(1 - chipsOpacity) * -15}px)`,
+                    pointerEvents: chipsOpacity < 0.1 ? "none" : "auto",
+                    display: chipsOpacity === 0 ? "none" : "flex"
                 }}>
                     {statusFilters.map((sf) => (
                         <button
@@ -149,6 +152,7 @@ export function InvoicesListView({
                     ))}
                 </div>
             )}
+
 
             <div className="content-area">
                 {showNewInvoicesList ? (
