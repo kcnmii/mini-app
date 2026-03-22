@@ -52,7 +52,7 @@ export function App() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [tab]);
 
   const invHook = useInvoices(setStatus, setBusy, profile, setSubView);
 

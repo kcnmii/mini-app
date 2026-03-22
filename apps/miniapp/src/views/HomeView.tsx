@@ -44,23 +44,45 @@ export function HomeView({
     const bankBtnLabel = bankAccounts.length === 0 ? "Добавить счёт" : selectedBa ? selectedBa.bank_name : "Все счета";
 
     return (
-        <>
-            <div className="nav-bar">
-                <div className="nav-bar-inner">
-                    <button className="nav-bar-btn-circle" onClick={() => {
+        <div className="content-area">
+            {/* ── Scrollable Home Header ── */}
+            <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between", 
+                padding: "16px 16px 8px",
+                gap: "12px"
+            }}>
+                <button 
+                    className="nav-bar-btn-circle" 
+                    onClick={() => {
                         if (bankAccounts.length === 0) { setProfileDraft(profile); setSubView("addBankAccount"); }
                         else setSubView("bankPicker");
-                    }} style={{ borderRadius: "20px", width: "auto", padding: "0 14px", gap: "6px", fontSize: "14px", fontWeight: 600 }}>
-                        <Icon name={bankAccounts.length === 0 ? "add" : "account_balance"} />
-                        <span>{bankBtnLabel}</span>
-                    </button>
-                    <button className="nav-bar-btn-circle" onClick={() => setSubView("dateFilter")}>
-                        <Icon name="calendar_month" />
-                    </button>
-                </div>
+                    }} 
+                    style={{ 
+                        borderRadius: "20px", 
+                        width: "auto", 
+                        padding: "0 14px", 
+                        gap: "6px", 
+                        fontSize: "14px", 
+                        fontWeight: 600,
+                        background: "var(--card)",
+                        color: "var(--text)"
+                    }}
+                >
+                    <Icon name={bankAccounts.length === 0 ? "add" : "account_balance"} />
+                    <span>{bankBtnLabel}</span>
+                </button>
+                <button 
+                    className="nav-bar-btn-circle" 
+                    onClick={() => setSubView("dateFilter")}
+                    style={{ background: "var(--card)", color: "var(--text)" }}
+                >
+                    <Icon name="calendar_month" />
+                </button>
             </div>
-            <div className="content-area">
-                <Dashboard summary={dashboardSummary} />
+
+            <Dashboard summary={dashboardSummary} />
 
                 {/* ── Create invoice & Import 1C buttons ── */}
                 <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -107,7 +129,6 @@ export function HomeView({
                     </div>
                 )}
                 <div className="spacer-24" />
-            </div>
-        </>
+        </div>
     );
 }
