@@ -3,7 +3,7 @@
 :root {
     --primary: #007bff;
     --bg: #F2F2F7;
-    --bg-gradient: linear-gradient(135deg, #E8F1FF 0%, #F2F2F7 40%, #F2F2F7 100%);
+    --bg-gradient: radial-gradient(circle at 50% 0%, #E2EDFF 0%, #F2F2F7 75%);
     --card: #FFFFFF;
     --text: #0f172a;
     --text-secondary: #64748b;
@@ -130,10 +130,14 @@ body,
 body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);
-    background-image: var(--bg-gradient);
-    background-attachment: fixed;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
+}
+
+.has-gradient-bg {
+    background-image: var(--bg-gradient) !important;
+    background-attachment: fixed;
+    background-size: cover;
 }
 
 button,

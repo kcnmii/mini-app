@@ -294,7 +294,7 @@ export function App() {
   );
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${(!subView && (tab === "home" || tab === "profile")) ? "has-gradient-bg" : ""}`}>
       <div className={`status-banner${status ? " visible" : ""}`}>{status}</div>
       {!isAppReady ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "16px" }}>
