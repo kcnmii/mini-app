@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.db import init_db
 from app.core.config import settings
+from app.core.scheduler import start_scheduler
 from app.modules.auth.router import router as auth_router
 from app.modules.catalog.router import router as catalog_router
 from app.modules.clients.router import router as clients_router
@@ -38,3 +39,4 @@ app.include_router(banks_router)
 @app.on_event("startup")
 async def startup() -> None:
     init_db()
+    start_scheduler()

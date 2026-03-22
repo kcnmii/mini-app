@@ -18,6 +18,7 @@ from app.schemas.invoice import (
     PaymentRead,
 )
 from app.modules.telegram_bot.service import TelegramBotClient
+from app.core.scheduler import notify_status_change, send_payment_reminder
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -163,10 +164,19 @@ async def update_invoice_status(
     if not inv:
         raise HTTPException(status_code=404, detail="Счёт не найден")
 
+    old_status = inv.status
     inv.status = body.status
     inv.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(inv)
+
+    # Push notification on status change (sent, overdue)
+    if old_status != body.status and body.status in ("sent", "overdue"):
+        try:
+            await notify_status_change(user_id, inv, body.status)
+        except Exception as e:
+            print(f"Status notification failed: {e}")
+
     return inv
 
 
@@ -233,6 +243,33 @@ async def delete_invoice(
     db.delete(inv)
     db.commit()
     return {"status": "ok"}
+
+
+# ── REMIND ABOUT PAYMENT ──
+
+@router.post("/{invoice_id}/remind")
+async def remind_about_payment(
+    invoice_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Send a payment reminder for an invoice via Telegram.
+    
+    The reminder is sent to the user's Telegram chat.
+    They can forward it to the client.
+    """
+    inv = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user_id).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Счёт не найден")
+    
+    if inv.status == "paid":
+        raise HTTPException(status_code=400, detail="Счёт уже оплачен")
+    
+    try:
+        reminder_text = await send_payment_reminder(user_id=user_id, invoice=inv)
+        return {"status": "ok", "message": "Напоминание отправлено в Telegram"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка отправки: {e}")
 
 
 @router.get("/{invoice_id}/pdf")

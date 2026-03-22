@@ -12,6 +12,7 @@ interface ViewDocumentViewProps {
     markInvoicePaid: (id: number) => void;
     markInvoiceSent: (id: number) => void;
     sendInvoice: () => void;
+    sendReminder: (id: number) => void;
     busy: string;
     animationType?: "none" | "left" | "up";
 }
@@ -25,6 +26,7 @@ export function ViewDocumentView({
     markInvoicePaid,
     markInvoiceSent,
     sendInvoice,
+    sendReminder,
     busy,
     animationType = "left"
 }: ViewDocumentViewProps) {
@@ -121,6 +123,14 @@ export function ViewDocumentView({
                                     style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#34C759", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                                 >
                                     <Icon name="check_circle" /> Оплачен
+                                </button>
+
+                                <button
+                                    onClick={() => sendReminder(selectedInvoice!.id)}
+                                    disabled={busy === "remind"}
+                                    style={{ flex: 1, height: "48px", borderRadius: "12px", border: "none", background: "#007AFF", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", opacity: busy === "remind" ? 0.6 : 1 }}
+                                >
+                                    <Icon name="notifications" /> {busy === "remind" ? "Отправка..." : "Напомнить"}
                                 </button>
 
                                 {selectedInvoice.status === "draft" && (

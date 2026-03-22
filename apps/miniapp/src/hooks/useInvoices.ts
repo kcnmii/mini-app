@@ -247,12 +247,24 @@ export function useInvoices(setStatus: (s: string) => void, setBusy: (b: any) =>
         } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка отправки"); } finally { setBusy("idle"); }
     }, [invoice, setBusy, setStatus]);
 
+    const sendReminder = useCallback(async (invoiceId: number) => {
+        setBusy("remind");
+        try {
+            await request(`/invoices/${invoiceId}/remind`, { method: "POST" });
+            setStatus("Напоминание отправлено в Telegram 🔔");
+        } catch (e) {
+            setStatus(e instanceof Error ? e.message : "Ошибка отправки");
+        } finally {
+            setBusy("idle");
+        }
+    }, [setBusy, setStatus]);
+
     return {
         invoice, setInvoice, invoiceRecords, setInvoiceRecords, dashboardSummary, setDashboardSummary,
         selectedInvoiceId, setSelectedInvoiceId, selectedDocId, setSelectedDocId,
         previewPages, setPreviewPages, isPdfLoading, setIsPdfLoading,
         invoiceClientSearch, setInvoiceClientSearch,
         updateItem, addRow, removeRow, changeQuantity, selectClient, openNewInvoice,
-        loadAndPreviewNewInvoice, saveInvoice, deleteInvoice, markInvoicePaid, markInvoiceSent, generatePdf, sendInvoice
+        loadAndPreviewNewInvoice, saveInvoice, deleteInvoice, markInvoicePaid, markInvoiceSent, generatePdf, sendInvoice, sendReminder
     };
 }
