@@ -3,6 +3,7 @@
 :root {
     --primary: #007bff;
     --bg: #F2F2F7;
+    --bg-gradient: linear-gradient(135deg, #E8F1FF 0%, #F2F2F7 40%, #F2F2F7 100%);
     --card: #FFFFFF;
     --text: #0f172a;
     --text-secondary: #64748b;
@@ -35,6 +36,7 @@
 [data-theme="dark"] {
     --primary: #0a84ff;
     --bg: #000000;
+    --bg-gradient: radial-gradient(circle at 50% -20%, #0a1b3d 0%, #000000 70%);
     --card: #1c1c1e;
     --text: #f8fafc;
     --text-secondary: #94a3b8;
@@ -68,6 +70,7 @@
     :root:not([data-theme="light"]) {
         --primary: #0a84ff;
         --bg: #000000;
+        --bg-gradient: radial-gradient(circle at 50% -20%, #0a1b3d 0%, #000000 70%);
         --card: #1c1c1e;
         --text: #f8fafc;
         --text-secondary: #94a3b8;
@@ -127,6 +130,8 @@ body,
 body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
 }
