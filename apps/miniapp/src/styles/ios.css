@@ -178,22 +178,40 @@
 .selectable-row-container {
     display: flex;
     align-items: center;
-    overflow: hidden;
     width: 100%;
 }
 
+.selectable-row-container:not(:last-child) {
+    border-bottom: 0.5px solid var(--separator);
+}
+
+/* When inside a selectable container, the inner doc-row should not add its own border */
+.selectable-row-container .doc-row:not(:last-child) {
+    border-bottom: none;
+}
+
 .selectable-checkbox-wrap {
+    flex-shrink: 0;
     width: 0;
+    overflow: hidden;
     opacity: 0;
-    transition: width 0.3s ease, opacity 0.3s ease, margin-right 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-left: 0;
 }
 
 .selectable-row-container.edit-mode .selectable-checkbox-wrap {
-    width: 44px;
+    width: 40px;
     opacity: 1;
-    padding-left: 16px;
+}
+
+/* In edit mode: reduce doc-row left padding so total indent stays balanced */
+.selectable-row-container.edit-mode .doc-row {
+    padding-left: 0;
+}
+
+/* Disable tap highlight on the row itself in edit mode */
+.selectable-row-container.edit-mode .doc-row:active {
+    background: transparent;
 }
