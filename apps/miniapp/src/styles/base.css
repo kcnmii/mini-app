@@ -3,7 +3,11 @@
 :root {
     --primary: #007bff;
     --bg: #F2F2F7;
-    --bg-gradient: radial-gradient(circle at 50% 0%, #E2EDFF 0%, #F2F2F7 75%);
+    --bg-gradient: 
+        radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(0, 199, 190, 0.1) 0%, transparent 50%),
+        radial-gradient(at 50% 0%, rgba(10, 132, 255, 0.1) 0%, transparent 70%),
+        #F2F2F7;
     --card: #FFFFFF;
     --text: #0f172a;
     --text-secondary: #64748b;
@@ -36,7 +40,10 @@
 [data-theme="dark"] {
     --primary: #0a84ff;
     --bg: #000000;
-    --bg-gradient: radial-gradient(circle at 50% -20%, #0a1b3d 0%, #000000 70%);
+    --bg-gradient: 
+        radial-gradient(at 50% -20%, rgba(10, 132, 255, 0.25) 0%, transparent 70%),
+        radial-gradient(at 0% 0%, rgba(0, 80, 255, 0.15) 0%, transparent 50%),
+        #000000;
     --card: #1c1c1e;
     --text: #f8fafc;
     --text-secondary: #94a3b8;
@@ -70,7 +77,10 @@
     :root:not([data-theme="light"]) {
         --primary: #0a84ff;
         --bg: #000000;
-        --bg-gradient: radial-gradient(circle at 50% -20%, #0a1b3d 0%, #000000 70%);
+        --bg-gradient: 
+            radial-gradient(at 50% -20%, rgba(10, 132, 255, 0.25) 0%, transparent 70%),
+            radial-gradient(at 0% 0%, rgba(0, 80, 255, 0.15) 0%, transparent 50%),
+            #000000;
         --card: #1c1c1e;
         --text: #f8fafc;
         --text-secondary: #94a3b8;
