@@ -32,33 +32,9 @@ export function ClientsView({
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
-    const headerRef = React.useRef<HTMLDivElement>(null);
-    const inputRef = React.useRef<HTMLDivElement>(null);
-
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
-
-    React.useEffect(() => {
-        const handleScroll = () => {
-            const offset = Math.max(0, window.scrollY);
-            const scale = Math.min(1, Math.max(0, 1 - offset / 50));
-            
-            if (headerRef.current) {
-                headerRef.current.style.height = `${44 * scale}px`;
-                headerRef.current.style.opacity = `${scale}`;
-                headerRef.current.style.transform = `scaleY(${scale})`;
-                headerRef.current.style.marginBottom = `${8 * scale}px`;
-                headerRef.current.style.pointerEvents = scale < 0.2 ? "none" : "auto";
-            }
-            if (inputRef.current) {
-                inputRef.current.style.opacity = `${scale * scale}`;
-                inputRef.current.style.transform = `scale(${0.9 + 0.1 * scale})`;
-            }
-        };
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
@@ -96,15 +72,9 @@ export function ClientsView({
                 actionIcon={isEditMode ? "delete" : "add"}
             />
             
-            <div className="search-header-anim" ref={headerRef} style={{ 
-                height: "44px", 
-                overflow: "hidden",
-                transformOrigin: "top"
-            }}>
+            <div className="search-header-anim">
                 <div className="search-bar" style={{ padding: "0 16px" }}>
-                    <div className="search-input-wrap" ref={inputRef} style={{ 
-                        height: "36px"
-                    }}>
+                    <div className="search-input-wrap" style={{ height: "36px" }}>
                         <Icon name="search" />
                         <input placeholder="Поиск..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} />
                     </div>
