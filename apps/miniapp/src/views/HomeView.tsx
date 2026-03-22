@@ -65,9 +65,7 @@ export function HomeView({
                         padding: "0 14px", 
                         gap: "6px", 
                         fontSize: "14px", 
-                        fontWeight: 600,
-                        background: "var(--card)",
-                        color: "var(--text)"
+                        fontWeight: 600
                     }}
                 >
                     <Icon name={bankAccounts.length === 0 ? "add" : "account_balance"} />
@@ -76,7 +74,6 @@ export function HomeView({
                 <button 
                     className="nav-bar-btn-circle" 
                     onClick={() => setSubView("dateFilter")}
-                    style={{ background: "var(--card)", color: "var(--text)" }}
                 >
                     <Icon name="calendar_month" />
                 </button>
