@@ -8,14 +8,16 @@ interface DateFilterViewProps {
     dateFilter: DateFilter;
     setDateFilter: React.Dispatch<React.SetStateAction<DateFilter>>;
     onClose: () => void;
+    animationType?: "none" | "left" | "up";
 }
 
-export function DateFilterView({ dateFilter, setDateFilter, onClose }: DateFilterViewProps) {
+export function DateFilterView({ dateFilter, setDateFilter, onClose, animationType = "up" }: DateFilterViewProps) {
     const pick = (type: DateFilterType) => { setDateFilter({ type }); onClose(); };
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
 
     return (
-        <>
-            <header className="nav-bar">
+        <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 100 }}>
+            <header className={`nav-bar ${animClass}`}>
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={onClose}>
                         <Icon name="close" />
@@ -24,7 +26,7 @@ export function DateFilterView({ dateFilter, setDateFilter, onClose }: DateFilte
                     <div className="nav-bar-right" />
                 </div>
             </header>
-            <div className="content-area">
+            <div className={`content-area ${animClass}`}>
                 <div className="section-title" style={{ paddingTop: 8 }}>Выберите период</div>
                 <div className="ios-group">
                     <button className="ios-row" onClick={() => pick("today")}>
@@ -79,6 +81,6 @@ export function DateFilterView({ dateFilter, setDateFilter, onClose }: DateFilte
                     </>
                 )}
             </div>
-        </>
+        </div>
     );
 }

@@ -202,14 +202,9 @@ body.has-hero-gradient .nav-bar-title {
     color: #fff !important;
 }
 
-body.has-hero-gradient .nav-bar-btn-circle {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #fff !important;
-}
-
-body.has-hero-gradient .nav-bar-btn-circle:active {
-    background: rgba(255, 255, 255, 0.3) !important;
+body.has-hero-gradient .nav-bar-subtitle,
+body.has-hero-gradient .nav-bar p {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 body.has-hero-gradient .dashboard-hero .dashboard-label {
@@ -218,12 +213,6 @@ body.has-hero-gradient .dashboard-hero .dashboard-label {
 
 body.has-hero-gradient .dashboard-hero .dashboard-value {
     color: #fff !important;
-}
-
-/* Fix for any secondary subtitles in nav or hero */
-body.has-hero-gradient .nav-bar-subtitle,
-body.has-hero-gradient .nav-bar p {
-    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* Dark theme hero — text stays as-is (already light), buttons follow standard theme for consistency */

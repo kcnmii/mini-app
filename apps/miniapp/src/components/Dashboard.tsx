@@ -14,31 +14,31 @@ export function Dashboard({ summary }: DashboardProps) {
         <div className="dashboard-hero" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "12px 20px 8px" }}>
             {(summary.awaiting > 0 || allZero) && (
                 <div>
-                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.awaiting)} ₸</div>
+                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginTop: "2px" }}>
                         <Icon name="schedule" style={{ fontSize: "18px" }} /> 
                         Ожидается
                     </div>
-                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.awaiting)} ₸</div>
                 </div>
             )}
 
             {summary.overdue > 0 && (
                 <div>
-                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--ios-red)", marginBottom: "4px" }}>
+                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--ios-red)", letterSpacing: "-0.02em" }}>{formatMoney(summary.overdue)} ₸</div>
+                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--ios-red)", marginTop: "2px" }}>
                         <Icon name="error_outline" style={{ fontSize: "18px" }} /> 
                         Просрочено
                     </div>
-                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--ios-red)", letterSpacing: "-0.02em" }}>{formatMoney(summary.overdue)} ₸</div>
                 </div>
             )}
 
             {summary.paid_this_month > 0 && (
                 <div>
-                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.paid_this_month)} ₸</div>
+                    <div className="dashboard-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)", marginTop: "2px" }}>
                         <Icon name="check_circle" style={{ fontSize: "18px" }} /> 
                         Получено
                     </div>
-                    <div className="dashboard-value" style={{ fontSize: "32px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{formatMoney(summary.paid_this_month)} ₸</div>
                 </div>
             )}
         </div>

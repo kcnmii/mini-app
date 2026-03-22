@@ -8,6 +8,7 @@ interface BankPickerViewProps {
     setSelectedBankAccountId: React.Dispatch<React.SetStateAction<number | null>>;
     onClose: () => void;
     onAddAccount: () => void;
+    animationType?: "none" | "left" | "up";
 }
 
 export function BankPickerView({
@@ -16,10 +17,13 @@ export function BankPickerView({
     setSelectedBankAccountId,
     onClose,
     onAddAccount,
+    animationType = "up"
 }: BankPickerViewProps) {
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
+
     return (
-        <>
-            <header className="nav-bar">
+        <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 100 }}>
+            <header className={`nav-bar ${animClass}`}>
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={onClose}>
                         <Icon name="close" />
@@ -28,7 +32,7 @@ export function BankPickerView({
                     <div className="nav-bar-right" />
                 </div>
             </header>
-            <div className="content-area">
+            <div className={`content-area ${animClass}`}>
                 <div className="section-title" style={{ paddingTop: 8 }}>Выберите счёт</div>
                 <div className="ios-group">
                     <button className="ios-row" onClick={() => { setSelectedBankAccountId(null); onClose(); }}>
@@ -51,6 +55,6 @@ export function BankPickerView({
                     </button>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
