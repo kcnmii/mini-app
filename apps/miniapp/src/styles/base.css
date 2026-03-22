@@ -177,14 +177,14 @@ body.has-hero-gradient .app-shell::before {
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    height: 280px;
-    background: radial-gradient(at 50% 0%, #1a6dff 0%, #4a9aff 40%, var(--bg) 90%);
+    height: 350px;
+    background: radial-gradient(at 50% 0%, #1a6dff 0%, #4a9aff 65%, var(--bg) 100%);
     z-index: -1;
     pointer-events: none;
 }
 
 [data-theme="dark"] body.has-hero-gradient .app-shell::before {
-    background: radial-gradient(at 50% 0%, #0d2d5c 0%, #0a1e3d 40%, #000000 90%);
+    background: radial-gradient(at 50% 0%, #0d2d5c 0%, #0a1e3d 60%, #000000 100%);
 }
 
 @media (prefers-color-scheme: dark) {
