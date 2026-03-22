@@ -27,7 +27,7 @@ def _mark_overdue(db: Session, user_id: int) -> int:
     """Auto-update sent invoices whose due_date has passed to 'overdue'.
     Returns number of rows updated.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     count = (
         db.query(Invoice)
         .filter(
@@ -78,7 +78,7 @@ async def create_invoice(
     inv = Invoice(
         user_id=user_id,
         number=payload.number,
-        date=payload.date or datetime.now(timezone.utc),
+        date=payload.date or datetime.now(timezone.utc).replace(tzinfo=None),
         due_date=payload.due_date,
         client_id=payload.client_id,
         client_name=payload.client_name,
@@ -166,7 +166,7 @@ async def update_invoice_status(
 
     old_status = inv.status
     inv.status = body.status
-    inv.updated_at = datetime.now(timezone.utc)
+    inv.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(inv)
 
@@ -199,14 +199,14 @@ async def mark_invoice_paid(
         user_id=user_id,
         invoice_id=inv.id,
         amount=payment_amount,
-        date=body.date or datetime.now(timezone.utc),
+        date=body.date or datetime.now(timezone.utc).replace(tzinfo=None),
         source="manual",
         note=body.note,
     )
     db.add(payment)
 
     inv.status = "paid"
-    inv.updated_at = datetime.now(timezone.utc)
+    inv.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(payment)
 

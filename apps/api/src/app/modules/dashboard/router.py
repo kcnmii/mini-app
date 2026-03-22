@@ -23,7 +23,7 @@ async def get_dashboard_summary(
     db: Session = Depends(get_db),
 ) -> DashboardSummary:
     # Auto-mark overdue first
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     db.query(Invoice).filter(
         Invoice.user_id == user_id,
         Invoice.status == "sent",

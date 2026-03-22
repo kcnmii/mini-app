@@ -59,7 +59,7 @@ async def check_overdue_invoices() -> None:
     logger.info("Running daily overdue check...")
     
     with get_session() as db:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         
         # Auto-mark sent invoices as overdue
         updated = (
@@ -131,7 +131,7 @@ async def send_weekly_digest() -> None:
     logger.info("Running weekly digest...")
     
     with get_session() as db:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         week_ago = now - timedelta(days=7)
         
         user_ids = _all_user_ids(db)
@@ -256,7 +256,7 @@ async def send_payment_reminder(
     
     if invoice.due_date:
         due_str = invoice.due_date.strftime("%d.%m.%Y")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         if invoice.due_date < now:
             days_overdue = (now - invoice.due_date).days
             reminder_text += f"Срок оплаты: {due_str} (просрочено {days_overdue} дн.)\n"
