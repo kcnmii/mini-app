@@ -10,16 +10,16 @@
 .nav-bar::before {
     content: "";
     position: absolute;
-    top: -50px;
+    top: -100px;
     left: 0;
     right: 0;
-    bottom: -80px;
+    bottom: 0;
     z-index: -1;
     background: var(--nav-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 80%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 80%, transparent 100%);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 95%);
+    mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 95%);
     pointer-events: none;
 }
 
@@ -92,16 +92,16 @@
 .nav-bar-detail::before {
     content: "";
     position: absolute;
-    top: -50px;
+    top: -100px;
     left: 0;
     right: 0;
-    bottom: -80px;
+    bottom: 0;
     z-index: -1;
     background: var(--nav-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 85%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 85%, transparent 100%);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 95%);
+    mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 95%);
     pointer-events: none;
 }
 
