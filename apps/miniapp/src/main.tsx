@@ -65,13 +65,12 @@ const mo = new MutationObserver((mutations) => {
 mo.observe(document.body, { childList: true, subtree: true });
 
 // Apply user theme preference
-const savedTheme = localStorage.getItem("theme") || "system";
-if (savedTheme === "dark") {
+const savedTheme = localStorage.getItem("theme");
+const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+if (savedTheme === "dark" || (savedTheme !== "light" && prefersDark)) {
   document.documentElement.setAttribute("data-theme", "dark");
-} else if (savedTheme === "light") {
-  document.documentElement.setAttribute("data-theme", "light");
 } else {
-  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", "light");
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

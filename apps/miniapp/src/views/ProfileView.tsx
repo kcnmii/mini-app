@@ -35,18 +35,17 @@ export function ProfileView({
     deleteBankAccount,
     onLogout
 }: ProfileViewProps) {
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "system");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedTheme = localStorage.getItem("theme");
+    const [isDarkTheme, setIsDarkTheme] = useState(savedTheme === "dark" || (savedTheme !== "light" && prefersDark));
 
-    const cycleTheme = () => {
-        const nextTheme = theme === "system" ? "light" : theme === "light" ? "dark" : "system";
-        setTheme(nextTheme);
-        localStorage.setItem("theme", nextTheme);
-        if (nextTheme === "dark") document.documentElement.setAttribute("data-theme", "dark");
-        else if (nextTheme === "light") document.documentElement.setAttribute("data-theme", "light");
-        else document.documentElement.removeAttribute("data-theme");
+    const toggleTheme = () => {
+        const nextIsDark = !isDarkTheme;
+        setIsDarkTheme(nextIsDark);
+        localStorage.setItem("theme", nextIsDark ? "dark" : "light");
+        if (nextIsDark) document.documentElement.setAttribute("data-theme", "dark");
+        else document.documentElement.setAttribute("data-theme", "light");
     };
-
-    const themeLabel = theme === "system" ? "Системное" : theme === "light" ? "Светлое" : "Темное";
 
     return (
         <div className="content-area">
@@ -134,12 +133,14 @@ export function ProfileView({
                     </div>
                     <div className="settings-row-right"><span>Русский</span><Icon name="chevron_right" /></div>
                 </div>
-                <div className="settings-row" onClick={cycleTheme} style={{ cursor: "pointer" }}>
+                <div className="settings-row" onClick={toggleTheme} style={{ cursor: "pointer" }}>
                     <div className="settings-row-left">
                         <div className="settings-icon dark"><Icon name="dark_mode" /></div>
-                        <span className="settings-row-label">Оформление</span>
+                        <span className="settings-row-label">Тёмная тема</span>
                     </div>
-                    <div className="settings-row-right"><span>{themeLabel}</span><Icon name="change_circle" /></div>
+                    <div style={{ pointerEvents: "none" }}>
+                        <Toggle checked={isDarkTheme} onChange={() => {}} />
+                    </div>
                 </div>
             </div>
             {!webAppInitData && (
