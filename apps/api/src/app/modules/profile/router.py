@@ -38,7 +38,12 @@ async def get_profile(
     db: Session = Depends(get_db),
 ) -> SupplierProfile:
     profile_model = _get_or_create_profile(db, user_id)
-    data = {c.name: getattr(profile_model, c.name) for c in profile_model.__table__.columns}
+    data = {}
+    for c in profile_model.__table__.columns:
+        val = getattr(profile_model, c.name)
+        if c.name == "notifications_enabled" and val is None:
+            val = True
+        data[c.name] = val
     return SupplierProfile(**data)
 
 
@@ -57,7 +62,12 @@ async def update_profile(
     db.commit()
     db.refresh(profile_model)
 
-    data = {c.name: getattr(profile_model, c.name) for c in profile_model.__table__.columns}
+    data = {}
+    for c in profile_model.__table__.columns:
+        val = getattr(profile_model, c.name)
+        if c.name == "notifications_enabled" and val is None:
+            val = True
+        data[c.name] = val
     return SupplierProfile(**data)
 
 
