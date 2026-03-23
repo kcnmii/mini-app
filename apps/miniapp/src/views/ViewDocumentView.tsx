@@ -139,8 +139,9 @@ export function ViewDocumentView({
             {/* Floating 'Подробнее' Button */}
             <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
                 <button 
+                    className="nav-bar-pill-btn"
                     onClick={() => setShowDetails(true)} 
-                    style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
+                    style={{ pointerEvents: "auto", height: "40px" }}
                 >
                     Подробнее
                     <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.9 }} />

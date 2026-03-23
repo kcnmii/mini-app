@@ -288,10 +288,10 @@ async def get_invoice_pdf(
     if not inv:
         raise HTTPException(status_code=404, detail="Счёт не найден")
 
-    # Find the matching Document record
+    # Find the matching Document record (specifically the Invoice, not Acts/Waybills)
     doc = db.query(Document).filter(
         Document.user_id == user_id,
-        Document.title.like(f"%{inv.number}%")
+        Document.title.like(f"Счет %{inv.number}%")
     ).order_by(Document.id.desc()).first()
 
     # If document exists and PDF file is in S3 — return it immediately
@@ -349,10 +349,10 @@ async def get_invoice_preview(
     if not inv:
         raise HTTPException(status_code=404, detail="Счёт не найден")
 
-    # Find the matching Document record
+    # Find the matching Document record (specifically the Invoice, not Acts/Waybills)
     doc = db.query(Document).filter(
         Document.user_id == user_id,
-        Document.title.like(f"%{inv.number}%")
+        Document.title.like(f"Счет %{inv.number}%")
     ).order_by(Document.id.desc()).first()
 
     pdf_bytes = None
