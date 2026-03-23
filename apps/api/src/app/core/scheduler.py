@@ -157,7 +157,7 @@ async def send_weekly_digest() -> None:
                 db.query(func.coalesce(func.sum(Invoice.total_amount), 0.0))
                 .filter(
                     Invoice.user_id == user_id,
-                    Invoice.status.in_(["sent", "overdue"]),
+                    Invoice.status == "sent",
                 )
                 .scalar()
             ) or 0

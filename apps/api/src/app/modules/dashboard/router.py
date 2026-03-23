@@ -46,9 +46,9 @@ async def get_dashboard_summary(
         except ValueError:
             pass
 
-    # Awaiting = sent + overdue totals
+    # Awaiting = sent only (not overdue anymore)
     awaiting_query = db.query(func.coalesce(func.sum(Invoice.total_amount), 0.0)).filter(
-        Invoice.user_id == user_id, Invoice.status.in_(["sent", "overdue"])
+        Invoice.user_id == user_id, Invoice.status == "sent"
     )
     if start_dt:
         awaiting_query = awaiting_query.filter(Invoice.due_date >= start_dt)
