@@ -56,6 +56,9 @@ export function ViewDocumentView({
 }: ViewDocumentViewProps) {
     const [showDocMenu, setShowDocMenu] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [touchStartY, setTouchStartY] = useState<number | null>(null);
     const animClass = animationType === "none" ? "" : animationType === "up" ? "animate-slide-up" : "animate-slide-left";
 
     const title = selectedInvoice?.number ? `# ${selectedInvoice.number}` : (selectedDoc?.title || "");
@@ -80,6 +83,21 @@ export function ViewDocumentView({
         }
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => setTouchStartY(e.touches[0].clientY);
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (touchStartY === null) return;
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - touchStartY;
+        if (!isCollapsed && diff > 0) setDragOffset(diff);
+        if (isCollapsed && diff < 0) setDragOffset(diff);
+    };
+    const handleTouchEnd = () => {
+        if (!isCollapsed && dragOffset > 50) setIsCollapsed(true);
+        if (isCollapsed && dragOffset < -50) setIsCollapsed(false);
+        setDragOffset(0);
+        setTouchStartY(null);
+    };
+
     if (isFullscreen) {
         return (
             <div className={`content-area ${animClass}`} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#f2f2f7", zIndex: 100, display: "flex", flexDirection: "column" }}>
@@ -97,6 +115,15 @@ export function ViewDocumentView({
             </div>
         );
     }
+
+    // Dynamic transform for swipe
+    // If collapsed, move down completely minus the header height. 
+    // Header includes padding=16px, DragHandle=24px, Title&Status=32px, margin=8px, Amount=34px + 24px margin = ~138px depending on screen sizes. We will leave visible ~140px.
+    const transformStyle = touchStartY !== null
+        ? `translateY(calc(${isCollapsed ? '100% - 150px' : '0px'} + ${dragOffset}px))`
+        : `translateY(${isCollapsed ? 'calc(100% - 150px)' : '0px'})`;
+
+    const transitionStyle = touchStartY !== null ? "none" : "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
 
     return (
         <div className={`content-area ${animClass}`} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#f5f5f7", zIndex: 50, display: "flex", flexDirection: "column" }}>
@@ -133,7 +160,11 @@ export function ViewDocumentView({
             </div>
 
             {/* Bottom Sheet Card */}
-            <div style={{
+            <div 
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                style={{
                 position: "absolute",
                 bottom: 0,
                 left: 0,
@@ -141,12 +172,18 @@ export function ViewDocumentView({
                 background: "#ffffff",
                 borderTopLeftRadius: "32px",
                 borderTopRightRadius: "32px",
-                padding: "32px 24px",
+                padding: "16px 24px 32px 24px",
                 paddingBottom: "max(32px, env(safe-area-inset-bottom))",
-                boxShadow: "0 -8px 40px rgba(0,0,0,0.06)",
+                boxShadow: "0 -8px 40px rgba(0,0,0,0.08)",
                 display: "flex",
-                flexDirection: "column"
+                flexDirection: "column",
+                transform: transformStyle,
+                transition: transitionStyle
             }}>
+                {/* Drag Handle */}
+                <div style={{ width: "100%", display: "flex", justifyContent: "center", paddingBottom: "16px", cursor: "pointer" }} onClick={() => setIsCollapsed(!isCollapsed)}>
+                    <div style={{ width: "40px", height: "5px", background: "#e5e5ea", borderRadius: "3px" }} />
+                </div>
                 {/* Client & Status */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                     <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#1c1c1e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "70%" }}>
