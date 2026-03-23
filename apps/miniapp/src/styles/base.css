@@ -244,12 +244,13 @@ body.has-hero-gradient .dashboard-hero .dashboard-value {
 }
 
 .animate-ios-popover {
-    animation: ios-popover-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: ios-popover-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .animate-ios-popover-out {
-    animation: ios-popover-out 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+    animation: ios-popover-out 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
+
 
 .popover-item:active {
     background: rgba(255, 255, 255, 0.1) !important;

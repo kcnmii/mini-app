@@ -82,12 +82,12 @@ export function ViewDocumentView({
         setTimeout(() => {
             setShowActionsMenu(false);
             setIsClosingActions(false);
-        }, 300);
+        }, 150);
     };
 
     const animClass = animationType === "none" ? "" : animationType === "up" ? "animate-slide-up" : "animate-slide-left";
 
-    const title = selectedInvoice?.number ? `# ${selectedInvoice.number}` : (selectedDoc?.title || "");
+    const title = selectedInvoice?.number ? `${selectedInvoice.number}` : (selectedDoc?.title || "");
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
     const statusColors: Record<string, { bg: string, text: string }> = {
@@ -140,7 +140,7 @@ export function ViewDocumentView({
             <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
                 <button 
                     onClick={() => setShowDetails(true)} 
-                    style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0, 122, 255, 0.3)", cursor: "pointer" }}
+                    style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                 >
                     Подробнее
                     <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.9 }} />
@@ -299,7 +299,7 @@ export function ViewDocumentView({
                             }}
                         >
                             <Icon name="edit" style={{ fontSize: "20px" }} />
-                            <span>Изменить счет</span>
+                            <span>Изменить</span>
                         </button>
                         
                         {/* Delete Action */}
