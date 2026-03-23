@@ -239,6 +239,7 @@ export function App() {
         sendInvoice={() => invHook.sendInvoice(chatId)}
         sendReminder={(id) => invHook.sendReminder(id)}
         generateDocument={(id, type) => invHook.generateDocument(id, type)}
+        deleteInvoice={async (id) => { await invHook.deleteInvoice(id); setSubView(null); loadData(); }}
         busy={busy}
         animationType={prevSubView === "invoiceForm" ? "none" : "left"}
       />
