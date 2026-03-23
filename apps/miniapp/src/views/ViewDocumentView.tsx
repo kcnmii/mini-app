@@ -226,17 +226,17 @@ export function ViewDocumentView({
                         
                         <h3 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)", textAlign: "left" }}>Создать документ</h3>
                         
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
                             <button
                                 onClick={() => {
                                     closeDocMenu();
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "act");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "60px", borderRadius: "16px", background: "var(--segment-bg, #f2f2f7)", border: "none", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 16px", cursor: "pointer", width: "100%" }}
+                                style={{ height: "56px", background: "none", border: "none", color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 500, display: "flex", alignItems: "center", gap: "16px", padding: "0", cursor: "pointer", width: "100%", opacity: busy === "generate" ? 0.6 : 1 }}
                             >
                                 <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" style={{ fontSize: "20px" }} /></div>
-                                Акт выполненных работ (АВР)
+                                <span>Акт выполненных работ (АВР)</span>
                             </button>
                             <button
                                 onClick={() => {
@@ -244,10 +244,10 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "waybill");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "60px", borderRadius: "16px", background: "var(--segment-bg, #f2f2f7)", border: "none", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 16px", cursor: "pointer", width: "100%" }}
+                                style={{ height: "56px", background: "none", border: "none", color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 500, display: "flex", alignItems: "center", gap: "16px", padding: "0", cursor: "pointer", width: "100%", opacity: busy === "generate" ? 0.6 : 1 }}
                             >
                                 <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" style={{ fontSize: "20px" }} /></div>
-                                Накладная на отпуск запасов
+                                <span>Накладная на отпуск запасов</span>
                             </button>
                         </div>
                     </div>
