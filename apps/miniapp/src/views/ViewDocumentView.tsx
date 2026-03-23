@@ -136,7 +136,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Preview Section */}
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "20px", marginBottom: "320px", opacity: 0.9 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", padding: "20px", marginBottom: isCollapsed ? "150px" : "340px", opacity: 0.9, transition: "margin-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
                 {isPdfLoading && previewPages.length === 0 ? (
                     <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "#007AFF", borderTopColor: "transparent" }} />
                 ) : (
@@ -178,7 +178,8 @@ export function ViewDocumentView({
                 display: "flex",
                 flexDirection: "column",
                 transform: transformStyle,
-                transition: transitionStyle
+                transition: transitionStyle,
+                touchAction: "none"
             }}>
                 {/* Drag Handle */}
                 <div style={{ width: "100%", display: "flex", justifyContent: "center", paddingBottom: "16px", cursor: "pointer" }} onClick={() => setIsCollapsed(!isCollapsed)}>
