@@ -151,7 +151,7 @@ export function ViewDocumentView({
             {/* Details Modal */}
             {(showDetails || isClosingDetails) && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)", opacity: isClosingDetails ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDetails}>
-                    <div className={isClosingDetails ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+                    <div className={isClosingDetails ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--card, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
                         
                         {/* Header & Close Button */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -163,17 +163,17 @@ export function ViewDocumentView({
                             </button>
                         </div>
 
-                        {/* Status Badge */}
-                        <div style={{ marginBottom: "12px" }}>
+                        {/* Amount */}
+                        <h1 style={{ margin: "0 0 8px 0", fontSize: "30px", fontWeight: 800, color: "var(--text, #1c1c1e)", letterSpacing: "-0.5px" }}>
+                            {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
+                        </h1>
+
+                        {/* Status Badge (Moved after Amount) */}
+                        <div style={{ marginBottom: "16px" }}>
                             <span style={{ background: activeColor.bg, color: activeColor.text, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
                                 {statusLabels[status]}
                             </span>
                         </div>
-
-                        {/* Amount */}
-                        <h1 style={{ margin: "0 0 16px 0", fontSize: "30px", fontWeight: 800, color: "var(--text, #1c1c1e)", letterSpacing: "-0.5px" }}>
-                            {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
-                        </h1>
 
                         {/* Details list (if invoice) */}
                         {selectedInvoice && (
@@ -186,11 +186,17 @@ export function ViewDocumentView({
                                     <span style={{ color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>Срок оплаты:</span>
                                     <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU") : "—"}</span>
                                 </div>
+                                {isPaid && selectedInvoice.updated_at && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                                        <span style={{ color: "var(--ios-green, #34C759)", fontWeight: 500 }}>Оплачен:</span>
+                                        <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{new Date(selectedInvoice.updated_at).toLocaleDateString("ru-RU")}</span>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* Mark as paid toggle */}
-                        {selectedInvoice && (
+                        {/* Mark as paid toggle (Hidden if already paid) */}
+                        {selectedInvoice && !isPaid && (
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                                 <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>Счет оплачен</span>
                                 <Switch
@@ -214,7 +220,7 @@ export function ViewDocumentView({
             {/* Action Sheet Modal for "Создать на основании" (Stays on top of Details Modal) */}
             {(showDocMenu || isClosingDocMenu) && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingDocMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDocMenu}>
-                    <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
+                    <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--card, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                             <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Создать документ</h3>
                             <button onClick={closeDocMenu} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
