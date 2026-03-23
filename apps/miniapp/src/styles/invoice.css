@@ -144,10 +144,8 @@
     left: 0;
     right: 0;
     background: var(--card);
-    border-top: 1px solid var(--separator);
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 8px));
     z-index: 50;
-    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .invoice-footer-inner {

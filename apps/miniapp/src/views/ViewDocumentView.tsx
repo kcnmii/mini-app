@@ -266,7 +266,7 @@ export function ViewDocumentView({
                             position: "absolute", 
                             top: "60px", 
                             right: "16px", 
-                            width: "220px", 
+                            width: "190px", 
                             background: "rgba(28, 28, 30, 0.9)", 
                             backdropFilter: "blur(20px)",
                             borderRadius: "14px", 
@@ -307,7 +307,7 @@ export function ViewDocumentView({
                                 }}
                             >
                                 <Icon name="mark_email_read" style={{ fontSize: "20px" }} />
-                                <span>Отправить (без Telegram)</span>
+                                <span>Отправить (вручную)</span>
                             </button>
                         )}
 
