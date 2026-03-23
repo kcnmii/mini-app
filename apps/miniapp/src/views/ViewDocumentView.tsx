@@ -211,7 +211,7 @@ export function ViewDocumentView({
                         <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px", padding: "0 4px" }}>
                             <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
                             <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
-                            <IconButton icon="post_add" label="Документ" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
+                            <IconButton icon="post_add" label="Создать" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
                         </div>
                     </div>
                 </div>
@@ -220,21 +220,22 @@ export function ViewDocumentView({
             {/* Action Sheet Modal for "Создать на основании" (Stays on top of Details Modal) */}
             {(showDocMenu || isClosingDocMenu) && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingDocMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDocMenu}>
-                    <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--card, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Создать документ</h3>
-                            <button onClick={closeDocMenu} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--card, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "12px 20px 32px", paddingBottom: "max(32px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
+                        {/* Grabber */}
+                        <div style={{ width: "36px", height: "5px", borderRadius: "3px", backgroundColor: "var(--separator, #C7C7CC)", margin: "0 auto 16px" }} />
+                        
+                        <h3 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)", textAlign: "left" }}>Создать документ</h3>
+                        
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                             <button
                                 onClick={() => {
                                     closeDocMenu();
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "act");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "60px", borderRadius: "16px", background: "var(--segment-bg, #f2f2f7)", border: "none", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 16px", cursor: "pointer", width: "100%" }}
                             >
-                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" /></div>
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" style={{ fontSize: "20px" }} /></div>
                                 Акт выполненных работ (АВР)
                             </button>
                             <button
@@ -243,9 +244,9 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "waybill");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "60px", borderRadius: "16px", background: "var(--segment-bg, #f2f2f7)", border: "none", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 16px", cursor: "pointer", width: "100%" }}
                             >
-                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" /></div>
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" style={{ fontSize: "20px" }} /></div>
                                 Накладная на отпуск запасов
                             </button>
                         </div>
