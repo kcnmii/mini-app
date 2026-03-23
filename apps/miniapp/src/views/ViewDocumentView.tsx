@@ -91,10 +91,10 @@ export function ViewDocumentView({
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
     const statusColors: Record<string, { bg: string, text: string }> = {
-        draft: { bg: "var(--segment-bg, #f2f2f7)", text: "var(--text-muted, #8E8E93)" },
-        sent: { bg: "#FFF4E5", text: "#FF9500" },
-        paid: { bg: "#E8F8EE", text: "#34C759" },
-        overdue: { bg: "#FFECEB", text: "#FF3B30" },
+        draft: { bg: "#8E8E93", text: "#fff" },
+        sent: { bg: "#FF9500", text: "#fff" },
+        paid: { bg: "#34C759", text: "#fff" },
+        overdue: { bg: "#FF3B30", text: "#fff" },
         document: { bg: "var(--separator, #E2E2E6)", text: "var(--text, #48484A)" }
     };
     const activeColor = statusColors[status] || statusColors.draft;
@@ -224,7 +224,7 @@ export function ViewDocumentView({
                         {/* Grabber */}
                         <div style={{ width: "36px", height: "5px", borderRadius: "3px", backgroundColor: "var(--separator, #C7C7CC)", margin: "0 auto 16px" }} />
                         
-                        <h3 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)", textAlign: "left" }}>Создать документ</h3>
+                        <h3 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)", textAlign: "left" }}>Создать на основании</h3>
                         
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             <button
