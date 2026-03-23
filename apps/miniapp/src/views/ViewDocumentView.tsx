@@ -92,7 +92,7 @@ export function ViewDocumentView({
     const isPaid = status === "paid";
 
     return (
-        <div className={`content-area ${animClass}`} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "var(--bg, #e5e5ea)", zIndex: 50, display: "flex", flexDirection: "column" }}>
+        <div className={animClass} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "var(--bg, #e5e5ea)", zIndex: 50, display: "flex", flexDirection: "column" }}>
             {/* Top Bar */}
             <div className="nav-bar" style={{ position: "relative", background: "var(--bg, #f2f2f7)", flexShrink: 0 }}>
                 <div className="nav-bar-detail">
@@ -105,7 +105,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Document Pages Container */}
-            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "max(64px, env(safe-area-inset-bottom))", touchAction: "pan-x pan-y pinch-zoom" }}>
+            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", touchAction: "pan-x pan-y pinch-zoom" }}>
                 {isPdfLoading && previewPages.length === 0 ? (
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
                         <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent" }} />
