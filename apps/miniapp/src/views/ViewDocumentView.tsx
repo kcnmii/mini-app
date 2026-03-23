@@ -136,17 +136,15 @@ export function ViewDocumentView({
             </div>
 
             {/* Floating 'Подробнее' Button */}
-            {!showDetails && (
-                <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
-                    <button 
-                        onClick={() => setShowDetails(true)} 
-                        style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0, 122, 255, 0.3)", cursor: "pointer" }}
-                    >
-                        Подробнее
-                        <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.9 }} />
-                    </button>
-                </div>
-            )}
+            <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
+                <button 
+                    onClick={() => setShowDetails(true)} 
+                    style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0, 122, 255, 0.3)", cursor: "pointer" }}
+                >
+                    Подробнее
+                    <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.9 }} />
+                </button>
+            </div>
 
             {/* Details Modal */}
             {(showDetails || isClosingDetails) && (
@@ -247,35 +245,87 @@ export function ViewDocumentView({
                 </div>
             )}
 
-            {/* Context Actions Menu (More Actions) */}
+            {/* Context Actions Menu (Popover Style like Telegram) */}
             {(showActionsMenu || isClosingActions) && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1200, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingActions ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeActionsMenu}>
-                    <div className={isClosingActions ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Действия</h3>
-                            <button onClick={closeActionsMenu} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                            <button
-                                onClick={() => {
-                                    closeActionsMenu();
-                                    if (selectedInvoice) setSubView("invoiceForm");
-                                }}
-                                disabled={!selectedInvoice}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", opacity: !selectedInvoice ? 0.5 : 1 }}
-                            >
-                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="edit" /></div>
-                                Изменить счет
-                            </button>
-                            <button
-                                onClick={deleteInvoice}
-                                disabled={busy !== "idle"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "rgba(255, 69, 58, 0.08)", color: "#FF3B30", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer" }}
-                            >
-                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(255, 69, 58, 0.15)", color: "#FF3B30", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="delete" /></div>
-                                Удалить документ
-                            </button>
-                        </div>
+                <div 
+                    style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1200, pointerEvents: "auto" }} 
+                    onClick={closeActionsMenu}
+                >
+                    <div 
+                        className={isClosingActions ? "animate-fade-out" : "animate-fade-in"}
+                        style={{ 
+                            position: "absolute", 
+                            top: "60px", 
+                            right: "16px", 
+                            width: "220px", 
+                            background: "rgba(28, 28, 30, 0.9)", 
+                            backdropFilter: "blur(20px)",
+                            borderRadius: "14px", 
+                            padding: "6px 0", 
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+                            display: "flex", 
+                            flexDirection: "column",
+                            color: "#fff",
+                            overflow: "hidden",
+                            transformOrigin: "top right",
+                            zIndex: 1201,
+                            transition: "0.2s ease"
+                        }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Edit Action */}
+                        <button
+                            onClick={() => {
+                                closeActionsMenu();
+                                if (selectedInvoice) setSubView("invoiceForm");
+                            }}
+                            disabled={!selectedInvoice}
+                            style={{ 
+                                height: "44px", 
+                                background: "none", 
+                                border: "none", 
+                                color: "#fff", 
+                                fontSize: "16px", 
+                                fontWeight: 500, 
+                                display: "flex", 
+                                alignItems: "center", 
+                                gap: "12px", 
+                                padding: "0 16px", 
+                                cursor: "pointer", 
+                                width: "100%",
+                                borderBottom: "0.5px solid rgba(255,255,255,0.1)",
+                                opacity: !selectedInvoice ? 0.5 : 1
+                            }}
+                        >
+                            <Icon name="edit" style={{ fontSize: "20px" }} />
+                            <span>Изменить счет</span>
+                        </button>
+                        
+                        {/* Delete Action */}
+                        <button
+                            onClick={() => {
+                                closeActionsMenu();
+                                deleteInvoice();
+                            }}
+                            disabled={busy !== "idle"}
+                            style={{ 
+                                height: "44px", 
+                                background: "none", 
+                                border: "none", 
+                                color: "#FF453A", 
+                                fontSize: "16px", 
+                                fontWeight: 500, 
+                                display: "flex", 
+                                alignItems: "center", 
+                                gap: "12px", 
+                                padding: "0 16px", 
+                                cursor: "pointer", 
+                                width: "100%"
+                            }}
+                        >
+                            <Icon name="delete" style={{ fontSize: "20px" }} />
+                            <span>Удалить</span>
+                        </button>
                     </div>
                 </div>
             )}
