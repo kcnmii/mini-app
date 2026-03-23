@@ -21,10 +21,10 @@ interface ViewDocumentViewProps {
 
 const IconButton = ({ icon, label, onClick, disabled, busy }: any) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", opacity: disabled ? 0.3 : 1, pointerEvents: disabled ? "none" : "auto", cursor: "pointer", transition: "0.2s" }} onClick={onClick}>
-        <div style={{ width: "52px", height: "52px", borderRadius: "18px", background: "#f8f8fb", display: "flex", justifyContent: "center", alignItems: "center", color: "#1c1c1e", border: "1px solid rgba(0,0,0,0.03)" }}>
-            {busy ? <div className="spinner" style={{ borderColor: "#1c1c1e", borderTopColor: "transparent" }} /> : <Icon name={icon} style={{ fontSize: "24px" }} />}
+        <div style={{ width: "52px", height: "52px", borderRadius: "18px", background: "var(--card-bg, #f8f8fb)", display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text, #1c1c1e)", border: "1px solid var(--border, rgba(0,0,0,0.03))" }}>
+            {busy ? <div className="spinner" style={{ borderColor: "var(--text, #1c1c1e)", borderTopColor: "transparent" }} /> : <Icon name={icon} style={{ fontSize: "24px" }} />}
         </div>
-        <span style={{ fontSize: "12px", fontWeight: 600, color: "#1c1c1e" }}>{label}</span>
+        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>{label}</span>
     </div>
 );
 
@@ -32,7 +32,7 @@ const Switch = ({ checked, onChange, disabled }: any) => {
     return (
         <div
             onClick={(e) => { e.stopPropagation(); if (!disabled) onChange(!checked); }}
-            style={{ width: "50px", height: "30px", borderRadius: "15px", background: checked ? "#34C759" : "#e5e5ea", position: "relative", cursor: "pointer", transition: "0.3s", opacity: disabled ? 0.6 : 1 }}
+            style={{ width: "50px", height: "30px", borderRadius: "15px", background: checked ? "var(--primary, #34C759)" : "var(--border, #e5e5ea)", position: "relative", cursor: "pointer", transition: "0.3s", opacity: disabled ? 0.6 : 1 }}
         >
             <div style={{ width: "26px", height: "26px", borderRadius: "13px", background: "#fff", position: "absolute", top: "2px", left: checked ? "22px" : "2px", transition: "0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }} />
         </div>
@@ -61,39 +61,43 @@ export function ViewDocumentView({
     const title = selectedInvoice?.number ? `# ${selectedInvoice.number}` : (selectedDoc?.title || "");
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
+    // We will keep specific semantic colors for status backgrounds as they aren't necessarily dark-mode inverted (like green/red/orange), but adapt the draft & document to use variables.
     const statusColors: Record<string, { bg: string, text: string }> = {
-        draft: { bg: "#f2f2f7", text: "#8E8E93" },
+        draft: { bg: "var(--card-bg, #f2f2f7)", text: "var(--hint, #8E8E93)" },
         sent: { bg: "#FFF4E5", text: "#FF9500" },
         paid: { bg: "#E8F8EE", text: "#34C759" },
         overdue: { bg: "#FFECEB", text: "#FF3B30" },
-        document: { bg: "#E2E2E6", text: "#48484A" }
+        document: { bg: "var(--border, #E2E2E6)", text: "var(--text, #48484A)" }
     };
     const activeColor = statusColors[status] || statusColors.draft;
 
     const isPaid = status === "paid";
 
     return (
-        <div className={`content-area ${animClass}`} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#e5e5ea", zIndex: 50, display: "flex", flexDirection: "column" }}>
+        <div className={`content-area ${animClass}`} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "var(--bg, #e5e5ea)", zIndex: 50, display: "flex", flexDirection: "column" }}>
             {/* Top Bar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", paddingTop: "max(16px, env(safe-area-inset-top))", flexShrink: 0, background: "#f2f2f7" }}>
-                <span style={{ fontWeight: 700, fontSize: "20px", color: "#1c1c1e", letterSpacing: "-0.5px" }}>{title}</span>
-                <button onClick={() => setSubView(null)} style={{ background: "#e5e5ea", border: "none", borderRadius: "50%", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#8e8e93", cursor: "pointer" }}>
-                    <Icon name="close" />
-                </button>
+            <div className="nav-bar" style={{ position: "relative", background: "var(--bg, #f2f2f7)", flexShrink: 0 }}>
+                <div className="nav-bar-detail">
+                    <button className="nav-bar-btn-circle" onClick={() => setSubView(null)}>
+                        <Icon name="chevron_left" />
+                    </button>
+                    <span className="nav-bar-title-center">{title}</span>
+                    <div className="nav-bar-right"></div>
+                </div>
             </div>
 
             {/* Document Pages Container */}
             <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "120px", touchAction: "pan-x pan-y pinch-zoom" }}>
                 {isPdfLoading && previewPages.length === 0 ? (
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
-                        <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "#007AFF", borderTopColor: "transparent" }} />
+                        <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent" }} />
                     </div>
                 ) : previewPages.length > 0 ? (
                     previewPages.map((src, i) => (
                         <img key={i} src={src} alt={`Page ${i + 1}`} style={{ width: "100%", borderRadius: "8px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", marginBottom: "16px", display: "block" }} />
                     ))
                 ) : (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "#8e8e93", fontWeight: 500 }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--hint, #8e8e93)", fontWeight: 500 }}>
                         Нет превью
                     </div>
                 )}
@@ -101,13 +105,13 @@ export function ViewDocumentView({
 
             {/* Floating 'Подробнее' Button */}
             {!showDetails && (
-                <div style={{ position: "fixed", bottom: "max(32px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
+                <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
                     <button 
                         onClick={() => setShowDetails(true)} 
-                        style={{ pointerEvents: "auto", background: "rgba(28, 28, 30, 0.85)", backdropFilter: "blur(12px)", color: "#fff", height: "56px", padding: "0 32px", borderRadius: "28px", border: "none", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.15)", cursor: "pointer" }}
+                        style={{ pointerEvents: "auto", background: "var(--text, #1c1c1e)", color: "var(--bg, #fff)", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.15)", cursor: "pointer" }}
                     >
                         Подробнее
-                        <Icon name="keyboard_arrow_up" style={{ fontSize: "20px", opacity: 0.8 }} />
+                        <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.8 }} />
                     </button>
                 </div>
             )}
@@ -115,48 +119,48 @@ export function ViewDocumentView({
             {/* Details Modal */}
             {showDetails && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)" }} onClick={() => setShowDetails(false)}>
-                    <div style={{ width: "100%", background: "#ffffff", borderTopLeftRadius: "32px", borderTopRightRadius: "32px", padding: "20px 24px 32px 24px", paddingBottom: "max(32px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column", animation: "slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} onClick={e => e.stopPropagation()}>
+                    <div className="animate-slide-up" style={{ width: "100%", background: "var(--bg, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
                         
                         {/* Header & Close Button */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#1c1c1e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "70%" }}>
+                            <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text, #1c1c1e)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "70%" }}>
                                 {selectedInvoice?.client_name || selectedDoc?.client_name || "Неизвестный клиент"}
                             </h2>
-                            <button onClick={() => setShowDetails(false)} style={{ background: "#f2f2f7", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#8e8e93", cursor: "pointer" }}>
+                            <button onClick={() => setShowDetails(false)} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}>
                                 <Icon name="close" style={{ fontSize: "18px" }} />
                             </button>
                         </div>
 
                         {/* Status Badge */}
-                        <div style={{ marginBottom: "16px" }}>
-                            <span style={{ background: activeColor.bg, color: activeColor.text, padding: "6px 12px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, display: "inline-block" }}>
+                        <div style={{ marginBottom: "12px" }}>
+                            <span style={{ background: activeColor.bg, color: activeColor.text, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
                                 {statusLabels[status]}
                             </span>
                         </div>
 
                         {/* Amount */}
-                        <h1 style={{ margin: "0 0 24px 0", fontSize: "34px", fontWeight: 800, color: "#1c1c1e", letterSpacing: "-0.5px" }}>
+                        <h1 style={{ margin: "0 0 16px 0", fontSize: "30px", fontWeight: 800, color: "var(--text, #1c1c1e)", letterSpacing: "-0.5px" }}>
                             {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
                         </h1>
 
                         {/* Details list (if invoice) */}
                         {selectedInvoice && (
-                            <div style={{ paddingBottom: "20px", borderBottom: "1px solid #f2f2f7", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px" }}>
-                                    <span style={{ color: "#8e8e93", fontWeight: 500 }}>Выставлен:</span>
-                                    <span style={{ color: "#1c1c1e", fontWeight: 600 }}>{selectedInvoice.date ? new Date(selectedInvoice.date).toLocaleDateString("ru-RU") : "—"}</span>
+                            <div style={{ paddingBottom: "16px", borderBottom: "1px solid var(--border, #f2f2f7)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                                    <span style={{ color: "var(--hint, #8e8e93)", fontWeight: 500 }}>Выставлен:</span>
+                                    <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{selectedInvoice.date ? new Date(selectedInvoice.date).toLocaleDateString("ru-RU") : "—"}</span>
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px" }}>
-                                    <span style={{ color: "#8e8e93", fontWeight: 500 }}>Срок оплаты:</span>
-                                    <span style={{ color: "#1c1c1e", fontWeight: 600 }}>{selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU") : "—"}</span>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                                    <span style={{ color: "var(--hint, #8e8e93)", fontWeight: 500 }}>Срок оплаты:</span>
+                                    <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU") : "—"}</span>
                                 </div>
                             </div>
                         )}
 
                         {/* Mark as paid toggle */}
                         {selectedInvoice && (
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
-                                <span style={{ fontSize: "16px", fontWeight: 600, color: "#1c1c1e" }}>Счет оплачен</span>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>Счет оплачен</span>
                                 <Switch
                                     checked={isPaid}
                                     onChange={() => isPaid ? markInvoiceSent(selectedInvoice.id) : markInvoicePaid(selectedInvoice.id)}
@@ -166,7 +170,7 @@ export function ViewDocumentView({
                         )}
 
                         {/* Action Buttons Row */}
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "32px", padding: "0 8px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", padding: "0 4px" }}>
                             <IconButton icon="edit" label="Изменить" onClick={() => { if (selectedInvoice) setSubView("invoiceForm"); setShowDetails(false); }} disabled={!selectedInvoice} />
                             <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
                             <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
@@ -177,7 +181,7 @@ export function ViewDocumentView({
                         <button
                             onClick={() => deleteInvoice()}
                             disabled={busy !== "idle"}
-                            style={{ width: "100%", height: "56px", borderRadius: "18px", background: "#fff5f5", color: "#FF3B30", border: "none", fontSize: "16px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
+                            style={{ width: "100%", height: "48px", borderRadius: "14px", background: "rgba(255, 59, 48, 0.1)", color: "#FF3B30", border: "none", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
                         >
                             <Icon name="delete" /> Удалить
                         </button>
@@ -188,10 +192,10 @@ export function ViewDocumentView({
             {/* Action Sheet Modal for "Создать на основании" (Stays on top of Details Modal) */}
             {showDocMenu && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)" }} onClick={() => setShowDocMenu(false)}>
-                    <div style={{ width: "100%", background: "#fff", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", animation: "slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} onClick={e => e.stopPropagation()}>
+                    <div className="animate-slide-up" style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#1c1c1e" }}>Создать документ</h3>
-                            <button onClick={() => setShowDocMenu(false)} style={{ background: "#f2f2f7", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#8e8e93", cursor: "pointer" }}><Icon name="close" /></button>
+                            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Создать документ</h3>
+                            <button onClick={() => setShowDocMenu(false)} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             <button
@@ -200,9 +204,9 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "act");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.05)", background: "#fff", color: "#1c1c1e", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card-bg, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
                             >
-                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "#007AFF", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" /></div>
+                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" /></div>
                                 Акт выполненных работ (АВР)
                             </button>
                             <button
@@ -211,7 +215,7 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "waybill");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.05)", background: "#fff", color: "#1c1c1e", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card-bg, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
                             >
                                 <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" /></div>
                                 Накладная на отпуск запасов
