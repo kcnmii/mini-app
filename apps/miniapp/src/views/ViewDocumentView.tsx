@@ -14,7 +14,7 @@ interface ViewDocumentViewProps {
     sendInvoice: () => void;
     sendReminder: (id: number) => void;
     generateDocument: (id: number, type: "act" | "waybill") => void;
-    deleteInvoice: (id: number) => void;
+    deleteInvoice: () => void;
     busy: string;
     animationType?: "none" | "left" | "up";
 }
@@ -159,7 +159,7 @@ export function ViewDocumentView({
 
                 {/* Amount */}
                 <h1 style={{ margin: "0 0 24px 0", fontSize: "34px", fontWeight: 800, color: "#1c1c1e", letterSpacing: "-0.5px" }}>
-                    {formatMoney(selectedInvoice?.total_amount || selectedDoc?.total_amount || 0)} ₸
+                    {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
                 </h1>
 
                 {/* Details list (if invoice) */}
@@ -198,12 +198,7 @@ export function ViewDocumentView({
 
                 {/* Delete Button */}
                 <button
-                    onClick={() => {
-                        const id = selectedInvoice?.id || selectedDoc?.id;
-                        if (id && window.confirm("Удалить этот документ безвозвратно?")) {
-                            deleteInvoice(id);
-                        }
-                    }}
+                    onClick={() => deleteInvoice()}
                     disabled={busy !== "idle"}
                     style={{ width: "100%", height: "56px", borderRadius: "18px", background: "#fff5f5", color: "#FF3B30", border: "none", fontSize: "16px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
                 >
