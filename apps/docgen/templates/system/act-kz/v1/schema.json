@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Act KZ Render Payload",
+  "type": "object",
+  "required": ["MyCompanyRequisiteRqCompanyName", "ClientName", "items", "TotalSum"],
+  "properties": {
+    "MyCompanyRequisiteRqCompanyName": { "type": "string" },
+    "MyCompanyRequisiteRegisteredAddressText": { "type": "string" },
+    "MyCompanyPhone": { "type": "string" },
+    "MyCompanyRequisiteRqDirector": { "type": "string" },
+    "ClientName": { "type": "string" },
+    "ClientPhone": { "type": "string" },
+    "RequisiteRegisteredAddressText": { "type": "string" },
+    "TotalQuantity": { "type": "string" },
+    "TotalSum": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer" },
+          "name": { "type": "string" },
+          "unit": { "type": "string" },
+          "quantity": { "type": "string" },
+          "price": { "type": "string" },
+          "total": { "type": "string" }
+        }
+      }
+    }
+  }
+}

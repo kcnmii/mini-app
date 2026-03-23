@@ -259,12 +259,26 @@ export function useInvoices(setStatus: (s: string) => void, setBusy: (b: any) =>
         }
     }, [setBusy, setStatus]);
 
+    const generateDocument = useCallback(async (invoiceId: number, docType: "act" | "waybill") => {
+        setBusy("generate");
+        try {
+            const result = await request<{ status: string; title: string }>(`/invoices/${invoiceId}/generate-document?doc_type=${docType}`, { method: "POST" });
+            setStatus(`${docType === "act" ? "Акт" : "Накладная"} создан(а) и отправлен(а) в Telegram ✅`);
+            return result;
+        } catch (e) {
+            setStatus(e instanceof Error ? e.message : "Ошибка генерации");
+            return null;
+        } finally {
+            setBusy("idle");
+        }
+    }, [setBusy, setStatus]);
+
     return {
         invoice, setInvoice, invoiceRecords, setInvoiceRecords, dashboardSummary, setDashboardSummary,
         selectedInvoiceId, setSelectedInvoiceId, selectedDocId, setSelectedDocId,
         previewPages, setPreviewPages, isPdfLoading, setIsPdfLoading,
         invoiceClientSearch, setInvoiceClientSearch,
         updateItem, addRow, removeRow, changeQuantity, selectClient, openNewInvoice,
-        loadAndPreviewNewInvoice, saveInvoice, deleteInvoice, markInvoicePaid, markInvoiceSent, generatePdf, sendInvoice, sendReminder
+        loadAndPreviewNewInvoice, saveInvoice, deleteInvoice, markInvoicePaid, markInvoiceSent, generatePdf, sendInvoice, sendReminder, generateDocument
     };
 }

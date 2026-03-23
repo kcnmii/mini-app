@@ -402,3 +402,203 @@ async def get_invoice_preview(
         return {"pages": pages, "total": len(pages)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ошибка конвертации: {exc}") from exc
+
+
+# ── GENERATE ACT / WAYBILL FROM INVOICE ──
+
+@router.post("/{invoice_id}/generate-document")
+async def generate_document_from_invoice(
+    invoice_id: int,
+    doc_type: str = Query(..., description="act or waybill"),
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Generate an Act (АВР) or Waybill (Накладная) based on an existing invoice.
+
+    Renders DOCX+PDF, saves document record, and sends to user via Telegram.
+    """
+    from app.modules.render.service import RenderService
+    from app.core.db import SupplierProfile, Client, ClientContact
+
+    if doc_type not in ("act", "waybill"):
+        raise HTTPException(status_code=400, detail="doc_type must be 'act' or 'waybill'")
+
+    inv = (
+        db.query(Invoice)
+        .options(joinedload(Invoice.line_items))
+        .filter(Invoice.id == invoice_id, Invoice.user_id == user_id)
+        .first()
+    )
+    if not inv:
+        raise HTTPException(status_code=404, detail="Счёт не найден")
+
+    # Load supplier profile
+    profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+
+    # Load client info
+    client = None
+    client_phone = ""
+    client_address = ""
+    if inv.client_id:
+        client = db.query(Client).filter(Client.id == inv.client_id).first()
+        if client:
+            client_address = client.address or ""
+            # Get first contact phone
+            contact = db.query(ClientContact).filter(ClientContact.client_id == client.id).first()
+            if contact:
+                client_phone = contact.phone or ""
+
+    # Build items list
+    items = []
+    total_quantity = 0.0
+    for i, li in enumerate(inv.line_items):
+        items.append({
+            "index": i + 1,
+            "name": li.name,
+            "unit": li.unit or "шт.",
+            "quantity": str(li.quantity),
+            "price": f"{li.price:,.0f}",
+            "total": f"{li.total:,.0f}",
+            "tax": "0",
+        })
+        total_quantity += li.quantity
+
+    total_sum_formatted = f"{inv.total_amount:,.0f}"
+
+    # Number to words (simple Russian)
+    def _num_to_words_simple(n: int) -> str:
+        if n == 0:
+            return "ноль"
+        units = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+        teens = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"]
+        tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"]
+        hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"]
+
+        parts = []
+        if n >= 1000:
+            t = n // 1000
+            if t == 1:
+                parts.append("одна тысяча")
+            elif t == 2:
+                parts.append("две тысячи")
+            elif 3 <= t <= 4:
+                parts.append(f"{units[t]} тысячи")
+            elif 5 <= t <= 20:
+                parts.append(f"{units[t] if t < 10 else teens[t - 10]} тысяч")
+            else:
+                parts.append(f"{t} тысяч")
+            n %= 1000
+
+        if n >= 100:
+            parts.append(hundreds[n // 100])
+            n %= 100
+
+        if 10 <= n <= 19:
+            parts.append(teens[n - 10])
+        else:
+            if n >= 20:
+                parts.append(tens[n // 10])
+                n %= 10
+            if n > 0:
+                parts.append(units[n])
+
+        return " ".join(p for p in parts if p)
+
+    total_sum_words = _num_to_words_simple(int(inv.total_amount)) + " тенге"
+    total_qty_int = int(total_quantity)
+    total_qty_words = _num_to_words_simple(total_qty_int)
+
+    now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%d.%m.%Y")
+
+    if doc_type == "act":
+        template_key = "act-kz"
+        doc_title = f"Акт {inv.number}"
+        data = {
+            "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
+            "MyCompanyRequisiteRegisteredAddressText": (profile.supplier_address if profile else "") or "",
+            "MyCompanyPhone": (profile.phone if profile else "") or "",
+            "MyCompanyRequisiteRqDirector": (profile.executor_name if profile else "") or "",
+            "ClientName": inv.client_name or "",
+            "ClientPhone": client_phone,
+            "RequisiteRegisteredAddressText": client_address,
+            "TotalQuantity": str(total_qty_int),
+            "TotalSum": total_sum_formatted,
+            "items": items,
+        }
+    else:
+        template_key = "waybill-kz"
+        doc_title = f"Накладная {inv.number}"
+        data = {
+            "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
+            "MyCompanyRequisiteRqBin": (profile.company_iin if profile else "") or "",
+            "MyCompanyRequisiteRqAccountant": (profile.executor_name if profile else "") or "",
+            "RequisiteRqCompanyName": inv.client_name or "",
+            "DocumentNumber": inv.number,
+            "DocumentCreateTime": now_str,
+            "TotalQuantity": str(total_qty_int),
+            "TotalQuantityWords": total_qty_words,
+            "TotalSum": total_sum_formatted,
+            "TotalSumWords": total_sum_words,
+            "TotalTax": "0",
+            "items": items,
+        }
+
+    render_service = RenderService()
+
+    try:
+        # Render DOCX
+        docx_bytes = await render_service.render_document_docx(template_key, data)
+
+        safe_number = ''.join(c if c.isascii() and c.isalnum() else '-' for c in inv.number).strip('-') or 'document'
+        filename_prefix = f"{doc_type}-{safe_number}"
+
+        # Convert to PDF
+        pdf_bytes = await render_service.convert_docx_to_pdf(f"{filename_prefix}.docx", docx_bytes)
+
+        # Save to S3
+        pdf_path = await render_service.save_file(f"{filename_prefix}.pdf", pdf_bytes, user_id=user_id)
+        docx_path = await render_service.save_file(f"{filename_prefix}.docx", docx_bytes, user_id=user_id)
+
+        # Save document record
+        doc_record = Document(
+            user_id=user_id,
+            title=doc_title,
+            client_name=inv.client_name or "",
+            total_sum=total_sum_formatted,
+            total_amount=inv.total_amount,
+            total_sum_in_words=total_sum_words,
+            pdf_path=pdf_path,
+            docx_path=docx_path,
+        )
+        db.add(doc_record)
+        db.commit()
+        db.refresh(doc_record)
+
+        # Send via Telegram
+        bot = TelegramBotClient()
+        try:
+            await bot.send_invoice_documents(
+                chat_id=user_id,
+                filename_prefix=filename_prefix,
+                pdf_bytes=pdf_bytes,
+                docx_bytes=docx_bytes,
+                caption=f"{'📋 Акт выполненных работ' if doc_type == 'act' else '📦 Накладная'}\n{doc_title}\nКлиент: {inv.client_name}\nСумма: {total_sum_formatted} ₸",
+                user_id=user_id,
+            )
+        except Exception as e:
+            # Don't fail the whole request if Telegram send fails
+            pass
+        finally:
+            await bot.close()
+
+        return {
+            "status": "ok",
+            "doc_type": doc_type,
+            "title": doc_title,
+            "pdf_path": pdf_path,
+            "docx_path": docx_path,
+            "document_id": doc_record.id,
+        }
+
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Ошибка генерации документа: {exc}") from exc

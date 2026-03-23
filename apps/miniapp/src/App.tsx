@@ -238,6 +238,7 @@ export function App() {
         markInvoiceSent={(id) => invHook.markInvoiceSent(id, loadData)}
         sendInvoice={() => invHook.sendInvoice(chatId)}
         sendReminder={(id) => invHook.sendReminder(id)}
+        generateDocument={(id, type) => invHook.generateDocument(id, type)}
         busy={busy}
         animationType={prevSubView === "invoiceForm" ? "none" : "left"}
       />

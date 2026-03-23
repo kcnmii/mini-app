@@ -11,13 +11,17 @@ from app.schemas.render import InvoiceRenderPayload
 
 class RenderService:
     async def render_invoice_docx(self, payload: InvoiceRenderPayload, user_id: int) -> bytes:
+        return await self.render_document_docx("invoice-kz", payload.to_template_data(user_id=user_id))
+
+    async def render_document_docx(self, template_key: str, data: dict) -> bytes:
+        """Generic DOCX renderer — works for any template key (invoice-kz, act-kz, waybill-kz)."""
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
                 f"{settings.docgen_url}/render/docx",
                 json={
-                    "templateKey": "invoice-kz",
+                    "templateKey": template_key,
                     "templateVersion": "v1",
-                    "data": payload.to_template_data(user_id=user_id),
+                    "data": data,
                 },
             )
             response.raise_for_status()

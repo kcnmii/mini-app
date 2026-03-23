@@ -1,0 +1,16 @@
+{
+  "key": "act-kz",
+  "version": "v1",
+  "type": "act",
+  "title": "Акт выполненных работ (Казахстан)",
+  "country": "KZ",
+  "output_formats": ["docx", "pdf"],
+  "required_fields": [
+    "MyCompanyRequisiteRqCompanyName",
+    "ClientName",
+    "items",
+    "TotalSum"
+  ],
+  "docxtemplater_modules": [],
+  "notes": "Act of completed works (AVR) template for Kazakhstan."
+}

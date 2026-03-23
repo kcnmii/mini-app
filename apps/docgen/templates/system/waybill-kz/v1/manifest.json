@@ -1,0 +1,17 @@
+{
+  "key": "waybill-kz",
+  "version": "v1",
+  "type": "waybill",
+  "title": "Накладная на отпуск запасов (Казахстан)",
+  "country": "KZ",
+  "output_formats": ["docx", "pdf"],
+  "required_fields": [
+    "MyCompanyRequisiteRqCompanyName",
+    "RequisiteRqCompanyName",
+    "DocumentNumber",
+    "items",
+    "TotalSum"
+  ],
+  "docxtemplater_modules": [],
+  "notes": "Waybill template for Kazakhstan (Form Z-2)."
+}
