@@ -119,20 +119,21 @@ export function ViewDocumentView({
             </div>
 
             {/* Document Pages Container */}
-            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", touchAction: "pan-x pan-y pinch-zoom" }}>
-                {isPdfLoading && previewPages.length === 0 ? (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
-                        <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent" }} />
-                    </div>
-                ) : previewPages.length > 0 ? (
-                    previewPages.map((src, i) => (
-                        <img key={i} src={src} alt={`Page ${i + 1}`} style={{ width: "100%", borderRadius: "8px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", marginBottom: "16px", display: "block" }} />
-                    ))
-                ) : (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>
-                        Нет превью
+            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", touchAction: "pan-x pan-y pinch-zoom", position: "relative" }}>
+                {previewPages.length === 0 && (
+                    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        {isPdfLoading ? (
+                            <div className="spinner" style={{ width: "32px", height: "32px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent", borderWidth: "3px" }} />
+                        ) : (
+                            <div style={{ color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>
+                                Нет превью
+                            </div>
+                        )}
                     </div>
                 )}
+                {previewPages.length > 0 && previewPages.map((src, i) => (
+                    <img key={i} src={src} alt={`Page ${i + 1}`} style={{ width: "100%", borderRadius: "8px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", marginBottom: "16px", display: "block" }} />
+                ))}
             </div>
 
             {/* Floating 'Подробнее' Button */}
@@ -252,7 +253,7 @@ export function ViewDocumentView({
                     onClick={closeActionsMenu}
                 >
                     <div 
-                        className={isClosingActions ? "animate-fade-out" : "animate-fade-in"}
+                        className={isClosingActions ? "animate-ios-popover-out" : "animate-ios-popover"}
                         style={{ 
                             position: "absolute", 
                             top: "60px", 
@@ -268,8 +269,7 @@ export function ViewDocumentView({
                             color: "#fff",
                             overflow: "hidden",
                             transformOrigin: "top right",
-                            zIndex: 1201,
-                            transition: "0.2s ease"
+                            zIndex: 1201
                         }} 
                         onClick={e => e.stopPropagation()}
                     >
@@ -280,6 +280,7 @@ export function ViewDocumentView({
                                 if (selectedInvoice) setSubView("invoiceForm");
                             }}
                             disabled={!selectedInvoice}
+                            className="popover-item"
                             style={{ 
                                 height: "44px", 
                                 background: "none", 
@@ -308,6 +309,7 @@ export function ViewDocumentView({
                                 deleteInvoice();
                             }}
                             disabled={busy !== "idle"}
+                            className="popover-item"
                             style={{ 
                                 height: "44px", 
                                 background: "none", 
