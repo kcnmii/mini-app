@@ -21,7 +21,7 @@ interface ViewDocumentViewProps {
 
 const IconButton = ({ icon, label, onClick, disabled, busy }: any) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", opacity: disabled ? 0.3 : 1, pointerEvents: disabled ? "none" : "auto", cursor: "pointer", transition: "0.2s" }} onClick={onClick}>
-        <div style={{ width: "52px", height: "52px", borderRadius: "18px", background: "var(--card-bg, #f8f8fb)", display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text, #1c1c1e)", border: "1px solid var(--border, rgba(0,0,0,0.03))" }}>
+        <div style={{ width: "52px", height: "52px", borderRadius: "18px", background: "var(--card, #f8f8fb)", display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text, #1c1c1e)", border: "1px solid var(--separator, rgba(0,0,0,0.03))" }}>
             {busy ? <div className="spinner" style={{ borderColor: "var(--text, #1c1c1e)", borderTopColor: "transparent" }} /> : <Icon name={icon} style={{ fontSize: "24px" }} />}
         </div>
         <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>{label}</span>
@@ -32,7 +32,7 @@ const Switch = ({ checked, onChange, disabled }: any) => {
     return (
         <div
             onClick={(e) => { e.stopPropagation(); if (!disabled) onChange(!checked); }}
-            style={{ width: "50px", height: "30px", borderRadius: "15px", background: checked ? "var(--primary, #34C759)" : "var(--border, #e5e5ea)", position: "relative", cursor: "pointer", transition: "0.3s", opacity: disabled ? 0.6 : 1 }}
+            style={{ width: "50px", height: "30px", borderRadius: "15px", background: checked ? "var(--ios-green, #34C759)" : "var(--segment-bg, #e5e5ea)", position: "relative", cursor: "pointer", transition: "0.3s", opacity: disabled ? 0.6 : 1 }}
         >
             <div style={{ width: "26px", height: "26px", borderRadius: "13px", background: "#fff", position: "absolute", top: "2px", left: checked ? "22px" : "2px", transition: "0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }} />
         </div>
@@ -81,11 +81,11 @@ export function ViewDocumentView({
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
     const statusColors: Record<string, { bg: string, text: string }> = {
-        draft: { bg: "var(--card-bg, #f2f2f7)", text: "var(--hint, #8E8E93)" },
+        draft: { bg: "var(--segment-bg, #f2f2f7)", text: "var(--text-muted, #8E8E93)" },
         sent: { bg: "#FFF4E5", text: "#FF9500" },
         paid: { bg: "#E8F8EE", text: "#34C759" },
         overdue: { bg: "#FFECEB", text: "#FF3B30" },
-        document: { bg: "var(--border, #E2E2E6)", text: "var(--text, #48484A)" }
+        document: { bg: "var(--separator, #E2E2E6)", text: "var(--text, #48484A)" }
     };
     const activeColor = statusColors[status] || statusColors.draft;
 
@@ -105,7 +105,7 @@ export function ViewDocumentView({
             </div>
 
             {/* Document Pages Container */}
-            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "120px", touchAction: "pan-x pan-y pinch-zoom" }}>
+            <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "16px", paddingBottom: "max(64px, env(safe-area-inset-bottom))", touchAction: "pan-x pan-y pinch-zoom" }}>
                 {isPdfLoading && previewPages.length === 0 ? (
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
                         <div className="spinner" style={{ width: "40px", height: "40px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent" }} />
@@ -115,7 +115,7 @@ export function ViewDocumentView({
                         <img key={i} src={src} alt={`Page ${i + 1}`} style={{ width: "100%", borderRadius: "8px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", marginBottom: "16px", display: "block" }} />
                     ))
                 ) : (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--hint, #8e8e93)", fontWeight: 500 }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>
                         Нет превью
                     </div>
                 )}
@@ -136,7 +136,7 @@ export function ViewDocumentView({
 
             {/* Details Modal */}
             {(showDetails || isClosingDetails) && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)", opacity: isClosingDetails ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDetails}>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)", opacity: isClosingDetails ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDetails}>
                     <div className={isClosingDetails ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
                         
                         {/* Header & Close Button */}
@@ -144,7 +144,7 @@ export function ViewDocumentView({
                             <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text, #1c1c1e)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "70%" }}>
                                 {selectedInvoice?.client_name || selectedDoc?.client_name || "Неизвестный клиент"}
                             </h2>
-                            <button onClick={closeDetails} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}>
+                            <button onClick={closeDetails} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}>
                                 <Icon name="close" style={{ fontSize: "18px" }} />
                             </button>
                         </div>
@@ -163,13 +163,13 @@ export function ViewDocumentView({
 
                         {/* Details list (if invoice) */}
                         {selectedInvoice && (
-                            <div style={{ paddingBottom: "16px", borderBottom: "1px solid var(--border, #f2f2f7)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <div style={{ paddingBottom: "16px", borderBottom: "1px solid var(--separator, #f2f2f7)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
-                                    <span style={{ color: "var(--hint, #8e8e93)", fontWeight: 500 }}>Выставлен:</span>
+                                    <span style={{ color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>Выставлен:</span>
                                     <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{selectedInvoice.date ? new Date(selectedInvoice.date).toLocaleDateString("ru-RU") : "—"}</span>
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
-                                    <span style={{ color: "var(--hint, #8e8e93)", fontWeight: 500 }}>Срок оплаты:</span>
+                                    <span style={{ color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>Срок оплаты:</span>
                                     <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("ru-RU") : "—"}</span>
                                 </div>
                             </div>
@@ -199,7 +199,7 @@ export function ViewDocumentView({
                         <button
                             onClick={() => deleteInvoice()}
                             disabled={busy !== "idle"}
-                            style={{ width: "100%", height: "48px", borderRadius: "14px", background: "rgba(255, 59, 48, 0.1)", color: "#FF3B30", border: "none", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
+                            style={{ width: "100%", height: "48px", borderRadius: "14px", background: "rgba(255, 69, 58, 0.15)", color: "var(--ios-red, #FF3B30)", border: "none", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
                         >
                             <Icon name="delete" /> Удалить
                         </button>
