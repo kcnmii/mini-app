@@ -55,9 +55,11 @@ export function ViewDocumentView({
     animationType = "left"
 }: ViewDocumentViewProps) {
     const [showDocMenu, setShowDocMenu] = useState(false);
+    const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [isClosingDetails, setIsClosingDetails] = useState(false);
     const [isClosingDocMenu, setIsClosingDocMenu] = useState(false);
+    const [isClosingActions, setIsClosingActions] = useState(false);
 
     const closeDetails = () => {
         setIsClosingDetails(true);
@@ -72,6 +74,14 @@ export function ViewDocumentView({
         setTimeout(() => {
             setShowDocMenu(false);
             setIsClosingDocMenu(false);
+        }, 300);
+    };
+
+    const closeActionsMenu = () => {
+        setIsClosingActions(true);
+        setTimeout(() => {
+            setShowActionsMenu(false);
+            setIsClosingActions(false);
         }, 300);
     };
 
@@ -100,7 +110,11 @@ export function ViewDocumentView({
                         <Icon name="chevron_left" />
                     </button>
                     <span className="nav-bar-title-center">{title}</span>
-                    <div className="nav-bar-right"></div>
+                    <div className="nav-bar-right">
+                        <button className="nav-bar-btn-circle" onClick={() => setShowActionsMenu(true)}>
+                            <Icon name="more_horiz" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -188,32 +202,22 @@ export function ViewDocumentView({
                         )}
 
                         {/* Action Buttons Row */}
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", padding: "0 4px" }}>
-                            <IconButton icon="edit" label="Изменить" onClick={() => { if (selectedInvoice) setSubView("invoiceForm"); setShowDetails(false); }} disabled={!selectedInvoice} />
+                        <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px", padding: "0 4px" }}>
                             <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
                             <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
                             <IconButton icon="post_add" label="Документ" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
                         </div>
-
-                        {/* Delete Button */}
-                        <button
-                            onClick={() => deleteInvoice()}
-                            disabled={busy !== "idle"}
-                            style={{ width: "100%", height: "48px", borderRadius: "14px", background: "rgba(255, 69, 58, 0.15)", color: "var(--ios-red, #FF3B30)", border: "none", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", opacity: busy !== "idle" ? 0.6 : 1 }}
-                        >
-                            <Icon name="delete" /> Удалить
-                        </button>
                     </div>
                 </div>
             )}
 
             {/* Action Sheet Modal for "Создать на основании" (Stays on top of Details Modal) */}
             {(showDocMenu || isClosingDocMenu) && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingDocMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDocMenu}>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingDocMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDocMenu}>
                     <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                             <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Создать документ</h3>
-                            <button onClick={closeDocMenu} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
+                            <button onClick={closeDocMenu} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             <button
@@ -222,7 +226,7 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "act");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card-bg, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
                             >
                                 <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="assignment" /></div>
                                 Акт выполненных работ (АВР)
@@ -233,10 +237,43 @@ export function ViewDocumentView({
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "waybill");
                                 }}
                                 disabled={busy === "generate"}
-                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card-bg, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}
                             >
                                 <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "#34C759", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" /></div>
                                 Накладная на отпуск запасов
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Context Actions Menu (More Actions) */}
+            {(showActionsMenu || isClosingActions) && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1200, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingActions ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeActionsMenu}>
+                    <div className={isClosingActions ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Действия</h3>
+                            <button onClick={closeActionsMenu} style={{ background: "var(--segment-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <button
+                                onClick={() => {
+                                    closeActionsMenu();
+                                    if (selectedInvoice) setSubView("invoiceForm");
+                                }}
+                                disabled={!selectedInvoice}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "var(--card, #fff)", color: "var(--text, #1c1c1e)", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer", opacity: !selectedInvoice ? 0.5 : 1 }}
+                            >
+                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="edit" /></div>
+                                Изменить счет
+                            </button>
+                            <button
+                                onClick={deleteInvoice}
+                                disabled={busy !== "idle"}
+                                style={{ height: "64px", borderRadius: "16px", border: "1px solid var(--border, rgba(0,0,0,0.05))", background: "rgba(255, 69, 58, 0.08)", color: "#FF3B30", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "16px", padding: "0 20px", cursor: "pointer" }}
+                            >
+                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(255, 69, 58, 0.15)", color: "#FF3B30", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="delete" /></div>
+                                Удалить документ
                             </button>
                         </div>
                     </div>
