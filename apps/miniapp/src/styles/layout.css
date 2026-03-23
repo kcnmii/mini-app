@@ -218,3 +218,15 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+.animate-slide-down {
+    animation: slideDownScreen 0.4s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+}
+
+@keyframes slideDownScreen {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(100vh);
+    }
+}

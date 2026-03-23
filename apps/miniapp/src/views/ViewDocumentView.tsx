@@ -56,12 +56,30 @@ export function ViewDocumentView({
 }: ViewDocumentViewProps) {
     const [showDocMenu, setShowDocMenu] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
+    const [isClosingDetails, setIsClosingDetails] = useState(false);
+    const [isClosingDocMenu, setIsClosingDocMenu] = useState(false);
+
+    const closeDetails = () => {
+        setIsClosingDetails(true);
+        setTimeout(() => {
+            setShowDetails(false);
+            setIsClosingDetails(false);
+        }, 300);
+    };
+
+    const closeDocMenu = () => {
+        setIsClosingDocMenu(true);
+        setTimeout(() => {
+            setShowDocMenu(false);
+            setIsClosingDocMenu(false);
+        }, 300);
+    };
+
     const animClass = animationType === "none" ? "" : animationType === "up" ? "animate-slide-up" : "animate-slide-left";
 
     const title = selectedInvoice?.number ? `# ${selectedInvoice.number}` : (selectedDoc?.title || "");
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
-    // We will keep specific semantic colors for status backgrounds as they aren't necessarily dark-mode inverted (like green/red/orange), but adapt the draft & document to use variables.
     const statusColors: Record<string, { bg: string, text: string }> = {
         draft: { bg: "var(--card-bg, #f2f2f7)", text: "var(--hint, #8E8E93)" },
         sent: { bg: "#FFF4E5", text: "#FF9500" },
@@ -108,25 +126,25 @@ export function ViewDocumentView({
                 <div style={{ position: "fixed", bottom: "max(16px, env(safe-area-inset-bottom))", left: "0", right: "0", display: "flex", justifyContent: "center", zIndex: 60, pointerEvents: "none" }}>
                     <button 
                         onClick={() => setShowDetails(true)} 
-                        style={{ pointerEvents: "auto", background: "var(--text, #1c1c1e)", color: "var(--bg, #fff)", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.15)", cursor: "pointer" }}
+                        style={{ pointerEvents: "auto", background: "var(--primary, #007AFF)", color: "#ffffff", height: "40px", padding: "0 20px", borderRadius: "20px", border: "none", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 16px rgba(0, 122, 255, 0.3)", cursor: "pointer" }}
                     >
                         Подробнее
-                        <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.8 }} />
+                        <Icon name="keyboard_arrow_up" style={{ fontSize: "18px", opacity: 0.9 }} />
                     </button>
                 </div>
             )}
 
             {/* Details Modal */}
-            {showDetails && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)" }} onClick={() => setShowDetails(false)}>
-                    <div className="animate-slide-up" style={{ width: "100%", background: "var(--bg, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+            {(showDetails || isClosingDetails) && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)", opacity: isClosingDetails ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDetails}>
+                    <div className={isClosingDetails ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #ffffff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "16px 20px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
                         
                         {/* Header & Close Button */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                             <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text, #1c1c1e)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "70%" }}>
                                 {selectedInvoice?.client_name || selectedDoc?.client_name || "Неизвестный клиент"}
                             </h2>
-                            <button onClick={() => setShowDetails(false)} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}>
+                            <button onClick={closeDetails} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}>
                                 <Icon name="close" style={{ fontSize: "18px" }} />
                             </button>
                         </div>
@@ -190,17 +208,17 @@ export function ViewDocumentView({
             )}
 
             {/* Action Sheet Modal for "Создать на основании" (Stays on top of Details Modal) */}
-            {showDocMenu && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)" }} onClick={() => setShowDocMenu(false)}>
-                    <div className="animate-slide-up" style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
+            {(showDocMenu || isClosingDocMenu) && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingDocMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeDocMenu}>
+                    <div className={isClosingDocMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--bg, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                             <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)" }}>Создать документ</h3>
-                            <button onClick={() => setShowDocMenu(false)} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
+                            <button onClick={closeDocMenu} style={{ background: "var(--card-bg, #f2f2f7)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--hint, #8e8e93)", cursor: "pointer" }}><Icon name="close" /></button>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             <button
                                 onClick={() => {
-                                    setShowDocMenu(false);
+                                    closeDocMenu();
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "act");
                                 }}
                                 disabled={busy === "generate"}
@@ -211,7 +229,7 @@ export function ViewDocumentView({
                             </button>
                             <button
                                 onClick={() => {
-                                    setShowDocMenu(false);
+                                    closeDocMenu();
                                     if (selectedInvoice) generateDocument(selectedInvoice.id, "waybill");
                                 }}
                                 disabled={busy === "generate"}
