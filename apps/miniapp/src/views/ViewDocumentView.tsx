@@ -280,6 +280,36 @@ export function ViewDocumentView({
                         }} 
                         onClick={e => e.stopPropagation()}
                     >
+                        {/* Mark As Sent Action */}
+                        {selectedInvoice && status === "draft" && (
+                            <button
+                                onClick={() => {
+                                    closeActionsMenu();
+                                    markInvoiceSent(selectedInvoice.id);
+                                }}
+                                disabled={busy !== "idle"}
+                                className="popover-item"
+                                style={{ 
+                                    height: "44px", 
+                                    background: "none", 
+                                    border: "none", 
+                                    color: "#fff", 
+                                    fontSize: "16px", 
+                                    fontWeight: 500, 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: "12px", 
+                                    padding: "0 16px", 
+                                    cursor: "pointer", 
+                                    width: "100%",
+                                    borderBottom: "0.5px solid rgba(255,255,255,0.1)"
+                                }}
+                            >
+                                <Icon name="mark_email_read" style={{ fontSize: "20px" }} />
+                                <span>Отправить (без Telegram)</span>
+                            </button>
+                        )}
+
                         {/* Edit Action */}
                         <button
                             onClick={() => {

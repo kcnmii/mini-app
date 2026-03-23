@@ -243,9 +243,20 @@ export function useInvoices(setStatus: (s: string) => void, setBusy: (b: any) =>
             const caption = parts.join("\n");
 
             await request("/telegram/send-invoice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: Number(chatId), payload: invoice, caption }) });
+            
+            // If it's a saved invoice and status is draft, automatically mark as sent
+            if (selectedInvoiceId) {
+                const currentInv = invoiceRecords.find(i => i.id === selectedInvoiceId);
+                if (currentInv && currentInv.status === "draft") {
+                    await request(`/invoices/${selectedInvoiceId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "sent" }) });
+                    setInvoiceRecords(prev => prev.map(inv => inv.id === selectedInvoiceId ? { ...inv, status: "sent" } : inv));
+                    setStatus("Счет отправлен и статус обновлен");
+                    return;
+                }
+            }
             setStatus("Отправлено в Telegram");
         } catch (e) { setStatus(e instanceof Error ? e.message : "Ошибка отправки"); } finally { setBusy("idle"); }
-    }, [invoice, setBusy, setStatus]);
+    }, [invoice, selectedInvoiceId, invoiceRecords, setInvoiceRecords, setBusy, setStatus]);
 
     const sendReminder = useCallback(async (invoiceId: number) => {
         setBusy("remind");
