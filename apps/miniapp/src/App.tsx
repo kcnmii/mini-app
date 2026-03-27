@@ -39,6 +39,7 @@ export function App() {
   const [dateFilter, setDateFilter] = useState<{ type: "today" | "week" | "month" | "all" | "custom", from?: string, to?: string }>({ type: "month" });
 
   const { status, setStatus, busy, setBusy, subView, setSubView, prevSubView, isBinLoading, setIsBinLoading } = useSharedState();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +70,22 @@ export function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [tab, subView]);
+
+  useEffect(() => {
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        setIsKeyboardVisible(true);
+      }
+    };
+    const handleBlur = () => setIsKeyboardVisible(false);
+    document.addEventListener('focusin', handleFocus);
+    document.addEventListener('focusout', handleBlur);
+    return () => {
+      document.removeEventListener('focusin', handleFocus);
+      document.removeEventListener('focusout', handleBlur);
+    };
+  }, []);
 
   const { bankAccounts, setBankAccounts, selectedBankAccountId, setSelectedBankAccountId, handleFileUpload, importResult, setImportResult } = useBanks(setStatus, setBusy, setSubView);
 
@@ -400,7 +417,7 @@ export function App() {
           )}
         </>
       )}
-      {isAuthenticated && !subViewContent && (
+      {isAuthenticated && !subViewContent && !isKeyboardVisible && (
         <nav className="tab-bar">
           <div className="tab-bar-inner">
             {(["home", "invoices", "directory", "profile"] as TabKey[]).map((t) => (

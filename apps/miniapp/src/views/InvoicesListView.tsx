@@ -230,7 +230,7 @@ export function InvoicesListView({
                                 <div style={{ padding: "0 16px" }}>
                                     {Object.entries(groupedItems).map(([dateLabel, items]) => (
                                         <div key={dateLabel} style={{ marginBottom: "24px" }}>
-                                            <div style={{ padding: "0 4px 10px", fontSize: "14px", fontWeight: 700, color: "var(--text-muted, #8e8e93)" }}>
+                                            <div style={{ padding: "0 4px 10px", fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>
                                                 {dateLabel}
                                             </div>
                                             <div className="ios-group" style={{ margin: 0 }}>
