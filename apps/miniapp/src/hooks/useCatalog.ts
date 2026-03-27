@@ -45,13 +45,13 @@ export function useCatalog(setStatus: (s: string) => void, setBusy: (b: any) => 
                 setStatus("Товар добавлен");
             }
 
-            if (tab === "home") {
+            if (tab === "home" || tab === "invoices") {
                 addRow(existingItem);
             }
 
             setItemDraft({ name: "", unit: "шт.", price: "", sku: "" });
             setSelectedCatalogItem(null);
-            setSubView(tab === "home" ? "invoiceForm" : null);
+            setSubView((tab === "home" || tab === "invoices") ? "invoiceForm" : null);
         } catch (e) {
             setStatus(e instanceof Error ? e.message : "Ошибка");
         } finally {

@@ -65,7 +65,7 @@ export function InvoiceFormView({
                     </div>
                 </div>
             </div>
-            <div className={`content-area has-footer ${animClass}`}>
+            <div className={`content-area ${animClass}`}>
                 <div className="section-title" style={{ paddingTop: 8 }}>Даты</div>
                 <div className="ios-group">
                     <div className="form-field">
@@ -202,17 +202,6 @@ export function InvoiceFormView({
                     </div>
                 )}
                 <div className="spacer-24" />
-            </div>
-            <div className={`invoice-footer ${animClass}`}>
-                <div className="invoice-footer-inner">
-                    <div className="invoice-total-row">
-                        <span className="invoice-total-label">Общая сумма</span>
-                        <span className="invoice-total-value">{invoice.TOTAL_SUM} ₸</span>
-                    </div>
-                    <button className="invoice-send-btn" disabled={busy !== "idle"} onClick={sendInvoice}>
-                        <Icon name="send" />{busy === "send" ? "Отправка..." : "Отправить"}
-                    </button>
-                </div>
             </div>
         </>
     );

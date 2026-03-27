@@ -63,7 +63,7 @@ export function useClients(setStatus: (s: string) => void, setBusy: (b: any) => 
             const optimisticClient = { ...selectedCatalogClient, ...clientDraft } as Client;
             setClients((c) => c.map(cl => cl.id === optimisticClient.id ? optimisticClient : cl));
             setStatus("Клиент обновлен");
-            setSubView(tab === "home" ? "invoiceForm" : null);
+            setSubView((tab === "home" || tab === "invoices") ? "invoiceForm" : null);
             setBusy("idle");
             request<Client>(`/clients/${selectedCatalogClient.id}`, {
                 method: "PUT",
@@ -97,11 +97,11 @@ export function useClients(setStatus: (s: string) => void, setBusy: (b: any) => 
         setClientDraft({ name: "", bin_iin: "", address: "", director: "", accounts: [], contacts: [], kbe: "" });
         setSelectedCatalogClient(null);
 
-        if (tab === "home") {
+        if (tab === "home" || tab === "invoices") {
             selectClient(finalClient);
         }
 
-        setSubView(tab === "home" ? "invoiceForm" : null);
+        setSubView((tab === "home" || tab === "invoices") ? "invoiceForm" : null);
         setBusy("idle");
     }, [clientDraft, selectedCatalogClient, clients, setBusy, setStatus, setSubView]);
 
