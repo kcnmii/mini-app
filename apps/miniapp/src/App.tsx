@@ -343,6 +343,7 @@ export function App() {
               handleFileUpload={(e) => handleFileUpload(e, profile.company_iic || "", loadData)}
               loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
               loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
+              loadAndPreviewDocument={(id) => loadAndPreviewDocument(id, invHook.setPreviewPages, invHook.setIsPdfLoading, invHook.setSelectedDocId, invHook.setSelectedInvoiceId)}
             />
           )}
           {tab === "invoices" && (

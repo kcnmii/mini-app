@@ -22,6 +22,7 @@ interface HomeViewProps {
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     loadAndPreviewNewInvoice: (id: number) => void;
     loadAndPreviewOldDocument: (id: number) => void;
+    loadAndPreviewDocument: (id: number) => void;
 }
 
 export function HomeView({
@@ -38,7 +39,8 @@ export function HomeView({
     openNewInvoice,
     handleFileUpload,
     loadAndPreviewNewInvoice,
-    loadAndPreviewOldDocument
+    loadAndPreviewOldDocument,
+    loadAndPreviewDocument
 }: HomeViewProps) {
     const selectedBa = bankAccounts.find(b => b.id === selectedBankAccountId);
     const bankBtnLabel = bankAccounts.length === 0 ? "Добавить счёт" : selectedBa ? selectedBa.bank_name : "Все счета";
@@ -93,39 +95,59 @@ export function HomeView({
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" style={{ display: 'none' }} />
                 </div>
 
-                {/* ── Recent invoices ── */}
-                {invoiceRecords.length > 0 ? (
-                    <>
-                        <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
-                            <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние</h2>
-                            <button className="nav-bar-pill-btn" style={{ fontSize: "14px", height: "36px", padding: "0 16px" }} onClick={() => setTab("invoices")}>
-                                Все
-                            </button>
-                        </div>
-                        <div className="ios-group" style={{ margin: "0 16px" }}>
-                            {invoiceRecords.slice(0, 10).map((inv) => (
-                                <InvoiceRow key={inv.id} invoice={inv} onClick={loadAndPreviewNewInvoice} showDate={false} />
-                            ))}
-                        </div>
-                    </>
-                ) : documents.length > 0 ? (
-                    <>
-                        <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
-                            <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние документы</h2>
-                        </div>
-                        <div className="ios-group" style={{ margin: "0 16px" }}>
-                            {documents.slice(0, 10).map((doc) => (
-                                <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
-                            ))}
-                        </div>
-                    </>
-                ) : (
-                    <div className="empty-state" style={{ marginTop: 24 }}>
-                        <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-                        <div className="empty-state-title">Нет счетов</div>
-                        <div className="empty-state-text">Создайте первый счёт, чтобы начать контролировать деньги</div>
-                    </div>
-                )}
+                {/* ── Recent items (unified: invoices + documents) ── */}
+                {(() => {
+                    // Non-invoice documents (AVR, Waybill)
+                    const nonInvoiceDocs = documents.filter(d => !d.title.startsWith("Счет"));
+                    type UnifiedItem = { type: "invoice"; data: InvoiceRecord; date: number } | { type: "document"; data: DocumentRecord; date: number };
+                    const recentItems: UnifiedItem[] = [
+                        ...invoiceRecords.map(inv => ({ type: "invoice" as const, data: inv, date: new Date(inv.created_at).getTime() })),
+                        ...nonInvoiceDocs.map(doc => ({ type: "document" as const, data: doc, date: new Date(doc.created_at).getTime() }))
+                    ].sort((a, b) => b.date - a.date).slice(0, 10);
+
+                    if (recentItems.length > 0) {
+                        return (
+                            <>
+                                <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
+                                    <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние</h2>
+                                    <button className="nav-bar-pill-btn" style={{ fontSize: "14px", height: "36px", padding: "0 16px" }} onClick={() => setTab("invoices")}>
+                                        Все
+                                    </button>
+                                </div>
+                                <div className="ios-group" style={{ margin: "0 16px" }}>
+                                    {recentItems.map((item) =>
+                                        item.type === "invoice" ? (
+                                            <InvoiceRow key={`inv-${item.data.id}`} invoice={item.data} onClick={loadAndPreviewNewInvoice} showDate={false} />
+                                        ) : (
+                                            <DocumentRow key={`doc-${item.data.id}`} document={item.data} onClick={loadAndPreviewDocument} />
+                                        )
+                                    )}
+                                </div>
+                            </>
+                        );
+                    } else if (documents.length > 0) {
+                        return (
+                            <>
+                                <div className="section-header-row" style={{ padding: "20px 16px 8px" }}>
+                                    <h2 style={{ textTransform: "none", fontSize: "18px", fontWeight: 600, color: "var(--text)", letterSpacing: "normal", margin: 0 }}>Последние документы</h2>
+                                </div>
+                                <div className="ios-group" style={{ margin: "0 16px" }}>
+                                    {documents.slice(0, 10).map((doc) => (
+                                        <DocumentRow key={doc.id} document={doc} onClick={loadAndPreviewOldDocument} />
+                                    ))}
+                                </div>
+                            </>
+                        );
+                    } else {
+                        return (
+                            <div className="empty-state" style={{ marginTop: 24 }}>
+                                <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+                                <div className="empty-state-title">Нет счетов</div>
+                                <div className="empty-state-text">Создайте первый счёт, чтобы начать контролировать деньги</div>
+                            </div>
+                        );
+                    }
+                })()}
                 <div className="spacer-24" />
         </div>
     );

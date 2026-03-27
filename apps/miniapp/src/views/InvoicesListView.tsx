@@ -86,12 +86,19 @@ export function InvoicesListView({
         return true;
     });
 
-    // Non-invoice documents (АВР, Накладная) - exclude invoice-type documents
+    // Non-invoice documents (АВР, Накладная) - exclude invoice-type documents (they are shown as InvoiceRow)
     const nonInvoiceDocs = documents.filter((d) => {
         if (d.title.startsWith("Счет")) return false;
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
         return true;
     });
+
+    // Build unified list: merge invoices + non-invoice docs, sorted by date desc
+    type UnifiedItem = { type: "invoice"; data: typeof invoiceRecords[0]; date: number } | { type: "document"; data: typeof documents[0]; date: number };
+    const unifiedItems: UnifiedItem[] = [
+        ...filteredInvoices.map(inv => ({ type: "invoice" as const, data: inv, date: new Date(inv.created_at).getTime() })),
+        ...(invoiceStatusFilter === "all" ? nonInvoiceDocs.map(doc => ({ type: "document" as const, data: doc, date: new Date(doc.created_at).getTime() })) : [])
+    ].sort((a, b) => b.date - a.date);
 
     const filteredDocs = documents.filter((d) => {
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
@@ -157,9 +164,6 @@ export function InvoicesListView({
                 </div>
             )}
 
-
-
-
             <div className="content-area">
                 {activeTab === "incoming" ? (
                     <div className="empty-state full-height">
@@ -194,51 +198,41 @@ export function InvoicesListView({
                             </>
                         )
                     ) : (
-                        <>
-                            {filteredInvoices.length === 0 && nonInvoiceDocs.length === 0 ? (
-                                <div className="empty-state full-height">
-                                    <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-                                    <div className="empty-state-title">Ничего не найдено</div>
-                                    <div className="empty-state-text">Нет документов с таким статусом</div>
+                        unifiedItems.length === 0 ? (
+                            <div className="empty-state full-height">
+                                <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+                                <div className="empty-state-title">Ничего не найдено</div>
+                                <div className="empty-state-text">Нет документов с таким статусом</div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="spacer-8" />
+                                <div className="ios-group">
+                                    {unifiedItems.map((item) => 
+                                        item.type === "invoice" ? (
+                                            <InvoiceRow 
+                                                key={`inv-${item.data.id}`} 
+                                                invoice={item.data as typeof invoiceRecords[0]} 
+                                                onClick={loadAndPreviewNewInvoice} 
+                                                isEditMode={isEditMode}
+                                                isSelected={selectedIds.includes(item.data.id)}
+                                                onSelect={toggleSelect}
+                                            />
+                                        ) : (
+                                            <DocumentRow 
+                                                key={`doc-${item.data.id}`} 
+                                                document={item.data as typeof documents[0]} 
+                                                onClick={loadAndPreviewDocument}
+                                                isEditMode={isEditMode}
+                                                isSelected={selectedIds.includes(item.data.id)}
+                                                onSelect={toggleSelect}
+                                            />
+                                        )
+                                    )}
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="spacer-8" />
-                                    {filteredInvoices.length > 0 && (
-                                        <div className="ios-group">
-                                            {filteredInvoices.map((inv) => (
-                                                <InvoiceRow 
-                                                    key={inv.id} 
-                                                    invoice={inv} 
-                                                    onClick={loadAndPreviewNewInvoice} 
-                                                    isEditMode={isEditMode}
-                                                    isSelected={selectedIds.includes(inv.id)}
-                                                    onSelect={toggleSelect}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                    {nonInvoiceDocs.length > 0 && invoiceStatusFilter === "all" && (
-                                        <>
-                                            <div className="section-title" style={{ fontSize: "13px", color: "var(--text-muted, #8e8e93)" }}>Документы</div>
-                                            <div className="ios-group">
-                                                {nonInvoiceDocs.map((doc) => (
-                                                    <DocumentRow 
-                                                        key={`doc-${doc.id}`} 
-                                                        document={doc} 
-                                                        onClick={loadAndPreviewDocument}
-                                                        isEditMode={isEditMode}
-                                                        isSelected={selectedIds.includes(doc.id)}
-                                                        onSelect={toggleSelect}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="spacer-24" />
-                                </>
-                            )}
-                        </>
+                                <div className="spacer-24" />
+                            </>
+                        )
                     )
                 )}
             </div>
