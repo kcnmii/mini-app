@@ -361,68 +361,54 @@ export function InvoicesListView({
 
             {/* Filter Screen */}
             {(showFilters || isClosingFilters) && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1200, display: "flex", flexDirection: "column", background: "var(--bg, #f2f2f7)" }} className={isClosingFilters ? "animate-slide-down" : "animate-slide-up"}>
-                    <div style={{ height: "env(safe-area-inset-top, 0px)", background: "var(--nav-bg, #fff)" }} />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "var(--nav-bg, #fff)", borderBottom: "0.5px solid var(--separator, rgba(0,0,0,0.1))" }}>
-                        <button onClick={closeFilters} style={{ fontWeight: 400, color: "var(--tg-theme-button-color, #007AFF)", background: "none", border: "none", fontSize: "17px", padding: 0 }}>Отмена</button>
-                        <div style={{ fontSize: "17px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>Фильтры</div>
-                        <button onClick={closeFilters} style={{ fontWeight: 600, color: "var(--tg-theme-button-color, #007AFF)", background: "none", border: "none", fontSize: "17px", padding: 0 }}>Готово</button>
-                    </div>
-                    <div className="content-area" style={{ padding: "0" }}>
-                        <div className="spacer-16" />
-                        
-                        <div style={{ padding: "0 16px" }}>
-                            <div className="section-title">Тип документа</div>
-                            <div className="ios-group list-options" style={{ marginTop: "8px" }}>
-                                {typeFilterOptions.map((opt, i) => (
-                                    <div 
-                                        key={opt.id} 
-                                        className="selectable-row-container" 
-                                        style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: i < typeFilterOptions.length - 1 ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
-                                        onClick={() => setTempType(opt.id)}
-                                    >
-                                        {tempType === opt.id ? iconChecked : iconUnchecked}
-                                        <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
-                                            {opt.label}
+                <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1200 }} className={isClosingFilters ? "animate-slide-down" : "animate-slide-up"}>
+                    <header className="nav-bar">
+                        <div className="nav-bar-detail">
+                            <button className="nav-bar-btn-circle" onClick={closeFilters}>
+                                <Icon name="close" />
+                            </button>
+                            <span className="nav-bar-title-center">Фильтры</span>
+                            <div className="nav-bar-right" style={{ width: 44 }} />
+                        </div>
+                    </header>
+                    <div className="content-area" style={{ overflowY: "auto" }}>
+                        <div className="section-title" style={{ paddingTop: 8 }}>Тип документа</div>
+                        <div className="ios-group">
+                            {typeFilterOptions.map((opt, i) => (
+                                <React.Fragment key={opt.id}>
+                                    <button className="ios-row" onClick={() => setTempType(opt.id)}>
+                                        <div className="ios-row-content">
+                                            <div className="ios-row-title">{opt.label}</div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                        {tempType === opt.id && <Icon name="check" style={{ color: "var(--primary)" }} />}
+                                    </button>
+                                    {i < typeFilterOptions.length - 1 && <div className="field-divider" />}
+                                </React.Fragment>
+                            ))}
                         </div>
 
                         {["all", "invoice"].includes(tempType) && (
-                            <div style={{ padding: "0 16px" }}>
-                                <div className="spacer-24" />
+                            <>
                                 <div className="section-title">Статус счета</div>
-                                <div className="ios-group list-options" style={{ marginTop: "8px" }}>
+                                <div className="ios-group">
                                     {statusFilters.map((status, i) => (
-                                        <div 
-                                            key={status} 
-                                            className="selectable-row-container" 
-                                            style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: i < statusFilters.length - 1 ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
-                                            onClick={() => setTempStatus(status)}
-                                        >
-                                            {tempStatus === status ? iconChecked : iconUnchecked}
-                                            <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
-                                                {statusFilterLabels[status]}
-                                            </div>
-                                        </div>
+                                        <React.Fragment key={status}>
+                                            <button className="ios-row" onClick={() => setTempStatus(status)}>
+                                                <div className="ios-row-content">
+                                                    <div className="ios-row-title">{statusFilterLabels[status]}</div>
+                                                </div>
+                                                {tempStatus === status && <Icon name="check" style={{ color: "var(--primary)" }} />}
+                                            </button>
+                                            {i < statusFilters.length - 1 && <div className="field-divider" />}
+                                        </React.Fragment>
                                     ))}
                                 </div>
-                            </div>
+                            </>
                         )}
-
-                        <div className="spacer-24" />
-                    </div>
-
-                    <div style={{ padding: "16px", background: "var(--bg, #f2f2f7)", paddingBottom: "max(16px, env(safe-area-inset-bottom))", borderTop: "0.5px solid var(--separator, rgba(0,0,0,0.1))" }}>
-                        <button 
-                            className="home-action-btn" 
-                            style={{ width: "100%", height: "54px", borderRadius: "14px", background: "var(--text, #1c1c1e)", color: "var(--bg, #f2f2f7)", fontSize: "17px", fontWeight: 600 }}
-                            onClick={applyFilters}
-                        >
-                            Применить фильтры
-                        </button>
+                        
+                        <div style={{ padding: "24px 16px" }}>
+                            <button className="action-btn-main" onClick={applyFilters}>Применить</button>
+                        </div>
                     </div>
                 </div>
             )}
