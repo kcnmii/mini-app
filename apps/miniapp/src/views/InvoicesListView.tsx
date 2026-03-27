@@ -41,6 +41,7 @@ export function InvoicesListView({
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -85,15 +86,34 @@ export function InvoicesListView({
                 title="Документы" 
                 titleCenter={true}
                 leftAction={
-                    <button className="nav-bar-btn-circle" onClick={() => { setIsEditMode(!isEditMode); setSelectedIds([]); }}>
-                        <Icon name={isEditMode ? "close" : "edit"} />
-                    </button>
+                    activeTab === "outgoing" && (
+                        <button className="nav-bar-btn-circle" onClick={() => { setIsEditMode(!isEditMode); setSelectedIds([]); }}>
+                            <Icon name={isEditMode ? "close" : "edit"} />
+                        </button>
+                    )
                 }
-                onAction={isEditMode ? () => setIsActionSheetOpen(true) : openNewInvoice} 
-                actionIcon={isEditMode ? "delete" : "add"} 
+                onAction={activeTab === "outgoing" ? (isEditMode ? () => setIsActionSheetOpen(true) : openNewInvoice) : undefined} 
+                actionIcon={activeTab === "outgoing" ? (isEditMode ? "delete" : "add") : undefined} 
             />
             
-            <div className="search-header-anim">
+            <div className="search-header-anim" style={{ height: "auto" }}>
+                <div className="segmented-control">
+                    <div className="segmented-control-inner">
+                        <button 
+                            className={`segment-btn ${activeTab === "outgoing" ? "active" : ""}`}
+                            onClick={() => { setActiveTab("outgoing"); setIsEditMode(false); setSelectedIds([]); }}
+                        >
+                            Исходящие
+                        </button>
+                        <button 
+                            className={`segment-btn ${activeTab === "incoming" ? "active" : ""}`}
+                            onClick={() => { setActiveTab("incoming"); setIsEditMode(false); setSelectedIds([]); }}
+                        >
+                            Входящие
+                        </button>
+                    </div>
+                </div>
+
                 <div className="search-bar" style={{ padding: "0 16px" }}>
                     <div className="search-input-wrap" style={{ height: "36px" }}>
                         <Icon name="search" />
@@ -102,7 +122,7 @@ export function InvoicesListView({
                 </div>
             </div>
 
-            {showNewInvoicesList && (
+            {activeTab === "outgoing" && showNewInvoicesList && (
                 <div className="status-chips-scroll">
                     {statusFilters.map((sf) => (
                         <button
@@ -120,24 +140,55 @@ export function InvoicesListView({
 
 
             <div className="content-area">
-                {showNewInvoicesList ? (
-                    filteredInvoices.length === 0 ? (
+                {activeTab === "incoming" ? (
+                    <div className="empty-state full-height">
+                        <div className="empty-state-icon"><Icon name="inbox" /></div>
+                        <div className="empty-state-title">Входящие документы отсутствуют</div>
+                        <div className="empty-state-text">Ожидайте поступления новых документов</div>
+                    </div>
+                ) : (
+                    showNewInvoicesList ? (
+                        filteredInvoices.length === 0 ? (
+                            <div className="empty-state full-height">
+                                <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+                                <div className="empty-state-title">Ничего не найдено</div>
+                                <div className="empty-state-text">Нет счетов с таким статусом</div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="spacer-8" />
+                                <div className="ios-group">
+                                    {filteredInvoices.map((inv) => (
+                                        <InvoiceRow 
+                                            key={inv.id} 
+                                            invoice={inv} 
+                                            onClick={loadAndPreviewNewInvoice} 
+                                            isEditMode={isEditMode}
+                                            isSelected={selectedIds.includes(inv.id)}
+                                            onSelect={toggleSelect}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="spacer-24" />
+                            </>
+                        )
+                    ) : filteredDocs.length === 0 ? (
                         <div className="empty-state full-height">
-                            <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-                            <div className="empty-state-title">Ничего не найдено</div>
-                            <div className="empty-state-text">Нет счетов с таким статусом</div>
+                            <div className="empty-state-icon"><Icon name="article" /></div>
+                            <div className="empty-state-title">Список пуст</div>
+                            <div className="empty-state-text">Создайте свой первый счёт</div>
                         </div>
                     ) : (
                         <>
                             <div className="spacer-8" />
                             <div className="ios-group">
-                                {filteredInvoices.map((inv) => (
-                                    <InvoiceRow 
-                                        key={inv.id} 
-                                        invoice={inv} 
-                                        onClick={loadAndPreviewNewInvoice} 
+                                {filteredDocs.map((doc) => (
+                                    <DocumentRow 
+                                        key={doc.id} 
+                                        document={doc} 
+                                        onClick={loadAndPreviewOldDocument} 
                                         isEditMode={isEditMode}
-                                        isSelected={selectedIds.includes(inv.id)}
+                                        isSelected={selectedIds.includes(doc.id)}
                                         onSelect={toggleSelect}
                                     />
                                 ))}
@@ -145,29 +196,6 @@ export function InvoicesListView({
                             <div className="spacer-24" />
                         </>
                     )
-                ) : filteredDocs.length === 0 ? (
-                    <div className="empty-state full-height">
-                        <div className="empty-state-icon"><Icon name="article" /></div>
-                        <div className="empty-state-title">Список пуст</div>
-                        <div className="empty-state-text">Создайте свой первый счёт</div>
-                    </div>
-                ) : (
-                    <>
-                        <div className="spacer-8" />
-                        <div className="ios-group">
-                            {filteredDocs.map((doc) => (
-                                <DocumentRow 
-                                    key={doc.id} 
-                                    document={doc} 
-                                    onClick={loadAndPreviewOldDocument} 
-                                    isEditMode={isEditMode}
-                                    isSelected={selectedIds.includes(doc.id)}
-                                    onSelect={toggleSelect}
-                                />
-                            ))}
-                        </div>
-                        <div className="spacer-24" />
-                    </>
                 )}
             </div>
 
