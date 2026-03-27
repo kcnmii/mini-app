@@ -7,6 +7,7 @@ interface DocumentRowProps {
     isEditMode?: boolean;
     isSelected?: boolean;
     onSelect?: (id: number) => void;
+    showDate?: boolean;
 }
 
 const getDocTypeInfo = (title: string): { code: string; label: string; color: string; bg: string } => {
@@ -15,7 +16,7 @@ const getDocTypeInfo = (title: string): { code: string; label: string; color: st
     return { code: "СФ", label: title.replace(/^Счет\s*(№|N)?\s*/i, ""), color: "var(--primary, #007AFF)", bg: "rgba(0, 122, 255, 0.12)" };
 };
 
-export function DocumentRow({ document, onClick, isEditMode, isSelected, onSelect }: DocumentRowProps) {
+export function DocumentRow({ document, onClick, isEditMode, isSelected, onSelect, showDate = true }: DocumentRowProps) {
     const handleRowClick = () => {
         if (isEditMode && onSelect) {
             onSelect(document.id);
@@ -43,9 +44,11 @@ export function DocumentRow({ document, onClick, isEditMode, isSelected, onSelec
                         {document.total_sum && (
                             <span className="doc-row-date">{document.total_sum} ₸</span>
                         )}
-                        <span className="doc-row-date">
-                            {new Date(document.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                        </span>
+                        {showDate && (
+                            <span className="doc-row-date">
+                                {new Date(document.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                            </span>
+                        )}
                     </div>
                 </div>
                 {!isEditMode && <div className="ios-row-right"><Icon name="chevron_right" /></div>}

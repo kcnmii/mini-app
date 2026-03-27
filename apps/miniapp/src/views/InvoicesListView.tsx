@@ -48,6 +48,9 @@ export function InvoicesListView({
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
 
+    const [showFilters, setShowFilters] = useState(false);
+    const [isClosingFilters, setIsClosingFilters] = useState(false);
+
     const closeCreateMenu = () => {
         setIsClosingCreateMenu(true);
         setTimeout(() => {
@@ -58,6 +61,14 @@ export function InvoicesListView({
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const closeFilters = () => {
+        setIsClosingFilters(true);
+        setTimeout(() => {
+            setShowFilters(false);
+            setIsClosingFilters(false);
+        }, 300);
     };
 
     const handleBulkDelete = async () => {
@@ -99,6 +110,18 @@ export function InvoicesListView({
         ...filteredInvoices.map(inv => ({ type: "invoice" as const, data: inv, date: new Date(inv.created_at).getTime() })),
         ...(invoiceStatusFilter === "all" ? nonInvoiceDocs.map(doc => ({ type: "document" as const, data: doc, date: new Date(doc.created_at).getTime() })) : [])
     ].sort((a, b) => b.date - a.date);
+
+    // Group items by local date string
+    const groupedItems: Record<string, UnifiedItem[]> = {};
+    unifiedItems.forEach(item => {
+        const d = new Date(item.date);
+        const day = d.getDate();
+        const monthNames = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+        const month = monthNames[d.getMonth()];
+        const key = `${day} ${month}`;
+        if (!groupedItems[key]) groupedItems[key] = [];
+        groupedItems[key].push(item);
+    });
 
     const filteredDocs = documents.filter((d) => {
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
@@ -142,27 +165,24 @@ export function InvoicesListView({
                     </div>
                 </div>
 
-                <div className="search-bar" style={{ padding: "0 16px" }}>
-                    <div className="search-input-wrap" style={{ height: "36px" }}>
-                        <Icon name="search" />
-                        <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} />
+                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px" }}>
+                    <div className="search-input-wrap" style={{ height: "40px", flex: 1, borderRadius: "10px", background: "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", padding: "0 10px", color: "var(--text-muted, #8e8e93)" }}>
+                        <Icon name="search" style={{ fontSize: "20px" }} />
+                        <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} style={{ border: "none", background: "transparent", outline: "none", flex: 1, height: "100%", padding: "0 8px", fontSize: "17px", color: "var(--text, #1c1c1e)" }} />
                     </div>
+                    {/* The square filter button next to search */}
+                    <button 
+                        onClick={() => setShowFilters(true)}
+                        style={{ height: "40px", width: "40px", borderRadius: "10px", background: invoiceStatusFilter !== "all" ? "var(--tg-theme-button-color, #007AFF)" : "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", justifyContent: "center", border: "none", color: invoiceStatusFilter !== "all" ? "#fff" : "var(--text, #1c1c1e)", cursor: "pointer", flexShrink: 0 }}
+                    >
+                        <Icon name="filter_list" />
+                        {/* Dot indicator if filters active */}
+                        {invoiceStatusFilter !== "all" && (
+                            <div style={{ position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: "50%", background: "#FF3B30", border: "2px solid var(--bg, #f2f2f7)" }} />
+                        )}
+                    </button>
                 </div>
             </div>
-
-            {activeTab === "outgoing" && showNewInvoicesList && (
-                <div className="status-chips-scroll">
-                    {statusFilters.map((sf) => (
-                        <button
-                            key={sf}
-                            onClick={() => setInvoiceStatusFilter(sf)}
-                            className={`status-chip${invoiceStatusFilter === sf ? " active" : ""}`}
-                        >
-                            {statusFilterLabels[sf]}
-                        </button>
-                    ))}
-                </div>
-            )}
 
             <div className="content-area">
                 {activeTab === "incoming" ? (
@@ -207,28 +227,39 @@ export function InvoicesListView({
                         ) : (
                             <>
                                 <div className="spacer-8" />
-                                <div className="ios-group">
-                                    {unifiedItems.map((item) => 
-                                        item.type === "invoice" ? (
-                                            <InvoiceRow 
-                                                key={`inv-${item.data.id}`} 
-                                                invoice={item.data as typeof invoiceRecords[0]} 
-                                                onClick={loadAndPreviewNewInvoice} 
-                                                isEditMode={isEditMode}
-                                                isSelected={selectedIds.includes(item.data.id)}
-                                                onSelect={toggleSelect}
-                                            />
-                                        ) : (
-                                            <DocumentRow 
-                                                key={`doc-${item.data.id}`} 
-                                                document={item.data as typeof documents[0]} 
-                                                onClick={loadAndPreviewDocument}
-                                                isEditMode={isEditMode}
-                                                isSelected={selectedIds.includes(item.data.id)}
-                                                onSelect={toggleSelect}
-                                            />
-                                        )
-                                    )}
+                                <div style={{ padding: "0 16px" }}>
+                                    {Object.entries(groupedItems).map(([dateLabel, items]) => (
+                                        <div key={dateLabel} style={{ marginBottom: "24px" }}>
+                                            <div style={{ padding: "0 4px 10px", fontSize: "13px", fontWeight: 700, color: "var(--text-muted, #8e8e93)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                                {dateLabel}
+                                            </div>
+                                            <div className="ios-group" style={{ margin: 0 }}>
+                                                {items.map((item) => 
+                                                    item.type === "invoice" ? (
+                                                        <InvoiceRow 
+                                                            key={`inv-${item.data.id}`} 
+                                                            invoice={item.data as typeof invoiceRecords[0]} 
+                                                            onClick={loadAndPreviewNewInvoice} 
+                                                            isEditMode={isEditMode}
+                                                            isSelected={selectedIds.includes(item.data.id)}
+                                                            onSelect={toggleSelect}
+                                                            showDate={false}
+                                                        />
+                                                    ) : (
+                                                        <DocumentRow 
+                                                            key={`doc-${item.data.id}`} 
+                                                            document={item.data as typeof documents[0]} 
+                                                            onClick={loadAndPreviewDocument}
+                                                            isEditMode={isEditMode}
+                                                            isSelected={selectedIds.includes(item.data.id)}
+                                                            onSelect={toggleSelect}
+                                                            showDate={false}
+                                                        />
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                                 <div className="spacer-24" />
                             </>
