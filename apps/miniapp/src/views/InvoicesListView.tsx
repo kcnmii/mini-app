@@ -165,7 +165,7 @@ export function InvoicesListView({
                     </div>
                 </div>
 
-                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px", paddingBottom: "8px" }}>
+                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px", paddingBottom: "2px" }}>
                     <div className="search-input-wrap" style={{ height: "40px", flex: 1, borderRadius: "10px", background: "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", padding: "0 10px", color: "var(--text-muted, #8e8e93)" }}>
                         <Icon name="search" style={{ fontSize: "20px" }} />
                         <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} style={{ border: "none", background: "transparent", outline: "none", flex: 1, height: "100%", padding: "0 8px", fontSize: "17px", color: "var(--text, #1c1c1e)" }} />
@@ -226,7 +226,7 @@ export function InvoicesListView({
                             </div>
                         ) : (
                             <>
-                                <div className="spacer-8" />
+                                <div style={{ height: "2px" }} />
                                 <div style={{ padding: "0 16px" }}>
                                     {Object.entries(groupedItems).map(([dateLabel, items]) => (
                                         <div key={dateLabel} style={{ marginBottom: "24px" }}>
@@ -314,6 +314,47 @@ export function InvoicesListView({
                                 <span>Накладная на отпуск запасов</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Filter Screen */}
+            {(showFilters || isClosingFilters) && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1200, display: "flex", flexDirection: "column", background: "var(--bg, #f2f2f7)" }} className={isClosingFilters ? "animate-slide-down" : "animate-slide-up"}>
+                    <div style={{ height: "env(safe-area-inset-top, 0px)", background: "var(--nav-bg, #fff)" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "var(--nav-bg, #fff)", borderBottom: "0.5px solid var(--separator, rgba(0,0,0,0.1))" }}>
+                        <button onClick={closeFilters} style={{ fontWeight: 400, color: "var(--tg-theme-button-color, #007AFF)", background: "none", border: "none", fontSize: "17px", padding: 0 }}>Отмена</button>
+                        <div style={{ fontSize: "17px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>Фильтры</div>
+                        <button onClick={closeFilters} style={{ fontWeight: 600, color: "var(--tg-theme-button-color, #007AFF)", background: "none", border: "none", fontSize: "17px", padding: 0 }}>Готово</button>
+                    </div>
+                    <div className="content-area" style={{ padding: "0 16px" }}>
+                        <div className="spacer-16" />
+                        <div className="section-title">Статус счетов</div>
+                        <div className="ios-group list-options">
+                            {statusFilters.map(status => (
+                                <div 
+                                    key={status} 
+                                    className="selectable-row-container" 
+                                    style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: status !== "draft" ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
+                                    onClick={() => setInvoiceStatusFilter(status)}
+                                >
+                                    <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
+                                        {statusFilterLabels[status]}
+                                    </div>
+                                    {invoiceStatusFilter === status && (
+                                        <Icon name="check" style={{ color: "var(--tg-theme-button-color, #007AFF)" }} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="spacer-24" />
+                        <button 
+                            className="home-action-btn home-action-btn--secondary" 
+                            style={{ width: "100%", color: "#FF3B30", background: "rgba(255, 59, 48, 0.1)" }}
+                            onClick={() => { setInvoiceStatusFilter("all"); setDocSearch(""); }}
+                        >
+                            Сбросить все фильтры
+                        </button>
                     </div>
                 </div>
             )}
