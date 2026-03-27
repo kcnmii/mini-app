@@ -1,4 +1,4 @@
-export type TabKey = "home" | "invoices" | "clients" | "items" | "profile";
+export type TabKey = "home" | "invoices" | "directory" | "profile";
 
 export type TelegramWebApp = {
     initData?: string;

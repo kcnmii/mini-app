@@ -8,8 +8,7 @@ import { DateFilterView } from "./views/DateFilterView";
 import { BankPickerView } from "./views/BankPickerView";
 import { HomeView } from "./views/HomeView";
 import { InvoicesListView } from "./views/InvoicesListView";
-import { ClientsView } from "./views/ClientsView";
-import { ItemsView } from "./views/ItemsView";
+import { DirectoryView } from "./views/DirectoryView";
 import { ProfileView } from "./views/ProfileView";
 import { AddBankAccountView } from "./views/AddBankAccountView";
 import { EditRequisitesView } from "./views/EditRequisitesView";
@@ -181,9 +180,9 @@ export function App() {
     }
   };
 
-  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", clients: "group", items: "inventory_2", profile: "person" };
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", directory: "perm_contact_calendar", profile: "person" };
 
-  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Документы", clients: "Клиенты", items: "Каталог", profile: "Профиль" };
+  const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Документы", directory: "Справочник", profile: "Профиль" };
 
   const loginView = (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "24px", padding: "32px" }}>
@@ -362,28 +361,22 @@ export function App() {
               setStatus={setStatus}
             />
           )}
-          {tab === "clients" && (
-            <ClientsView
+          {tab === "directory" && (
+            <DirectoryView
               clients={clients}
               setClients={setClients}
               clientSearch={clientSearch}
               setClientSearch={setClientSearch}
-              setSubView={setSubView}
               setSelectedCatalogClient={setSelectedCatalogClient}
               setClientDraft={setClientDraft}
               loadClientBalance={loadClientBalance}
-              setStatus={setStatus}
-            />
-          )}
-          {tab === "items" && (
-            <ItemsView
               items={items}
               setItems={setItems}
               itemSearch={itemSearch}
               setItemSearch={setItemSearch}
-              setSubView={setSubView}
               setSelectedCatalogItem={setSelectedCatalogItem}
               setItemDraft={setItemDraft}
+              setSubView={setSubView}
               setStatus={setStatus}
             />
           )}
@@ -408,7 +401,7 @@ export function App() {
       {isAuthenticated && !subViewContent && (
         <nav className="tab-bar">
           <div className="tab-bar-inner">
-            {(["home", "invoices", "clients", "items", "profile"] as TabKey[]).map((t) => (
+            {(["home", "invoices", "directory", "profile"] as TabKey[]).map((t) => (
               <button key={t} className={`tab-btn${t === tab ? " active" : ""}`} onClick={() => setTab(t)}>
                 <Icon name={tabIcons[t]} filled={t === tab} />
                 <span>{tabLabels[t]}</span>
