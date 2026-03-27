@@ -6,8 +6,7 @@ import { DocumentRow } from "../components/DocumentRow";
 import type { InvoiceRecord, DocumentRecord } from "../types";
 import { request } from "../utils";
 
-const statusFilters = ["all", "sent", "overdue", "paid", "draft"] as const;
-const statusFilterLabels: Record<string, string> = { all: "Все", sent: "Отправленные", overdue: "Просроченные", paid: "Оплаченные", draft: "Черновики" };
+import { DocumentFilterView, DocTypeFilter } from "./DocumentFilterView";
 
 interface InvoicesListViewProps {
     invoiceRecords: InvoiceRecord[];
@@ -45,11 +44,7 @@ export function InvoicesListView({
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
-    const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'invoice' | 'avr' | 'waybill'>('all');
-    
-    // Temporary states for the Filter Modal
-    const [tempType, setTempType] = useState(docTypeFilter);
-    const [tempStatus, setTempStatus] = useState(invoiceStatusFilter);
+    const [docTypeFilter, setDocTypeFilter] = useState<DocTypeFilter>('all');
 
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
@@ -70,14 +65,12 @@ export function InvoicesListView({
     };
 
     const openFilters = () => {
-        setTempType(docTypeFilter);
-        setTempStatus(invoiceStatusFilter);
         setShowFilters(true);
     };
 
-    const applyFilters = () => {
-        setDocTypeFilter(tempType);
-        setInvoiceStatusFilter(tempStatus);
+    const handleApplyFilters = (status: string, type: DocTypeFilter) => {
+        setDocTypeFilter(type);
+        setInvoiceStatusFilter(status);
         closeFilters();
     };
 
@@ -154,15 +147,6 @@ export function InvoicesListView({
         if (!groupedItems[key]) groupedItems[key] = [];
         groupedItems[key].push(item);
     });
-    const iconChecked = <Icon name="radio_button_checked" style={{ color: "var(--text, #1c1c1e)", marginRight: "12px", fontSize: "22px" }} />;
-    const iconUnchecked = <Icon name="radio_button_unchecked" style={{ color: "var(--text-muted, #8e8e93)", marginRight: "12px", fontSize: "22px" }} />;
-
-    const typeFilterOptions = [
-        { id: 'all', label: 'Все документы' },
-        { id: 'invoice', label: 'Счета на оплату' },
-        { id: 'avr', label: 'АВР (Акты)' },
-        { id: 'waybill', label: 'Накладные на отпуск' }
-    ] as const;
 
     const filteredDocs = documents.filter((d) => {
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
@@ -361,56 +345,13 @@ export function InvoicesListView({
 
             {/* Filter Screen */}
             {(showFilters || isClosingFilters) && (
-                <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1200 }} className={isClosingFilters ? "animate-slide-down" : "animate-slide-up"}>
-                    <header className="nav-bar">
-                        <div className="nav-bar-detail">
-                            <button className="nav-bar-btn-circle" onClick={closeFilters}>
-                                <Icon name="close" />
-                            </button>
-                            <span className="nav-bar-title-center">Фильтры</span>
-                            <div className="nav-bar-right" style={{ width: 44 }} />
-                        </div>
-                    </header>
-                    <div className="content-area" style={{ overflowY: "auto" }}>
-                        <div className="section-title" style={{ paddingTop: 8 }}>Тип документа</div>
-                        <div className="ios-group">
-                            {typeFilterOptions.map((opt, i) => (
-                                <React.Fragment key={opt.id}>
-                                    <button className="ios-row" onClick={() => setTempType(opt.id)}>
-                                        <div className="ios-row-content">
-                                            <div className="ios-row-title">{opt.label}</div>
-                                        </div>
-                                        {tempType === opt.id && <Icon name="check" style={{ color: "var(--primary)" }} />}
-                                    </button>
-                                    {i < typeFilterOptions.length - 1 && <div className="field-divider" />}
-                                </React.Fragment>
-                            ))}
-                        </div>
-
-                        {["all", "invoice"].includes(tempType) && (
-                            <>
-                                <div className="section-title">Статус счета</div>
-                                <div className="ios-group">
-                                    {statusFilters.map((status, i) => (
-                                        <React.Fragment key={status}>
-                                            <button className="ios-row" onClick={() => setTempStatus(status)}>
-                                                <div className="ios-row-content">
-                                                    <div className="ios-row-title">{statusFilterLabels[status]}</div>
-                                                </div>
-                                                {tempStatus === status && <Icon name="check" style={{ color: "var(--primary)" }} />}
-                                            </button>
-                                            {i < statusFilters.length - 1 && <div className="field-divider" />}
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-                        
-                        <div style={{ padding: "24px 16px" }}>
-                            <button className="action-btn-main" onClick={applyFilters}>Применить</button>
-                        </div>
-                    </div>
-                </div>
+                <DocumentFilterView 
+                    currentStatusFilter={invoiceStatusFilter} 
+                    currentTypeFilter={docTypeFilter} 
+                    onApply={handleApplyFilters} 
+                    onClose={closeFilters} 
+                    isClosing={isClosingFilters} 
+                />
             )}
         </>
     );
