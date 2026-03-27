@@ -48,5 +48,23 @@ export function useDocuments(setStatus: (s: string) => void, setBusy: (b: any) =
         }
     }, [profile, setBusy, setStatus, setSubView]);
 
-    return { documents, setDocuments, loadAndPreviewOldDocument };
+    const loadAndPreviewDocument = useCallback(async (id: number, setPreviewPages: (p: string[]) => void, setIsPdfLoading: (v: boolean) => void, setSelectedDocId: (id: number | null) => void, setSelectedInvoiceId: (id: number | null) => void) => {
+        setBusy("save");
+        setPreviewPages([]);
+        setIsPdfLoading(true);
+        setSelectedDocId(id);
+        setSelectedInvoiceId(null);
+        setSubView("viewDocument");
+        try {
+            const preview = await request<{ pages: { data: string }[] }>(`/documents/${id}/preview`);
+            setPreviewPages(preview.pages.map(p => p.data));
+        } catch {
+            console.error("Document preview load failed");
+        } finally {
+            setBusy("idle");
+            setIsPdfLoading(false);
+        }
+    }, [setBusy, setSubView]);
+
+    return { documents, setDocuments, loadAndPreviewOldDocument, loadAndPreviewDocument };
 }

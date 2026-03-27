@@ -87,6 +87,7 @@ export function ViewDocumentView({
 
     const animClass = animationType === "none" ? "" : animationType === "up" ? "animate-slide-up" : "animate-slide-left";
 
+    const isNonInvoiceDoc = !selectedInvoice && !!selectedDoc;
     const title = selectedInvoice?.number ? `${selectedInvoice.number}` : (selectedDoc?.title || "");
     const status = selectedInvoice?.status || "document";
     const statusLabels: Record<string, string> = { draft: "Черновик", sent: "Отправлен", paid: "Оплачен", overdue: "Просрочен", document: "Архив" };
@@ -97,6 +98,14 @@ export function ViewDocumentView({
         overdue: { bg: "#FF3B30", text: "#fff" },
         document: { bg: "var(--separator, #E2E2E6)", text: "var(--text, #48484A)" }
     };
+
+    // Doc type badge for non-invoice docs
+    const getDocTypeBadge = (t: string): { code: string; color: string; bg: string } => {
+        if (t.startsWith("Акт")) return { code: "АВР", color: "#34C759", bg: "rgba(52, 199, 89, 0.12)" };
+        if (t.startsWith("Накладная")) return { code: "НКЛ", color: "#FF9500", bg: "rgba(255, 149, 0, 0.12)" };
+        return { code: "ДОК", color: "var(--primary, #007AFF)", bg: "rgba(0, 122, 255, 0.12)" };
+    };
+    const docTypeBadge = isNonInvoiceDoc ? getDocTypeBadge(title) : null;
     const activeColor = statusColors[status] || statusColors.draft;
 
     const isPaid = status === "paid";
@@ -168,12 +177,28 @@ export function ViewDocumentView({
                             {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
                         </h1>
 
-                        {/* Status Badge (Moved after Amount) */}
+                        {/* Status / Type Badge */}
                         <div style={{ marginBottom: "16px" }}>
-                            <span style={{ background: activeColor.bg, color: activeColor.text, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
-                                {statusLabels[status]}
-                            </span>
+                            {isNonInvoiceDoc && docTypeBadge ? (
+                                <span style={{ background: docTypeBadge.bg, color: docTypeBadge.color, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
+                                    {docTypeBadge.code}
+                                </span>
+                            ) : (
+                                <span style={{ background: activeColor.bg, color: activeColor.text, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
+                                    {statusLabels[status]}
+                                </span>
+                            )}
                         </div>
+
+                        {/* Non-invoice doc: simple info */}
+                        {isNonInvoiceDoc && selectedDoc && (
+                            <div style={{ paddingBottom: "16px", borderBottom: "1px solid var(--separator, #f2f2f7)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                                    <span style={{ color: "var(--text-muted, #8e8e93)", fontWeight: 500 }}>Создан:</span>
+                                    <span style={{ color: "var(--text, #1c1c1e)", fontWeight: 600 }}>{new Date(selectedDoc.created_at).toLocaleDateString("ru-RU")}</span>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Details list (if invoice) */}
                         {selectedInvoice && (
@@ -207,12 +232,14 @@ export function ViewDocumentView({
                             </div>
                         )}
 
-                        {/* Action Buttons Row */}
-                        <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px", padding: "0 4px" }}>
-                            <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
-                            <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
-                            <IconButton icon="post_add" label="Создать" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
-                        </div>
+                        {/* Action Buttons Row (Only for invoices) */}
+                        {selectedInvoice && (
+                            <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px", padding: "0 4px" }}>
+                                <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
+                                <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
+                                <IconButton icon="post_add" label="Создать" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -281,7 +308,7 @@ export function ViewDocumentView({
                         }} 
                         onClick={e => e.stopPropagation()}
                     >
-                        {/* Mark As Sent Action */}
+                        {/* Mark As Sent Action (invoices only) */}
                         {selectedInvoice && status === "draft" && (
                             <button
                                 onClick={() => {
@@ -311,34 +338,34 @@ export function ViewDocumentView({
                             </button>
                         )}
 
-                        {/* Edit Action */}
-                        <button
-                            onClick={() => {
-                                closeActionsMenu();
-                                if (selectedInvoice) setSubView("invoiceForm");
-                            }}
-                            disabled={!selectedInvoice}
-                            className="popover-item"
-                            style={{ 
-                                height: "44px", 
-                                background: "none", 
-                                border: "none", 
-                                color: "#fff", 
-                                fontSize: "16px", 
-                                fontWeight: 500, 
-                                display: "flex", 
-                                alignItems: "center", 
-                                gap: "12px", 
-                                padding: "0 16px", 
-                                cursor: "pointer", 
-                                width: "100%",
-                                borderBottom: "0.5px solid rgba(255,255,255,0.1)",
-                                opacity: !selectedInvoice ? 0.5 : 1
-                            }}
-                        >
-                            <Icon name="edit" style={{ fontSize: "20px" }} />
-                            <span>Изменить</span>
-                        </button>
+                        {/* Edit Action (invoices only, hidden for AVR/Waybill) */}
+                        {selectedInvoice && (
+                            <button
+                                onClick={() => {
+                                    closeActionsMenu();
+                                    setSubView("invoiceForm");
+                                }}
+                                className="popover-item"
+                                style={{ 
+                                    height: "44px", 
+                                    background: "none", 
+                                    border: "none", 
+                                    color: "#fff", 
+                                    fontSize: "16px", 
+                                    fontWeight: 500, 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: "12px", 
+                                    padding: "0 16px", 
+                                    cursor: "pointer", 
+                                    width: "100%",
+                                    borderBottom: "0.5px solid rgba(255,255,255,0.1)"
+                                }}
+                            >
+                                <Icon name="edit" style={{ fontSize: "20px" }} />
+                                <span>Изменить</span>
+                            </button>
+                        )}
                         
                         {/* Delete Action */}
                         <button

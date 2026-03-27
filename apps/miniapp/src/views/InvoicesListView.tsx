@@ -21,6 +21,7 @@ interface InvoicesListViewProps {
     openNewInvoice: () => void;
     loadAndPreviewNewInvoice: (id: number) => void;
     loadAndPreviewOldDocument: (id: number) => void;
+    loadAndPreviewDocument: (id: number) => void;
     setStatus: (s: string) => void;
 }
 
@@ -36,6 +37,7 @@ export function InvoicesListView({
     openNewInvoice,
     loadAndPreviewNewInvoice,
     loadAndPreviewOldDocument,
+    loadAndPreviewDocument,
     setStatus
 }: InvoicesListViewProps) {
     const [isEditMode, setIsEditMode] = useState(false);
@@ -84,12 +86,20 @@ export function InvoicesListView({
         return true;
     });
 
+    // Non-invoice documents (АВР, Накладная) - exclude invoice-type documents
+    const nonInvoiceDocs = documents.filter((d) => {
+        if (d.title.startsWith("Счет")) return false;
+        if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
+        return true;
+    });
+
     const filteredDocs = documents.filter((d) => {
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
         return true;
     });
 
     const showNewInvoicesList = invoiceRecords.length > 0;
+    const hasAnyOutgoingContent = showNewInvoicesList || nonInvoiceDocs.length > 0;
 
     return (
         <>
@@ -158,24 +168,24 @@ export function InvoicesListView({
                         <div className="empty-state-text">Ожидайте поступления новых документов</div>
                     </div>
                 ) : (
-                    showNewInvoicesList ? (
-                        filteredInvoices.length === 0 ? (
+                    !hasAnyOutgoingContent ? (
+                        filteredDocs.length === 0 ? (
                             <div className="empty-state full-height">
-                                <div className="empty-state-icon"><Icon name="receipt_long" /></div>
-                                <div className="empty-state-title">Ничего не найдено</div>
-                                <div className="empty-state-text">Нет счетов с таким статусом</div>
+                                <div className="empty-state-icon"><Icon name="article" /></div>
+                                <div className="empty-state-title">Список пуст</div>
+                                <div className="empty-state-text">Создайте свой первый документ</div>
                             </div>
                         ) : (
                             <>
                                 <div className="spacer-8" />
                                 <div className="ios-group">
-                                    {filteredInvoices.map((inv) => (
-                                        <InvoiceRow 
-                                            key={inv.id} 
-                                            invoice={inv} 
-                                            onClick={loadAndPreviewNewInvoice} 
+                                    {filteredDocs.map((doc) => (
+                                        <DocumentRow 
+                                            key={doc.id} 
+                                            document={doc} 
+                                            onClick={loadAndPreviewOldDocument} 
                                             isEditMode={isEditMode}
-                                            isSelected={selectedIds.includes(inv.id)}
+                                            isSelected={selectedIds.includes(doc.id)}
                                             onSelect={toggleSelect}
                                         />
                                     ))}
@@ -183,28 +193,51 @@ export function InvoicesListView({
                                 <div className="spacer-24" />
                             </>
                         )
-                    ) : filteredDocs.length === 0 ? (
-                        <div className="empty-state full-height">
-                            <div className="empty-state-icon"><Icon name="article" /></div>
-                            <div className="empty-state-title">Список пуст</div>
-                            <div className="empty-state-text">Создайте свой первый счёт</div>
-                        </div>
                     ) : (
                         <>
-                            <div className="spacer-8" />
-                            <div className="ios-group">
-                                {filteredDocs.map((doc) => (
-                                    <DocumentRow 
-                                        key={doc.id} 
-                                        document={doc} 
-                                        onClick={loadAndPreviewOldDocument} 
-                                        isEditMode={isEditMode}
-                                        isSelected={selectedIds.includes(doc.id)}
-                                        onSelect={toggleSelect}
-                                    />
-                                ))}
-                            </div>
-                            <div className="spacer-24" />
+                            {filteredInvoices.length === 0 && nonInvoiceDocs.length === 0 ? (
+                                <div className="empty-state full-height">
+                                    <div className="empty-state-icon"><Icon name="receipt_long" /></div>
+                                    <div className="empty-state-title">Ничего не найдено</div>
+                                    <div className="empty-state-text">Нет документов с таким статусом</div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="spacer-8" />
+                                    {filteredInvoices.length > 0 && (
+                                        <div className="ios-group">
+                                            {filteredInvoices.map((inv) => (
+                                                <InvoiceRow 
+                                                    key={inv.id} 
+                                                    invoice={inv} 
+                                                    onClick={loadAndPreviewNewInvoice} 
+                                                    isEditMode={isEditMode}
+                                                    isSelected={selectedIds.includes(inv.id)}
+                                                    onSelect={toggleSelect}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {nonInvoiceDocs.length > 0 && invoiceStatusFilter === "all" && (
+                                        <>
+                                            <div className="section-title" style={{ fontSize: "13px", color: "var(--text-muted, #8e8e93)" }}>Документы</div>
+                                            <div className="ios-group">
+                                                {nonInvoiceDocs.map((doc) => (
+                                                    <DocumentRow 
+                                                        key={`doc-${doc.id}`} 
+                                                        document={doc} 
+                                                        onClick={loadAndPreviewDocument}
+                                                        isEditMode={isEditMode}
+                                                        isSelected={selectedIds.includes(doc.id)}
+                                                        onSelect={toggleSelect}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="spacer-24" />
+                                </>
+                            )}
                         </>
                     )
                 )}

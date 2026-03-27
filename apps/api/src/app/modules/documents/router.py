@@ -145,6 +145,45 @@ async def get_document_pdf(
         raise HTTPException(status_code=502, detail=f"Ошибка генерации PDF: {exc}") from exc
 
 
+@router.get("/{document_id}/preview")
+async def get_document_preview(
+    document_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Convert document PDF pages to PNG images for mobile-friendly viewing."""
+    import base64
+    import fitz  # PyMuPDF
+    from fastapi.responses import Response as FastResponse
+    from app.core import s3
+
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Документ не найден")
+
+    pdf_bytes = None
+    if doc.pdf_path:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
+
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="PDF не найден")
+
+    try:
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        pages = []
+        for page_num in range(len(pdf_doc)):
+            page = pdf_doc[page_num]
+            mat = fitz.Matrix(2.0, 2.0)
+            pix = page.get_pixmap(matrix=mat)
+            img_bytes = pix.tobytes("png")
+            b64 = base64.b64encode(img_bytes).decode("ascii")
+            pages.append({"page": page_num + 1, "data": f"data:image/png;base64,{b64}"})
+        pdf_doc.close()
+        return {"pages": pages, "total": len(pages)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ошибка конвертации: {exc}") from exc
+
+
 @router.post("/invoice", response_model=DocumentRead)
 async def save_invoice_document(
     payload: SaveInvoiceRequest,

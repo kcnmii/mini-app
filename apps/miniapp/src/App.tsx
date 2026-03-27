@@ -64,7 +64,7 @@ export function App() {
 
   const { items, setItems, itemDraft, setItemDraft, selectedCatalogItem, setSelectedCatalogItem, createItem, deleteItem } = useCatalog(setStatus, setBusy, setSubView);
 
-  const { documents, setDocuments, loadAndPreviewOldDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
+  const { documents, setDocuments, loadAndPreviewOldDocument, loadAndPreviewDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
   // Scroll to top when view changes
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -237,7 +237,7 @@ export function App() {
         markInvoiceSent={(id) => invHook.markInvoiceSent(id, loadData)}
         sendInvoice={() => invHook.sendInvoice(chatId)}
         sendReminder={(id) => invHook.sendReminder(id)}
-        generateDocument={(id, type) => invHook.generateDocument(id, type)}
+        generateDocument={(id, type) => invHook.generateDocument(id, type, loadData)}
         deleteInvoice={() => invHook.deleteInvoice(setDocuments)}
         busy={busy}
         animationType={prevSubView === "invoiceForm" ? "none" : "left"}
@@ -358,6 +358,7 @@ export function App() {
               openNewInvoice={() => invHook.openNewInvoice()}
               loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
               loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}
+              loadAndPreviewDocument={(id) => loadAndPreviewDocument(id, invHook.setPreviewPages, invHook.setIsPdfLoading, invHook.setSelectedDocId, invHook.setSelectedInvoiceId)}
               setStatus={setStatus}
             />
           )}
