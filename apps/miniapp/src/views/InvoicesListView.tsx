@@ -165,7 +165,7 @@ export function InvoicesListView({
                     </div>
                 </div>
 
-                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px" }}>
+                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px", paddingBottom: "16px" }}>
                     <div className="search-input-wrap" style={{ height: "40px", flex: 1, borderRadius: "10px", background: "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", padding: "0 10px", color: "var(--text-muted, #8e8e93)" }}>
                         <Icon name="search" style={{ fontSize: "20px" }} />
                         <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} style={{ border: "none", background: "transparent", outline: "none", flex: 1, height: "100%", padding: "0 8px", fontSize: "17px", color: "var(--text, #1c1c1e)" }} />
@@ -173,7 +173,7 @@ export function InvoicesListView({
                     {/* The square filter button next to search */}
                     <button 
                         onClick={() => setShowFilters(true)}
-                        style={{ height: "40px", width: "40px", borderRadius: "10px", background: invoiceStatusFilter !== "all" ? "var(--tg-theme-button-color, #007AFF)" : "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", justifyContent: "center", border: "none", color: invoiceStatusFilter !== "all" ? "#fff" : "var(--text, #1c1c1e)", cursor: "pointer", flexShrink: 0 }}
+                        style={{ position: "relative", zIndex: 10, height: "40px", width: "40px", borderRadius: "10px", background: invoiceStatusFilter !== "all" ? "var(--tg-theme-button-color, #007AFF)" : "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", justifyContent: "center", border: "none", color: invoiceStatusFilter !== "all" ? "#fff" : "var(--text, #1c1c1e)", cursor: "pointer", flexShrink: 0 }}
                     >
                         <Icon name="filter_list" />
                         {/* Dot indicator if filters active */}
@@ -226,11 +226,11 @@ export function InvoicesListView({
                             </div>
                         ) : (
                             <>
-                                <div className="spacer-8" />
+                                <div className="spacer-24" />
                                 <div style={{ padding: "0 16px" }}>
                                     {Object.entries(groupedItems).map(([dateLabel, items]) => (
                                         <div key={dateLabel} style={{ marginBottom: "24px" }}>
-                                            <div style={{ padding: "0 4px 10px", fontSize: "13px", fontWeight: 700, color: "var(--text-muted, #8e8e93)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                            <div style={{ padding: "0 4px 10px", fontSize: "14px", fontWeight: 700, color: "var(--text-muted, #8e8e93)" }}>
                                                 {dateLabel}
                                             </div>
                                             <div className="ios-group" style={{ margin: 0 }}>
