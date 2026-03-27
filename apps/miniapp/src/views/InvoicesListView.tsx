@@ -45,6 +45,12 @@ export function InvoicesListView({
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
+    const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'invoice' | 'avr' | 'waybill'>('all');
+    
+    // Temporary states for the Filter Modal
+    const [tempType, setTempType] = useState(docTypeFilter);
+    const [tempStatus, setTempStatus] = useState(invoiceStatusFilter);
+
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
 
@@ -61,6 +67,18 @@ export function InvoicesListView({
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const openFilters = () => {
+        setTempType(docTypeFilter);
+        setTempStatus(invoiceStatusFilter);
+        setShowFilters(true);
+    };
+
+    const applyFilters = () => {
+        setDocTypeFilter(tempType);
+        setInvoiceStatusFilter(tempStatus);
+        closeFilters();
     };
 
     const closeFilters = () => {
@@ -91,15 +109,29 @@ export function InvoicesListView({
         }
     };
 
-    const filteredInvoices = invoiceRecords.filter((inv) => {
-        if (invoiceStatusFilter !== "all" && inv.status !== invoiceStatusFilter) return false;
-        if (docSearch && !inv.number.toLowerCase().includes(docSearch.toLowerCase()) && !inv.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
-        return true;
-    });
+    const filteredInvoices = ["all", "invoice"].includes(docTypeFilter)
+        ? invoiceRecords.filter((inv) => {
+            if (invoiceStatusFilter !== "all" && inv.status !== invoiceStatusFilter) return false;
+            if (docSearch && !inv.number.toLowerCase().includes(docSearch.toLowerCase()) && !inv.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
+            return true;
+        })
+        : [];
 
-    // Non-invoice documents (АВР, Накладная) - exclude invoice-type documents (they are shown as InvoiceRow)
     const nonInvoiceDocs = documents.filter((d) => {
         if (d.title.startsWith("Счет")) return false;
+        
+        // Filter by Type
+        if (docTypeFilter === "invoice") return false;
+        if (docTypeFilter === "avr" && !d.title.startsWith("Акт")) return false;
+        if (docTypeFilter === "waybill" && !d.title.startsWith("Накладная")) return false;
+
+        // If the user selects a specific Status (e.g. "Paid"), and they didn't explicitly pick a non-invoice Type,
+        // it makes sense to hide non-invoices, since only invoices can be "Paid".
+        if (invoiceStatusFilter !== "all" && typeof invoiceStatusFilter === "string") {
+            // But if they selected "AVR", the status filter shouldn't hide it.
+            if (docTypeFilter === "all") return false; 
+        }
+
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
         return true;
     });
@@ -108,7 +140,7 @@ export function InvoicesListView({
     type UnifiedItem = { type: "invoice"; data: typeof invoiceRecords[0]; date: number } | { type: "document"; data: typeof documents[0]; date: number };
     const unifiedItems: UnifiedItem[] = [
         ...filteredInvoices.map(inv => ({ type: "invoice" as const, data: inv, date: new Date(inv.created_at).getTime() })),
-        ...(invoiceStatusFilter === "all" ? nonInvoiceDocs.map(doc => ({ type: "document" as const, data: doc, date: new Date(doc.created_at).getTime() })) : [])
+        ...nonInvoiceDocs.map(doc => ({ type: "document" as const, data: doc, date: new Date(doc.created_at).getTime() }))
     ].sort((a, b) => b.date - a.date);
 
     // Group items by local date string
@@ -122,6 +154,15 @@ export function InvoicesListView({
         if (!groupedItems[key]) groupedItems[key] = [];
         groupedItems[key].push(item);
     });
+    const iconChecked = <Icon name="radio_button_checked" style={{ color: "var(--text, #1c1c1e)", marginRight: "12px", fontSize: "22px" }} />;
+    const iconUnchecked = <Icon name="radio_button_unchecked" style={{ color: "var(--text-muted, #8e8e93)", marginRight: "12px", fontSize: "22px" }} />;
+
+    const typeFilterOptions = [
+        { id: 'all', label: 'Все документы' },
+        { id: 'invoice', label: 'Счета на оплату' },
+        { id: 'avr', label: 'АВР (Акты)' },
+        { id: 'waybill', label: 'Накладные на отпуск' }
+    ] as const;
 
     const filteredDocs = documents.filter((d) => {
         if (docSearch && !d.title.toLowerCase().includes(docSearch.toLowerCase()) && !d.client_name.toLowerCase().includes(docSearch.toLowerCase())) return false;
@@ -172,12 +213,12 @@ export function InvoicesListView({
                     </div>
                     {/* The square filter button next to search */}
                     <div 
-                        onClick={() => setShowFilters(true)}
+                        onClick={openFilters}
                         style={{ position: "relative", zIndex: 999, pointerEvents: "auto", height: "40px", width: "40px", borderRadius: "10px", background: "var(--search-bg, rgba(142, 142, 147, 0.12))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", cursor: "pointer", flexShrink: 0 }}
                     >
                         <Icon name="filter_list" />
                         {/* Dot indicator if filters active */}
-                        {invoiceStatusFilter !== "all" && (
+                        {(invoiceStatusFilter !== "all" || docTypeFilter !== "all") && (
                             <div style={{ position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: "50%", background: "#FF3B30", border: "2px solid var(--bg, #f2f2f7)" }} />
                         )}
                     </div>
@@ -327,33 +368,60 @@ export function InvoicesListView({
                         <div style={{ fontSize: "17px", fontWeight: 600, color: "var(--text, #1c1c1e)" }}>Фильтры</div>
                         <button onClick={closeFilters} style={{ fontWeight: 600, color: "var(--tg-theme-button-color, #007AFF)", background: "none", border: "none", fontSize: "17px", padding: 0 }}>Готово</button>
                     </div>
-                    <div className="content-area" style={{ padding: "0 16px" }}>
+                    <div className="content-area" style={{ padding: "0" }}>
                         <div className="spacer-16" />
-                        <div className="section-title">Статус счетов</div>
-                        <div className="ios-group list-options">
-                            {statusFilters.map(status => (
-                                <div 
-                                    key={status} 
-                                    className="selectable-row-container" 
-                                    style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: status !== "draft" ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
-                                    onClick={() => setInvoiceStatusFilter(status)}
-                                >
-                                    <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
-                                        {statusFilterLabels[status]}
+                        
+                        <div style={{ padding: "0 16px" }}>
+                            <div className="section-title">Тип документа</div>
+                            <div className="ios-group list-options" style={{ marginTop: "8px" }}>
+                                {typeFilterOptions.map((opt, i) => (
+                                    <div 
+                                        key={opt.id} 
+                                        className="selectable-row-container" 
+                                        style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: i < typeFilterOptions.length - 1 ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
+                                        onClick={() => setTempType(opt.id)}
+                                    >
+                                        {tempType === opt.id ? iconChecked : iconUnchecked}
+                                        <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
+                                            {opt.label}
+                                        </div>
                                     </div>
-                                    {invoiceStatusFilter === status && (
-                                        <Icon name="check" style={{ color: "var(--tg-theme-button-color, #007AFF)" }} />
-                                    )}
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
+
+                        {["all", "invoice"].includes(tempType) && (
+                            <div style={{ padding: "0 16px" }}>
+                                <div className="spacer-24" />
+                                <div className="section-title">Статус счета</div>
+                                <div className="ios-group list-options" style={{ marginTop: "8px" }}>
+                                    {statusFilters.map((status, i) => (
+                                        <div 
+                                            key={status} 
+                                            className="selectable-row-container" 
+                                            style={{ background: "#fff", display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: i < statusFilters.length - 1 ? "0.5px solid var(--separator, #c6c6c8)" : "none", cursor: "pointer" }}
+                                            onClick={() => setTempStatus(status)}
+                                        >
+                                            {tempStatus === status ? iconChecked : iconUnchecked}
+                                            <div style={{ flex: 1, fontSize: "17px", color: "var(--text, #1c1c1e)" }}>
+                                                {statusFilterLabels[status]}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="spacer-24" />
+                    </div>
+
+                    <div style={{ padding: "16px", background: "var(--bg, #f2f2f7)", paddingBottom: "max(16px, env(safe-area-inset-bottom))", borderTop: "0.5px solid var(--separator, rgba(0,0,0,0.1))" }}>
                         <button 
-                            className="home-action-btn home-action-btn--secondary" 
-                            style={{ width: "100%", color: "#FF3B30", background: "rgba(255, 59, 48, 0.1)" }}
-                            onClick={() => { setInvoiceStatusFilter("all"); setDocSearch(""); }}
+                            className="home-action-btn" 
+                            style={{ width: "100%", height: "54px", borderRadius: "14px", background: "var(--text, #1c1c1e)", color: "var(--bg, #f2f2f7)", fontSize: "17px", fontWeight: 600 }}
+                            onClick={applyFilters}
                         >
-                            Сбросить все фильтры
+                            Применить фильтры
                         </button>
                     </div>
                 </div>
