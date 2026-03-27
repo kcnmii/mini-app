@@ -165,7 +165,7 @@ export function InvoicesListView({
                     </div>
                 </div>
 
-                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px", paddingBottom: "2px" }}>
+                <div className="search-bar" style={{ padding: "0 16px", display: "flex", gap: "10px", paddingBottom: "12px" }}>
                     <div className="search-input-wrap" style={{ height: "40px", flex: 1, borderRadius: "10px", background: "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", padding: "0 10px", color: "var(--text-muted, #8e8e93)" }}>
                         <Icon name="search" style={{ fontSize: "20px" }} />
                         <input placeholder="Поиск..." value={docSearch} onChange={(e) => setDocSearch(e.target.value)} style={{ border: "none", background: "transparent", outline: "none", flex: 1, height: "100%", padding: "0 8px", fontSize: "17px", color: "var(--text, #1c1c1e)" }} />
@@ -173,7 +173,7 @@ export function InvoicesListView({
                     {/* The square filter button next to search */}
                     <div 
                         onClick={() => setShowFilters(true)}
-                        style={{ position: "relative", zIndex: 999, pointerEvents: "auto", height: "40px", width: "40px", borderRadius: "10px", background: "var(--search-bg, rgba(118,118,128,0.12))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted, #8e8e93)", cursor: "pointer", flexShrink: 0 }}
+                        style={{ position: "relative", zIndex: 999, pointerEvents: "auto", height: "40px", width: "40px", borderRadius: "10px", background: "var(--search-bg, rgba(142, 142, 147, 0.12))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", cursor: "pointer", flexShrink: 0 }}
                     >
                         <Icon name="filter_list" />
                         {/* Dot indicator if filters active */}
@@ -226,7 +226,7 @@ export function InvoicesListView({
                             </div>
                         ) : (
                             <>
-                                <div style={{ height: "2px" }} />
+                                <div style={{ height: "12px" }} />
                                 <div style={{ padding: "0 16px" }}>
                                     {Object.entries(groupedItems).map(([dateLabel, items]) => (
                                         <div key={dateLabel} style={{ marginBottom: "24px" }}>
