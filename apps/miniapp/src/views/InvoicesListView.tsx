@@ -43,6 +43,17 @@ export function InvoicesListView({
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
+    const [showCreateMenu, setShowCreateMenu] = useState(false);
+    const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
+
+    const closeCreateMenu = () => {
+        setIsClosingCreateMenu(true);
+        setTimeout(() => {
+            setShowCreateMenu(false);
+            setIsClosingCreateMenu(false);
+        }, 300);
+    };
+
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
@@ -92,7 +103,7 @@ export function InvoicesListView({
                         </button>
                     )
                 }
-                onAction={activeTab === "outgoing" ? (isEditMode ? () => setIsActionSheetOpen(true) : openNewInvoice) : undefined} 
+                onAction={activeTab === "outgoing" ? (isEditMode ? () => setIsActionSheetOpen(true) : () => setShowCreateMenu(true)) : undefined}
                 actionIcon={activeTab === "outgoing" ? (isEditMode ? "delete" : "add") : undefined} 
             />
             
@@ -207,6 +218,47 @@ export function InvoicesListView({
                     { label: "Удалить выбранное", danger: true, bold: true, onClick: handleBulkDelete }
                 ]}
             />
+
+            {(showCreateMenu || isClosingCreateMenu) && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "flex-end", backdropFilter: "blur(2px)", opacity: isClosingCreateMenu ? 0 : 1, transition: "opacity 0.3s ease" }} onClick={closeCreateMenu}>
+                    <div className={isClosingCreateMenu ? "animate-slide-down" : "animate-slide-up"} style={{ width: "100%", background: "var(--card, #fff)", borderTopLeftRadius: "24px", borderTopRightRadius: "24px", padding: "12px 20px 32px", paddingBottom: "max(32px, env(safe-area-inset-bottom))" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ width: "36px", height: "5px", borderRadius: "3px", backgroundColor: "var(--separator, #C7C7CC)", margin: "0 auto 16px" }} />
+                        
+                        <h3 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: 700, color: "var(--text, #1c1c1e)", textAlign: "left" }}>Создать документ</h3>
+                        
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                            <button
+                                onClick={() => {
+                                    closeCreateMenu();
+                                    openNewInvoice();
+                                }}
+                                style={{ height: "56px", background: "none", border: "none", color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 500, display: "flex", alignItems: "center", gap: "16px", padding: "0", cursor: "pointer", width: "100%" }}
+                            >
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 122, 255, 0.1)", color: "var(--primary, #007AFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="request_quote" style={{ fontSize: "20px" }} /></div>
+                                <span>Счёт на оплату</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    closeCreateMenu();
+                                }}
+                                style={{ height: "56px", background: "none", border: "none", color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 500, display: "flex", alignItems: "center", gap: "16px", padding: "0", cursor: "pointer", width: "100%" }}
+                            >
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(52, 199, 89, 0.1)", color: "var(--ios-green, #34C759)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="description" style={{ fontSize: "20px" }} /></div>
+                                <span>АВР (Акт выполненных работ)</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    closeCreateMenu();
+                                }}
+                                style={{ height: "56px", background: "none", border: "none", color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 500, display: "flex", alignItems: "center", gap: "16px", padding: "0", cursor: "pointer", width: "100%" }}
+                            >
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(255, 149, 0, 0.1)", color: "#FF9500", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="local_shipping" style={{ fontSize: "20px" }} /></div>
+                                <span>Накладная на отпуск запасов</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
