@@ -82,6 +82,7 @@ export type ClientBalance = {
 export type DocumentRecord = {
     id: number; title: string; client_name: string; total_sum: string;
     total_sum_in_words: string; pdf_path: string; docx_path: string; created_at: string;
+    edo_status?: string; doc_type?: string; share_uuid?: string;
 };
 
 export type DocumentStats = {
@@ -134,4 +135,48 @@ export type SupplierProfileData = {
     payment_code: string; supplier_name: string; supplier_iin: string;
     supplier_address: string; executor_name: string; position: string;
     phone: string; email: string; notifications_enabled: boolean; logo_path: string; signature_path: string; stamp_path: string;
+};
+
+// ── EDO Types ──
+
+export type EdoStatus =
+    | "draft"
+    | "awaiting_sign"
+    | "signed_self"
+    | "sent"
+    | "signed_both"
+    | "rejected"
+    | "esf_pending"
+    | "esf_submitted"
+    | "completed";
+
+export type SignatureInfo = {
+    id: number;
+    signer_name: string;
+    signer_iin: string;
+    signer_org: string;
+    signer_role: "sender" | "receiver";
+    certificate_serial: string;
+    certificate_valid_from: string | null;
+    certificate_valid_to: string | null;
+    signed_at: string | null;
+    signature_type: "cms" | "xml";
+};
+
+export type SigningSessionInfo = {
+    signing_session_id: number;
+    egov_mobile_link: string;
+    egov_business_link: string;
+    qr_code_b64: string;
+};
+
+export type SigningStatusInfo = {
+    status: "pending" | "signed" | "expired" | "error";
+    signed_at: string | null;
+    signer_name: string | null;
+};
+
+export type ShareInfo = {
+    share_url: string;
+    share_uuid: string;
 };

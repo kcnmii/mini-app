@@ -1,8 +1,9 @@
 import { DocumentRecord } from "../types";
 import { Icon, Checkbox } from "./Common";
+import { EdoStatusBadge } from "./EdoComponents";
 
 interface DocumentRowProps {
-    document: DocumentRecord;
+    document: DocumentRecord & { edo_status?: string };
     onClick: (id: number) => void;
     isEditMode?: boolean;
     isSelected?: boolean;
@@ -37,10 +38,15 @@ export function DocumentRow({ document, onClick, isEditMode, isSelected, onSelec
                     <div className="doc-row-title">
                         {typeInfo.label} {document.client_name && `· ${document.client_name}`}
                     </div>
-                    <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div className="doc-row-meta" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                         <span style={{ background: typeInfo.bg, color: typeInfo.color, padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.3px" }}>
                             {typeInfo.code}
                         </span>
+                        
+                        {document.edo_status && document.edo_status !== "draft" && (
+                            <EdoStatusBadge status={document.edo_status} style={{ padding: "2px 8px" }} />
+                        )}
+
                         {document.total_sum && (
                             <span className="doc-row-date">{document.total_sum} ₸</span>
                         )}

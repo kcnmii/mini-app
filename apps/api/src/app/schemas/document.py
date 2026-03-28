@@ -14,6 +14,14 @@ class DocumentRead(BaseModel):
     pdf_path: str
     docx_path: str = ""
     created_at: datetime
+    
+    # EDO Fields
+    doc_type: str = "invoice"
+    edo_status: str = "draft"
+    contract_id: int | None = None
+    share_uuid: str | None = None
+
+    model_config = {"from_attributes": True}
 
 
 class DocumentStats(BaseModel):

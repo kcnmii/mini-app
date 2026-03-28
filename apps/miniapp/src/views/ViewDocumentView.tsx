@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Icon } from "../components/Common";
+import { SignDocumentSheet } from "../components/EdoComponents";
 import { formatMoney } from "../utils";
 import type { InvoiceRecord, DocumentRecord } from "../types";
 
@@ -60,6 +61,7 @@ export function ViewDocumentView({
     const [isClosingDetails, setIsClosingDetails] = useState(false);
     const [isClosingDocMenu, setIsClosingDocMenu] = useState(false);
     const [isClosingActions, setIsClosingActions] = useState(false);
+    const [showSignSheet, setShowSignSheet] = useState(false);
 
     const closeDetails = () => {
         setIsClosingDetails(true);
@@ -232,13 +234,32 @@ export function ViewDocumentView({
                             </div>
                         )}
 
-                        {/* Action Buttons Row (Only for invoices) */}
+                        {/* Action Buttons Row */}
                         {selectedInvoice && (
                             <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px", padding: "0 4px" }}>
                                 <IconButton icon="send" label="Отправить" onClick={sendInvoice} busy={busy === "send"} />
                                 <IconButton icon="notifications" label="Напомнить" onClick={() => selectedInvoice && sendReminder(selectedInvoice.id)} disabled={!selectedInvoice || status === "paid"} busy={busy === "remind"} />
                                 <IconButton icon="post_add" label="Создать" onClick={() => setShowDocMenu(true)} disabled={!isPaid} />
                             </div>
+                        )}
+
+                        {/* ЭЦП Sign Button (Only for generated Documents like AVR/NKL) */}
+                        {selectedDoc && (
+                            <button
+                                onClick={() => { closeDetails(); setTimeout(() => setShowSignSheet(true), 350); }}
+                                style={{
+                                    width: "100%", height: "48px", border: "none", borderRadius: "14px",
+                                    background: "linear-gradient(135deg, #007AFF, #5856D6)",
+                                    color: "#fff", fontSize: "15px", fontWeight: 600,
+                                    cursor: "pointer", display: "flex", alignItems: "center",
+                                    justifyContent: "center", gap: "8px",
+                                    boxShadow: "0 4px 16px rgba(0, 122, 255, 0.25)",
+                                    marginBottom: "8px",
+                                }}
+                            >
+                                <Icon name="verified" style={{ fontSize: "20px" }} />
+                                Подписать ЭЦП
+                            </button>
                         )}
                     </div>
                 </div>
@@ -395,6 +416,20 @@ export function ViewDocumentView({
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* EDO Signing Sheet */}
+            {showSignSheet && (
+                <SignDocumentSheet
+                    documentId={(selectedInvoice as any)?.id || selectedDoc?.id || 0}
+                    documentTitle={title}
+                    onClose={() => setShowSignSheet(false)}
+                    onSigned={() => {
+                        setShowSignSheet(false);
+                        // Refresh view
+                        setSubView(null);
+                    }}
+                />
             )}
         </div>
     );

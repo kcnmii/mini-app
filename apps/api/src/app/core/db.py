@@ -65,6 +65,18 @@ class Document(Base):
     payload_json = Column(Text, default="")
     created_at = Column(DateTime, server_default=func.now())
 
+    # ── EDO fields ──
+    contract_id = Column(Integer, ForeignKey("contracts.id", ondelete="SET NULL"), nullable=True)
+    doc_type = Column(String(20), default="invoice")  # invoice | act | waybill | esf
+    edo_status = Column(String(30), default="draft")   # draft | awaiting_sign | signed_self | sent | signed_both | rejected | esf_pending | esf_submitted | completed
+    share_uuid = Column(String(36), nullable=True, unique=True, index=True)
+    sender_user_id = Column(BigInteger, nullable=True)
+    receiver_bin = Column(String(12), default="")
+    receiver_name = Column(Text, default="")
+    md5_hash = Column(String(32), default="")
+    signed_at = Column(DateTime, nullable=True)
+    countersigned_at = Column(DateTime, nullable=True)
+
 class DocumentItem(Base):
     __tablename__ = "document_items"
     id = Column(Integer, primary_key=True, index=True)
@@ -164,6 +176,95 @@ class SupplierProfile(Base):
     stamp_path = Column(Text, default="")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+# ── EDO Models ──
+
+class Contract(Base):
+    """Договор с контрагентом."""
+    __tablename__ = "contracts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    number = Column(String(50), nullable=False)
+    date = Column(DateTime, nullable=True)
+    counterparty_name = Column(Text, default="")
+    counterparty_bin = Column(String(12), default="")
+    total_amount = Column(Float, default=0.0)
+    status = Column(String(20), default="active")  # active, completed, terminated
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class Signature(Base):
+    """ЭЦП-подпись документа (CMS / XML Dsig)."""
+    __tablename__ = "signatures"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    signer_iin = Column(String(12), nullable=False)
+    signer_name = Column(Text, default="")
+    signer_org_name = Column(Text, default="")
+    signer_role = Column(String(20), default="sender")  # sender | receiver
+    certificate_serial = Column(Text, default="")
+    certificate_valid_from = Column(DateTime, nullable=True)
+    certificate_valid_to = Column(DateTime, nullable=True)
+    signature_data = Column(Text, nullable=False)  # Base64 CMS or XML Dsig
+    signature_type = Column(String(10), default="cms")  # cms | xml
+    signed_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document", backref="signatures")
+
+
+class SigningSession(Base):
+    """Активная сессия подписания через SIGEX/eGov Mobile."""
+    __tablename__ = "signing_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    sign_url = Column(Text, nullable=False)
+    egov_mobile_link = Column(Text, default="")
+    egov_business_link = Column(Text, default="")
+    qr_code_b64 = Column(Text, default="")
+    status = Column(String(20), default="pending")  # pending | signed | expired | error
+    signer_role = Column(String(20), default="sender")  # sender | receiver
+    created_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document", backref="signing_sessions")
+
+
+class EsfRecord(Base):
+    """Запись об ЭСФ отправленной в КГД."""
+    __tablename__ = "esf_records"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    esf_number = Column(String(50), default="")
+    esf_xml = Column(Text, default="")
+    signed_esf_xml = Column(Text, default="")
+    session_id = Column(String(100), default="")
+    kgd_status = Column(String(30), default="pending")  # pending, submitted, accepted, rejected
+    kgd_response = Column(Text, default="")
+    submitted_at = Column(DateTime, nullable=True)
+    deadline = Column(DateTime, nullable=True)  # 15 calendar days
+    created_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document", backref="esf_records")
+
+
+class DocumentShare(Base):
+    """Шаринг документа контрагенту (ссылка / email / Telegram)."""
+    __tablename__ = "document_shares"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    share_uuid = Column(String(36), nullable=False, unique=True, index=True)
+    share_type = Column(String(20), default="link")  # link | email | telegram
+    recipient_email = Column(Text, default="")
+    recipient_name = Column(Text, default="")
+    recipient_bin = Column(String(12), default="")
+    accessed_at = Column(DateTime, nullable=True)
+    signed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document", backref="shares")
 
 # ── Database Initialization ──
 

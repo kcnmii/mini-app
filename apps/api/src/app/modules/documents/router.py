@@ -75,6 +75,10 @@ async def get_document(
         "total_sum_in_words": doc.total_sum_in_words,
         "pdf_path": doc.pdf_path,
         "payload_json": doc.payload_json,
+        "doc_type": doc.doc_type,
+        "edo_status": doc.edo_status,
+        "contract_id": doc.contract_id,
+        "share_uuid": doc.share_uuid,
         "created_at": doc.created_at,
     }
 
