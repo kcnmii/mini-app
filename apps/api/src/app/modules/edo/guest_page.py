@@ -634,10 +634,13 @@ async def download_public_pdf(share_uuid: str, db: Session = Depends(get_db)):
     if doc.pdf_path.endswith("_stamped.pdf"):
         filename = filename.replace(".pdf", "_stamped.pdf")
 
+    import urllib.parse
+    encoded_filename = urllib.parse.quote(filename)
+
     return Response(
         pdf_bytes, 
         media_type="application/pdf", 
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{encoded_filename}"}
     )
 
 
