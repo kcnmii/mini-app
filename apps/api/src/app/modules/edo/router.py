@@ -549,7 +549,7 @@ async def test_sigex_page():
                 btn.disabled = true;
                 res.innerHTML = "⏳ Ожидаем ответ от бэкенда (python) и SIGEX API...";
                 try {
-                    const req = await fetch('/api/edo/test-sigex-generate', { method: 'POST' });
+                    const req = await fetch('/edo/test-sigex-generate', { method: 'POST' });
                     const data = await req.json();
                     if (!req.ok) throw new Error(data.detail || JSON.stringify(data));
                     
@@ -557,7 +557,7 @@ async def test_sigex_page():
                         <h3 style="color: #4ade80;">✅ Успех!</h3>
                         <p>Нажмите ссылку-кнопку ниже с мобильного устройства:</p>
                         <a href="${data.eGovMobileLaunchLink}" class="btn">📱 Universal Link (eGov Mobile)</a>
-                        <a href="/api/edo/mobile-redirect?url=${encodeURIComponent(data.eGovMobileLaunchLink)}" class="btn">🔄 Редирект (Обойти Telegram/Safari)</a>
+                        <a href="/edo/mobile-redirect?url=${encodeURIComponent(data.eGovMobileLaunchLink)}" class="btn">🔄 Редирект (Обойти Telegram/Safari)</a>
                         <img src="data:image/gif;base64,${data.qr_code_b64}" alt="QR">
                         <pre>${JSON.stringify(data, null, 2)}</pre>
                     `;
