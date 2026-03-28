@@ -220,9 +220,9 @@ export function InvoicesListView({
                     !hasAnyOutgoingContent ? (
                         filteredDocs.length === 0 ? (
                             <div className="empty-state full-height">
-                                <div className="empty-state-icon"><Icon name="article" /></div>
-                                <div className="empty-state-title">Список пуст</div>
-                                <div className="empty-state-text">Создайте свой первый документ</div>
+                                <div className="empty-state-icon"><Icon name="outbox" /></div>
+                                <div className="empty-state-title">Исходящие документы отсутствуют</div>
+                                <div className="empty-state-text">Создайте свой первый документ, чтобы он появился в списке</div>
                             </div>
                         ) : (
                             <>
