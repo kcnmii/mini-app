@@ -35,30 +35,10 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
             });
             setSigningSession(result);
 
-            // Open eGov Mobile deeplink safely on iOS
-            if (result.egov_mobile_link) {
-                const link = result.egov_mobile_link;
-                const tg = (window as any).Telegram?.WebApp;
-                
-                try {
-                    // Method 1: Try native Telegram WebApp openLink first (if HTTPS)
-                    if (tg && tg.openLink && link.startsWith("http")) {
-                        tg.openLink(link, { try_instant_view: false });
-                    } else {
-                        // Method 2: Invisible Anchor Tag (best for custom schemes egovmobile:// on iOS)
-                        const a = document.createElement("a");
-                        a.href = link;
-                        a.target = "_blank";
-                        a.rel = "noopener noreferrer";
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => document.body.removeChild(a), 100);
-                    }
-                } catch (e) {
-                    // Method 3: Direct assignment fallback
-                    window.location.href = link;
-                }
-            }
+            // We DO NOT try to open the link automatically here anymore.
+            // 1) iOS Safari strictly blocks window.location/a.click() if it happens after an 'await' network request.
+            // 2) Telegram WebApp might also suppress it.
+            // The user MUST click a direct <a> tag natively. We will display it in the 'waiting' step.
 
             // Start polling for signature
             pollRef.current = setInterval(async () => {
@@ -192,36 +172,22 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                         </p>
 
                         {signingSession?.egov_mobile_link && (
-                            <button
-                                onClick={() => {
-                                    const link = signingSession.egov_mobile_link;
-                                    const tg = (window as any).Telegram?.WebApp;
-                                    try {
-                                        if (tg && tg.openLink && link.startsWith("http")) {
-                                            tg.openLink(link, { try_instant_view: false });
-                                        } else {
-                                            const a = document.createElement("a");
-                                            a.href = link;
-                                            a.target = "_blank";
-                                            a.rel = "noopener noreferrer";
-                                            document.body.appendChild(a);
-                                            a.click();
-                                            setTimeout(() => document.body.removeChild(a), 100);
-                                        }
-                                    } catch (e) {
-                                        window.location.href = link;
-                                    }
-                                }}
+                            <a
+                                href={signingSession.egov_mobile_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 style={{
+                                    display: "inline-block",
                                     marginTop: "20px", padding: "12px 24px",
                                     background: "var(--segment-bg, #f2f2f7)",
                                     border: "none", borderRadius: "12px",
                                     color: "var(--primary, #007AFF)",
                                     fontSize: "15px", fontWeight: 600, cursor: "pointer",
+                                    textDecoration: "none"
                                 }}
                             >
-                                Открыть eGov Mobile ещё раз
-                            </button>
+                                Открыть eGov Mobile (нажать здесь)
+                            </a>
                         )}
                     </div>
                 )}
