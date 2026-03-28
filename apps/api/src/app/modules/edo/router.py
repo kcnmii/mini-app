@@ -16,8 +16,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -90,7 +89,6 @@ class PublicDocumentResponse(BaseModel):
 # ──────────────────────────────────────────────
 @router.post("/sign", response_model=SignDocumentResponse)
 async def initiate_signing(
-    request: Request,
     req: SignDocumentRequest,
     background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
@@ -99,10 +97,12 @@ async def initiate_signing(
     """
     Start the ЭЦП signing process for a document.
     
-    1. Loads document PDF from S3
-    2. Registers signing procedure with SIGEX
-    3. Returns eGov Mobile deeplink for the user to sign
-    4. Starts background polling for signature
+    Split into 2 phases:
+      Phase 1 (sync): Register signing on SIGEX → return deeplinks immediately
+      Phase 2 (background): Send document data + poll for CMS signature
+    
+    This prevents the API from timing out — SIGEX's dataURL POST
+    is a long-polling endpoint that blocks until eGov Mobile connects.
     """
     doc = db.query(Document).filter(
         Document.id == req.document_id,
@@ -122,8 +122,10 @@ async def initiate_signing(
         raise HTTPException(status_code=400, detail="PDF документа не найден для подписания")
 
     # Compute MD5 hash
+    import base64
     md5_hash = hashlib.md5(pdf_bytes).hexdigest()
     doc.md5_hash = md5_hash
+    document_b64 = base64.b64encode(pdf_bytes).decode("ascii")
 
     # Load supplier profile for metadata
     profile = db.query(SupplierProfile).filter(
@@ -135,30 +137,28 @@ async def initiate_signing(
     company_name = (profile.company_name if profile else "") or ""
 
     meta = [
-        {"name": "Документ", "value": str(doc.title or "")},
-        {"name": "Сумма", "value": str(doc.total_sum or "0")},
-        {"name": "Компания", "value": str(company_name or "")},
+        {"name": "Документ", "value": doc.title},
+        {"name": "Сумма", "value": doc.total_sum},
+        {"name": "Компания", "value": company_name},
     ]
 
+    # ── Phase 1: Register on SIGEX (fast, ~1-2 seconds) ──
     try:
-        result = await sigex.initiate_signing(
-            document_bytes=pdf_bytes,
+        reg = await sigex.register_signing(
             description=f"Подписание: {doc.title}",
-            names=[doc.title, doc.title, doc.title],
-            meta=meta,
         )
     except Exception as exc:
-        logger.error("SIGEX initiate_signing failed: %s", exc)
+        logger.error("SIGEX register_signing failed: %s", exc)
         raise HTTPException(status_code=502, detail=f"Ошибка SIGEX: {exc}") from exc
 
     # Save signing session
     session = SigningSession(
         document_id=doc.id,
         user_id=user_id,
-        sign_url=result["sign_url"],
-        egov_mobile_link=result["eGovMobileLaunchLink"],
-        egov_business_link=result["eGovBusinessLaunchLink"],
-        qr_code_b64=result["qr_code_b64"],
+        sign_url=reg.get("signURL", ""),
+        egov_mobile_link=reg.get("eGovMobileLaunchLink", ""),
+        egov_business_link=reg.get("eGovBusinessLaunchLink", ""),
+        qr_code_b64=reg.get("qrCode", ""),
         status="pending",
         signer_role=req.signer_role,
     )
@@ -169,11 +169,15 @@ async def initiate_signing(
     db.commit()
     db.refresh(session)
 
-    # Start background polling for signature
+    # ── Phase 2: Send data + poll in background ──
     background_tasks.add_task(
-        _poll_and_save_signature,
+        _send_data_and_poll,
         signing_session_id=session.id,
-        sign_url=result["sign_url"],
+        data_url=reg.get("dataURL", ""),
+        sign_url=reg.get("signURL", ""),
+        document_b64=document_b64,
+        names=[doc.title, doc.title, doc.title],
+        meta=meta,
         document_id=doc.id,
         user_id=user_id,
         signer_iin=signer_iin,
@@ -181,48 +185,12 @@ async def initiate_signing(
         signer_role=req.signer_role,
     )
 
-    # 🚀 Iron-clad iOS Fallback: Send deep link to the Telegram Chat! 🚀
-    if result.get("eGovMobileLaunchLink"):
-        try:
-            import urllib.parse
-            from app.modules.telegram_bot.service import TelegramBotClient
-            bot = TelegramBotClient()
-            
-            # Telegram strictly blocks non-HTTP URLs in inline buttons.
-            # We must use our own endpoint to bounce the user to the custom scheme.
-            safe_url = urllib.parse.quote(result["eGovMobileLaunchLink"])
-            base_url = str(request.base_url).rstrip("/")
-            
-            # The bounce URL inside our API
-            redirect_url = f"{base_url}/edo/mobile-redirect?url={safe_url}"
-
-            await bot.send_egov_signing_link(
-                chat_id=user_id,
-                text=f"Нажмите кнопку ниже, чтобы перейти в <b>eGov Mobile</b> и подписать документ:\n\n📄 <b>{doc.title}</b>",
-                egov_link=redirect_url,
-            )
-            await bot.close()
-        except Exception as e:
-            logger.warning("Failed to send eGov link to telegram: %s", e)
-
     return SignDocumentResponse(
         signing_session_id=session.id,
-        egov_mobile_link=result["eGovMobileLaunchLink"],
-        egov_business_link=result["eGovBusinessLaunchLink"],
-        qr_code_b64=result["qr_code_b64"],
+        egov_mobile_link=reg.get("eGovMobileLaunchLink", ""),
+        egov_business_link=reg.get("eGovBusinessLaunchLink", ""),
+        qr_code_b64=reg.get("qrCode", ""),
     )
-
-
-# ──────────────────────────────────────────────
-# GET /edo/mobile-redirect - Bounce to custom scheme
-# ──────────────────────────────────────────────
-@router.get("/mobile-redirect")
-async def mobile_redirect(url: str):
-    """
-    Bounces HTTP requests from Telegram inline buttons to custom schemes.
-    (Telegram restricts inline buttons to valid http/https URLs).
-    """
-    return RedirectResponse(url)
 
 
 # ──────────────────────────────────────────────
@@ -416,6 +384,65 @@ async def get_document_signatures(
 
 
 # ──────────────────────────────────────────────
+# Background task: Send data to SIGEX + poll for signature
+# ──────────────────────────────────────────────
+async def _send_data_and_poll(
+    signing_session_id: int,
+    data_url: str,
+    sign_url: str,
+    document_b64: str,
+    names: list[str],
+    meta: list[dict[str, str]],
+    document_id: int,
+    user_id: int,
+    signer_iin: str,
+    signer_name: str,
+    signer_role: str,
+):
+    """
+    Background task:
+      1. Send document data to SIGEX (long-polling, retries)
+      2. Poll for CMS signature
+      3. Save signature to DB
+    """
+    from app.core.db import SessionLocal
+
+    # Phase 2a: Send data to SIGEX
+    try:
+        await sigex.send_data_to_sign(
+            data_url=data_url,
+            document_b64=document_b64,
+            names=names,
+            meta=meta,
+        )
+        logger.info("SIGEX data sent for document %d", document_id)
+    except Exception as exc:
+        logger.error("SIGEX send_data failed for document %d: %s", document_id, exc)
+        db = SessionLocal()
+        try:
+            session = db.query(SigningSession).filter(
+                SigningSession.id == signing_session_id
+            ).first()
+            if session:
+                session.status = "error"
+            db.commit()
+        finally:
+            db.close()
+        return
+
+    # Phase 2b: Poll for signature
+    await _poll_and_save_signature(
+        signing_session_id=signing_session_id,
+        sign_url=sign_url,
+        document_id=document_id,
+        user_id=user_id,
+        signer_iin=signer_iin,
+        signer_name=signer_name,
+        signer_role=signer_role,
+    )
+
+
+# ──────────────────────────────────────────────
 # Background task: Poll SIGEX for signature
 # ──────────────────────────────────────────────
 async def _poll_and_save_signature(
@@ -515,82 +542,3 @@ async def _poll_and_save_signature(
         finally:
             db.close()
 
-from fastapi.responses import HTMLResponse
-
-@router.get("/test-sigex-page", response_class=HTMLResponse)
-async def test_sigex_page():
-    """Local test page to debug SIGEX generation."""
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SIGEX EDO Backend Test</title>
-        <style>
-            body { font-family: system-ui; padding: 20px; background: #111; color: #fff; max-width: 600px; margin: 0 auto; }
-            button { padding: 15px; width: 100%; font-size: 16px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; }
-            button:disabled { background: #333; cursor: not-allowed; }
-            pre { background: #222; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
-            img { max-width: 250px; display: block; margin: 10px auto; border-radius: 8px; background: white; padding: 10px; }
-            a.btn { display: block; text-align: center; padding: 15px 20px; background: white; color: #111; text-decoration: none; border-radius: 5px; margin: 10px 0; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <h2>Тестирование SIGEX (Backend)</h2>
-        <p>Генерирует тестовый документ и отправляет через python-клиент <code>sigex_client.py</code>.</p>
-        <button id="btn" onclick="runTest()">▶ Сгенерировать ссылку и QR</button>
-        <div id="res" style="margin-top: 20px;"></div>
-
-        <script>
-            async function runTest() {
-                const btn = document.getElementById('btn');
-                const res = document.getElementById('res');
-                btn.disabled = true;
-                res.innerHTML = "⏳ Ожидаем ответ от бэкенда (python) и SIGEX API...";
-                try {
-                    const req = await fetch('/edo/test-sigex-generate', { method: 'POST' });
-                    const data = await req.json();
-                    if (!req.ok) throw new Error(data.detail || JSON.stringify(data));
-                    
-                    res.innerHTML = `
-                        <h3 style="color: #4ade80;">✅ Успех!</h3>
-                        <p>Нажмите ссылку-кнопку ниже с мобильного устройства:</p>
-                        <a href="${data.eGovMobileLaunchLink}" class="btn">📱 Universal Link (eGov Mobile)</a>
-                        <a href="/edo/mobile-redirect?url=${encodeURIComponent(data.eGovMobileLaunchLink)}" class="btn">🔄 Редирект (Обойти Telegram/Safari)</a>
-                        <img src="data:image/gif;base64,${data.qr_code_b64}" alt="QR">
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
-                } catch (e) {
-                    res.innerHTML = `<h3 style="color: #f87171;">❌ Ошибка:</h3><pre>${e.message}</pre>`;
-                } finally {
-                    btn.disabled = false;
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
-
-@router.post("/test-sigex-generate")
-async def test_sigex_generate():
-    """Creates a dummy text document and signs it to ensure SIGEX logic works."""
-    from app.services.sigex_client import SigexClient
-    
-    # Simulate a small dummy file
-    dummy_pdf_bytes = b"This is a dummy test document for eGov Mobile signing test via SIGEX API."
-    
-    sigex = SigexClient()
-    try:
-        result = await sigex.initiate_signing(
-            document_bytes=dummy_pdf_bytes,
-            description="Test Backend SIGEX",
-            names=["Тестовый документ.pdf", "Тестовый документ.pdf", "Test document.pdf"],
-            meta=[{"name": "Note", "value": "Local testing"}],
-        )
-        return result
-    except Exception as e:
-        import traceback
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=502, detail=str(e))

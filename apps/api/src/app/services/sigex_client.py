@@ -49,7 +49,7 @@ class SigexClient:
           - eGovMobileLaunchLink
           - eGovBusinessLaunchLink
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
                 f"{self.base_url}/api/egovQr",
                 json={"description": description},
@@ -95,7 +95,7 @@ class SigexClient:
                     "meta": meta or [],
                     "document": {
                         "file": {
-                            "mime": "@file/pdf",
+                            "mime": "",
                             "data": document_b64,
                         }
                     },
@@ -104,9 +104,13 @@ class SigexClient:
         }
 
         last_error = None
-        for attempt in range(5):
+        for attempt in range(25):  # SIGEX JS client uses 25 retries
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
+                # SIGEX dataURL is a long-polling endpoint that blocks until
+                # eGov Mobile connects. Must use a long read timeout.
+                async with httpx.AsyncClient(
+                    timeout=httpx.Timeout(65.0, connect=10.0)
+                ) as client:
                     resp = await client.post(data_url, json=payload)
                     resp.raise_for_status()
                     data = resp.json()
@@ -116,18 +120,18 @@ class SigexClient:
                         f"SIGEX send_data error: {data['message']}"
                     )
 
-                logger.info("SIGEX data sent successfully")
+                logger.info("SIGEX data sent successfully on attempt %d", attempt + 1)
                 return data
+            except (httpx.ReadTimeout, httpx.ConnectTimeout) as exc:
+                last_error = exc
+                logger.warning("SIGEX send_data attempt %d timed out (expected, retrying)", attempt + 1)
+                await asyncio.sleep(0.5)
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                 last_error = exc
-                logger.warning("SIGEX send_data attempt %d failed: [%s] %s", attempt + 1, type(exc).__name__, exc)
-                await asyncio.sleep(1.0)
-            except TypeError as exc:
-                last_error = exc
-                logger.warning("SIGEX send_data payload TypeError attempt %d failed: %s", attempt + 1, exc)
+                logger.warning("SIGEX send_data attempt %d failed: %s", attempt + 1, exc)
                 await asyncio.sleep(1.0)
 
-        raise SigexSigningError(f"Failed to send data after 5 attempts: {last_error}")
+        raise SigexSigningError(f"Failed to send data after 25 attempts: {last_error}")
 
     # ──────────────────────────────────────────────
     # Step 3: Poll for signatures (long-polling)

@@ -35,10 +35,10 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
             });
             setSigningSession(result);
 
-            // We DO NOT try to open the link automatically here anymore.
-            // 1) iOS Safari strictly blocks window.location/a.click() if it happens after an 'await' network request.
-            // 2) Telegram WebApp might also suppress it.
-            // The user MUST click a direct <a> tag natively. We will display it in the 'waiting' step.
+            // Open eGov Mobile deeplink
+            if (result.egov_mobile_link) {
+                window.location.href = result.egov_mobile_link;
+            }
 
             // Start polling for signature
             pollRef.current = setInterval(async () => {
@@ -172,22 +172,20 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                         </p>
 
                         {signingSession?.egov_mobile_link && (
-                            <a
-                                href={signingSession.egov_mobile_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button
+                                onClick={() => {
+                                    window.location.href = signingSession.egov_mobile_link;
+                                }}
                                 style={{
-                                    display: "inline-block",
                                     marginTop: "20px", padding: "12px 24px",
                                     background: "var(--segment-bg, #f2f2f7)",
                                     border: "none", borderRadius: "12px",
                                     color: "var(--primary, #007AFF)",
                                     fontSize: "15px", fontWeight: 600, cursor: "pointer",
-                                    textDecoration: "none"
                                 }}
                             >
-                                Открыть eGov Mobile (нажать здесь)
-                            </a>
+                                Открыть eGov Mobile ещё раз
+                            </button>
                         )}
                     </div>
                 )}
