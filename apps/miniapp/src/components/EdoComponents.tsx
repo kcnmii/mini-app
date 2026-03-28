@@ -37,7 +37,13 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
 
             // Open eGov Mobile deeplink
             if (result.egov_mobile_link) {
-                window.location.href = result.egov_mobile_link;
+                const tg = (window as any).Telegram?.WebApp;
+                if (tg && tg.openLink) {
+                    // Try to open link natively in Telegram
+                    tg.openLink(result.egov_mobile_link);
+                } else {
+                    window.location.href = result.egov_mobile_link;
+                }
             }
 
             // Start polling for signature
@@ -174,7 +180,12 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                         {signingSession?.egov_mobile_link && (
                             <button
                                 onClick={() => {
-                                    window.location.href = signingSession.egov_mobile_link;
+                                    const tg = (window as any).Telegram?.WebApp;
+                                    if (tg && tg.openLink) {
+                                        tg.openLink(signingSession.egov_mobile_link);
+                                    } else {
+                                        window.location.href = signingSession.egov_mobile_link;
+                                    }
                                 }}
                                 style={{
                                     marginTop: "20px", padding: "12px 24px",
