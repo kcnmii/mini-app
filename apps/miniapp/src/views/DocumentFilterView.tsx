@@ -18,7 +18,7 @@ interface DocumentFilterViewProps {
     currentTypeFilter: DocTypeFilter;
     onApply: (status: string, type: DocTypeFilter) => void;
     onClose: () => void;
-    isClosing: boolean;
+    animationType?: "none" | "left" | "up";
 }
 
 export function DocumentFilterView({
@@ -26,13 +26,14 @@ export function DocumentFilterView({
     currentTypeFilter,
     onApply,
     onClose,
-    isClosing
+    animationType = "up"
 }: DocumentFilterViewProps) {
     const [tempType, setTempType] = useState<DocTypeFilter>(currentTypeFilter);
     const [tempStatus, setTempStatus] = useState<string>(currentStatusFilter);
+    const animClass = animationType === "none" ? "" : animationType === "left" ? "animate-slide-left" : "animate-slide-up";
 
     return (
-        <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1200, display: "flex", flexDirection: "column", height: "100dvh" }} className={isClosing ? "animate-slide-down" : "animate-slide-up"}>
+        <div className={animClass} style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 100, display: "flex", flexDirection: "column", height: "100dvh" }}>
             <header className="nav-bar">
                 <div className="nav-bar-detail">
                     <button className="nav-bar-btn-circle" onClick={onClose}>
@@ -42,12 +43,13 @@ export function DocumentFilterView({
                     <div className="nav-bar-right" style={{ width: 44 }} />
                 </div>
             </header>
-            <div className="content-area" style={{ overflowY: "auto", flex: 1 }}>
+            
+            <div className="content-area" style={{ flex: 1, overflowY: "auto" }}>
                 <div className="section-title" style={{ paddingTop: 8 }}>Тип документа</div>
                 <div className="ios-group">
                     {typeFilterOptions.map((opt, i) => (
                         <React.Fragment key={opt.id}>
-                            <button className="ios-row" onClick={() => setTempType(opt.id)}>
+                            <button className="ios-row" onClick={() => setTempType(opt.id as DocTypeFilter)}>
                                 <div className="ios-row-content">
                                     <div className="ios-row-title">{opt.label}</div>
                                 </div>
@@ -76,10 +78,13 @@ export function DocumentFilterView({
                         </div>
                     </>
                 )}
-                
-                <div style={{ padding: "24px 16px" }}>
-                    <button className="action-btn-main" onClick={() => onApply(tempStatus, tempType)}>Применить</button>
-                </div>
+            </div>
+
+            {/* Bottom pinned action button */}
+            <div style={{ padding: "16px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "var(--bg)" }}>
+                <button className="home-action-btn home-action-btn--primary" style={{ width: "100%", padding: "14px", fontSize: "17px", borderRadius: "12px", border: "none" }} onClick={() => onApply(tempStatus, tempType)}>
+                    Применить
+                </button>
             </div>
         </div>
     );

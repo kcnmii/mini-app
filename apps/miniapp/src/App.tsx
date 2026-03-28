@@ -19,6 +19,7 @@ import { AddClientContactView } from "./views/AddClientContactView";
 import { InvoiceFormView } from "./views/InvoiceFormView";
 import { ViewDocumentView } from "./views/ViewDocumentView";
 import { ImportSuccessView } from "./views/ImportSuccessView";
+import { DocumentFilterView, type DocTypeFilter } from "./views/DocumentFilterView";
 
 import { useAuth } from "./hooks/useAuth";
 import { useSharedState } from "./hooks/useSharedState";
@@ -33,6 +34,7 @@ import { useBanks } from "./hooks/useBanks";
 export function App() {
   const [tab, setTab] = useState<TabKey>("home");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
+  const [docTypeFilter, setDocTypeFilter] = useState<DocTypeFilter>("all");
   const [clientSearch, setClientSearch] = useState("");
   const [itemSearch, setItemSearch] = useState("");
   const [docSearch, setDocSearch] = useState("");
@@ -320,6 +322,19 @@ export function App() {
     );
   }
 
+  if (subView === ("documentFilter" as any)) subViewContent = (
+    <DocumentFilterView
+        currentStatusFilter={invoiceStatusFilter}
+        currentTypeFilter={docTypeFilter}
+        onApply={(status, type) => {
+            setInvoiceStatusFilter(status);
+            setDocTypeFilter(type);
+            setSubView(null);
+        }}
+        onClose={() => setSubView(null)}
+        animationType="up"
+    />
+  );
   if (subView === ("dateFilter" as any)) subViewContent = <DateFilterView dateFilter={dateFilter as any} setDateFilter={setDateFilter as any} onClose={() => setSubView(null)} />;
   if (subView === ("bankPicker" as any)) subViewContent = (
     <BankPickerView
@@ -373,6 +388,9 @@ export function App() {
               setDocSearch={setDocSearch}
               invoiceStatusFilter={invoiceStatusFilter}
               setInvoiceStatusFilter={setInvoiceStatusFilter}
+              docTypeFilter={docTypeFilter}
+              setDocTypeFilter={setDocTypeFilter}
+              setSubView={setSubView}
               openNewInvoice={() => invHook.openNewInvoice()}
               loadAndPreviewNewInvoice={(id) => invHook.loadAndPreviewNewInvoice(id)}
               loadAndPreviewOldDocument={(id) => loadAndPreviewOldDocument(id, invHook.setInvoice, invHook.setInvoiceClientSearch)}

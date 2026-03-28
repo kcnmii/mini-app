@@ -6,7 +6,7 @@ import { DocumentRow } from "../components/DocumentRow";
 import type { InvoiceRecord, DocumentRecord } from "../types";
 import { request } from "../utils";
 
-import { DocumentFilterView, DocTypeFilter } from "./DocumentFilterView";
+import { type DocTypeFilter } from "./DocumentFilterView";
 
 interface InvoicesListViewProps {
     invoiceRecords: InvoiceRecord[];
@@ -22,6 +22,9 @@ interface InvoicesListViewProps {
     loadAndPreviewOldDocument: (id: number) => void;
     loadAndPreviewDocument: (id: number) => void;
     setStatus: (s: string) => void;
+    docTypeFilter: DocTypeFilter;
+    setDocTypeFilter: (val: DocTypeFilter) => void;
+    setSubView: (val: any) => void;
 }
 
 export function InvoicesListView({
@@ -37,20 +40,18 @@ export function InvoicesListView({
     loadAndPreviewNewInvoice,
     loadAndPreviewOldDocument,
     loadAndPreviewDocument,
-    setStatus
+    setStatus,
+    docTypeFilter,
+    setDocTypeFilter,
+    setSubView
 }: InvoicesListViewProps) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
-    const [docTypeFilter, setDocTypeFilter] = useState<DocTypeFilter>('all');
-
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
-
-    const [showFilters, setShowFilters] = useState(false);
-    const [isClosingFilters, setIsClosingFilters] = useState(false);
 
     const closeCreateMenu = () => {
         setIsClosingCreateMenu(true);
@@ -65,21 +66,7 @@ export function InvoicesListView({
     };
 
     const openFilters = () => {
-        setShowFilters(true);
-    };
-
-    const handleApplyFilters = (status: string, type: DocTypeFilter) => {
-        setDocTypeFilter(type);
-        setInvoiceStatusFilter(status);
-        closeFilters();
-    };
-
-    const closeFilters = () => {
-        setIsClosingFilters(true);
-        setTimeout(() => {
-            setShowFilters(false);
-            setIsClosingFilters(false);
-        }, 300);
+        setSubView("documentFilter");
     };
 
     const handleBulkDelete = async () => {
@@ -343,16 +330,7 @@ export function InvoicesListView({
                 </div>
             )}
 
-            {/* Filter Screen */}
-            {(showFilters || isClosingFilters) && (
-                <DocumentFilterView 
-                    currentStatusFilter={invoiceStatusFilter} 
-                    currentTypeFilter={docTypeFilter} 
-                    onApply={handleApplyFilters} 
-                    onClose={closeFilters} 
-                    isClosing={isClosingFilters} 
-                />
-            )}
+
         </>
     );
 }
