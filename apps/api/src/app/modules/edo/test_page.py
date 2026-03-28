@@ -168,9 +168,22 @@ async def test_sigex_page():
         <h1>🔐 SIGEX Signing Test</h1>
         <p class="subtitle">Тестирование подписания через eGov Mobile</p>
 
+        <!-- Format Selector -->
+        <div class="card">
+            <div class="card-title">⚙️ Формат документа</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn" id="btn-xml" onclick="selectFormat('xml')" style="height: 40px; font-size: 14px; background: rgba(46,160,67,0.2); border: 1px solid #238636; color: #3fb950; border-radius: 10px;">XML (лёгкий)</button>
+                <button class="btn" id="btn-pdf" onclick="selectFormat('pdf')" style="height: 40px; font-size: 14px; background: rgba(139,148,158,0.1); border: 1px solid #30363d; color: #8b949e; border-radius: 10px;">PDF (реальный счёт)</button>
+            </div>
+            <div style="margin-top: 8px; font-size: 11px; color: #8b949e;" id="format-hint">
+                XML — минимальный тестовый документ (~500 байт)<br>
+                PDF — реальный счёт-фактура из шаблона (~50 КБ)
+            </div>
+        </div>
+
         <!-- Step 1: Document Preview -->
         <div class="card" id="doc-card">
-            <div class="card-title">📄 Тестовый XML документ</div>
+            <div class="card-title" id="doc-card-title">📄 Тестовый XML документ</div>
             <div class="xml-preview" id="xml-preview">Загрузка...</div>
             <div style="margin-top: 12px;">
                 <div class="info-row">
@@ -180,6 +193,10 @@ async def test_sigex_page():
                 <div class="info-row">
                     <span class="info-label">Размер</span>
                     <span class="info-value" id="doc-size">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">MIME</span>
+                    <span class="info-value" id="doc-mime">—</span>
                 </div>
             </div>
         </div>
@@ -240,6 +257,7 @@ async def test_sigex_page():
         const API_BASE = window.location.origin;
         let currentSession = null;
         let pollTimer = null;
+        let selectedFormat = 'xml';
 
         function log(msg, type = '') {
             const el = document.getElementById('log');
@@ -248,15 +266,46 @@ async def test_sigex_page():
             el.scrollTop = el.scrollHeight;
         }
 
+        function selectFormat(fmt) {
+            selectedFormat = fmt;
+            const btnXml = document.getElementById('btn-xml');
+            const btnPdf = document.getElementById('btn-pdf');
+            if (fmt === 'xml') {
+                btnXml.style.background = 'rgba(46,160,67,0.2)';
+                btnXml.style.borderColor = '#238636';
+                btnXml.style.color = '#3fb950';
+                btnPdf.style.background = 'rgba(139,148,158,0.1)';
+                btnPdf.style.borderColor = '#30363d';
+                btnPdf.style.color = '#8b949e';
+            } else {
+                btnPdf.style.background = 'rgba(31,111,235,0.2)';
+                btnPdf.style.borderColor = '#1f6feb';
+                btnPdf.style.color = '#58a6ff';
+                btnXml.style.background = 'rgba(139,148,158,0.1)';
+                btnXml.style.borderColor = '#30363d';
+                btnXml.style.color = '#8b949e';
+            }
+            loadDoc();
+        }
+
         // Load doc on page open
         async function loadDoc() {
             try {
-                const resp = await fetch(`${API_BASE}/edo/test-sigex-generate`);
+                const resp = await fetch(`${API_BASE}/edo/test-sigex-generate?format=${selectedFormat}`);
                 const data = await resp.json();
-                document.getElementById('xml-preview').textContent = data.xml_content;
+                if (selectedFormat === 'xml') {
+                    document.getElementById('doc-card-title').textContent = '📄 Тестовый XML документ';
+                    document.getElementById('xml-preview').textContent = data.xml_content;
+                    document.getElementById('xml-preview').style.color = '#7ee787';
+                } else {
+                    document.getElementById('doc-card-title').textContent = '📄 PDF счёт-фактура';
+                    document.getElementById('xml-preview').textContent = `[PDF файл — ${data.size_bytes.toLocaleString()} байт]\n\nЭто реальный PDF документ из шаблона invoice-kz.\neGov Mobile покажет превью PDF перед подписанием.`;
+                    document.getElementById('xml-preview').style.color = '#58a6ff';
+                }
                 document.getElementById('md5-hash').textContent = data.md5;
-                document.getElementById('doc-size').textContent = data.size_bytes + ' bytes';
-                log('Тестовый XML документ сгенерирован', 'success');
+                document.getElementById('doc-size').textContent = data.size_bytes.toLocaleString() + ' bytes';
+                document.getElementById('doc-mime').textContent = data.mime || '(пусто)';
+                log(`${selectedFormat.toUpperCase()} документ загружен (${data.size_bytes.toLocaleString()} байт)`, 'success');
             } catch (e) {
                 log('Ошибка загрузки документа: ' + e.message, 'error');
             }
@@ -268,8 +317,8 @@ async def test_sigex_page():
             btn.innerHTML = '<span class="spinner"></span> Регистрация в SIGEX...';
 
             try {
-                log('Отправка запроса на регистрацию в SIGEX...', 'info');
-                const resp = await fetch(`${API_BASE}/edo/test-sigex-sign`, { method: 'POST' });
+                log(`Отправка запроса на регистрацию в SIGEX (формат: ${selectedFormat.toUpperCase()})...`, 'info');
+                const resp = await fetch(`${API_BASE}/edo/test-sigex-sign?format=${selectedFormat}`, { method: 'POST' });
                 const data = await resp.json();
 
                 if (!data.success) {
@@ -315,7 +364,8 @@ async def test_sigex_page():
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         data_url: data.data_url,
-                        xml_b64: data.xml_b64,
+                        xml_b64: data.doc_b64,
+                        mime: data.mime || '',
                     }),
                 }).then(r => r.json()).then(result => {
                     if (result.success) {
@@ -392,12 +442,34 @@ async def test_sigex_page():
 # GET /edo/test-sigex-generate — Generate test XML
 # ──────────────────────────────────────────────
 @router.get("/test-sigex-generate")
-async def test_sigex_generate():
+async def test_sigex_generate(format: str = "xml"):
+    if format == "pdf":
+        pdf_path = "/app/tmp/output/invoice-TEST-001.pdf"
+        import os
+        # Fallback paths for local dev
+        for p in [pdf_path, "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-TEST-001.pdf",
+                  "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-002.pdf"]:
+            if os.path.exists(p):
+                pdf_path = p
+                break
+        if os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            md5 = hashlib.md5(pdf_bytes).hexdigest()
+            return {
+                "xml_content": f"[PDF: {os.path.basename(pdf_path)}]",
+                "md5": md5,
+                "size_bytes": len(pdf_bytes),
+                "mime": "@file/pdf",
+            }
+        return {"xml_content": "PDF not found", "md5": "", "size_bytes": 0, "mime": ""}
+
     xml_content, md5 = _generate_test_xml()
     return {
         "xml_content": xml_content,
         "md5": md5,
         "size_bytes": len(xml_content.encode("utf-8")),
+        "mime": "",
     }
 
 
@@ -405,16 +477,32 @@ async def test_sigex_generate():
 # POST /edo/test-sigex-sign — Register signing on SIGEX
 # ──────────────────────────────────────────────
 @router.post("/test-sigex-sign")
-async def test_sigex_sign():
+async def test_sigex_sign(format: str = "xml"):
     try:
-        xml_content, md5 = _generate_test_xml()
-        xml_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("ascii")
+        mime = ""
+        if format == "pdf":
+            import os
+            pdf_path = "/app/tmp/output/invoice-TEST-001.pdf"
+            for p in [pdf_path, "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-TEST-001.pdf",
+                      "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-002.pdf"]:
+                if os.path.exists(p):
+                    pdf_path = p
+                    break
+            with open(pdf_path, "rb") as f:
+                doc_bytes = f.read()
+            doc_b64 = base64.b64encode(doc_bytes).decode("ascii")
+            md5 = hashlib.md5(doc_bytes).hexdigest()
+            mime = "@file/pdf"
+            logger.info("Test SIGEX: using PDF (%d bytes)", len(doc_bytes))
+        else:
+            xml_content, md5 = _generate_test_xml()
+            doc_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("ascii")
 
         # Step 1: Register signing on SIGEX
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
                 f"{SIGEX_BASE}/api/egovQr",
-                json={"description": f"Тест подписания doc-mini-app | MD5: {md5}"},
+                json={"description": f"Тест подписания doc-mini-app ({format.upper()}) | MD5: {md5}"},
             )
             resp.raise_for_status()
             data = resp.json()
@@ -429,12 +517,13 @@ async def test_sigex_sign():
         _test_sessions[session_id] = {
             "data_url": data["dataURL"],
             "sign_url": data["signURL"],
-            "xml_b64": xml_b64,
+            "doc_b64": doc_b64,
             "md5": md5,
+            "mime": mime,
             "created_at": datetime.now().isoformat(),
         }
 
-        logger.info("Test SIGEX session registered: %s", session_id)
+        logger.info("Test SIGEX session registered: %s (format=%s)", session_id, format)
 
         return {
             "success": True,
@@ -444,8 +533,9 @@ async def test_sigex_sign():
             "egov_mobile_link": data.get("eGovMobileLaunchLink", ""),
             "egov_business_link": data.get("eGovBusinessLaunchLink", ""),
             "qr_code_b64": data.get("qrCode", ""),
-            "xml_b64": xml_b64,
+            "doc_b64": doc_b64,
             "md5": md5,
+            "mime": mime,
         }
 
     except Exception as exc:
@@ -464,10 +554,11 @@ async def test_sigex_sign():
 @router.post("/test-sigex-send-data")
 async def test_sigex_send_data(body: dict):
     data_url = body.get("data_url", "")
-    xml_b64 = body.get("xml_b64", "")
+    doc_b64 = body.get("xml_b64", "")  # kept as xml_b64 for backwards compat
+    mime = body.get("mime", "")
 
-    if not data_url or not xml_b64:
-        return JSONResponse({"success": False, "error": "Missing data_url or xml_b64"}, status_code=400)
+    if not data_url or not doc_b64:
+        return JSONResponse({"success": False, "error": "Missing data_url or doc data"}, status_code=400)
 
     payload = {
         "signMethod": "CMS_SIGN_ONLY",
@@ -483,8 +574,8 @@ async def test_sigex_send_data(body: dict):
                 ],
                 "document": {
                     "file": {
-                        "mime": "",
-                        "data": xml_b64,
+                        "mime": mime,
+                        "data": doc_b64,
                     }
                 },
             }

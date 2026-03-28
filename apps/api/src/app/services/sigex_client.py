@@ -73,6 +73,7 @@ class SigexClient:
         names: list[str],
         meta: list[dict[str, str]] | None = None,
         sign_method: str = "CMS_SIGN_ONLY",
+        mime: str = "",
     ) -> dict[str, Any]:
         """
         POST {dataURL} — send document data for signing.
@@ -83,6 +84,7 @@ class SigexClient:
             names: [nameRu, nameKz, nameEn] — at least one required
             meta: optional list of {name, value} metadata dicts
             sign_method: CMS_SIGN_ONLY | CMS_WITH_DATA | XML
+            mime: MIME hint for eGov Mobile (use '@file/pdf' for PDFs)
         """
         payload = {
             "signMethod": sign_method,
@@ -95,13 +97,14 @@ class SigexClient:
                     "meta": meta or [],
                     "document": {
                         "file": {
-                            "mime": "",
+                            "mime": mime,
                             "data": document_b64,
                         }
                     },
                 }
             ],
         }
+
 
         last_error = None
         for attempt in range(25):  # SIGEX JS client uses 25 retries

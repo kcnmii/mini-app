@@ -414,6 +414,7 @@ async def _send_data_and_poll(
             document_b64=document_b64,
             names=names,
             meta=meta,
+            mime="@file/pdf",  # eGov Mobile shows PDF preview before signing
         )
         logger.info("SIGEX data sent for document %d", document_id)
     except Exception as exc:
