@@ -7,6 +7,8 @@ export type TelegramWebApp = {
     };
     ready?: () => void;
     expand?: () => void;
+    openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
+    close?: () => void;
 };
 
 declare global {

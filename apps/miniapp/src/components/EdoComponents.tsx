@@ -3,6 +3,20 @@ import { Icon } from "./Common";
 import { request } from "../utils";
 import type { SigningSessionInfo, SigningStatusInfo, SignatureInfo } from "../types";
 
+/**
+ * Open an external URL from within the Telegram Mini App.
+ * Uses Telegram WebApp.openLink() which launches the system browser/app.
+ * Falls back to window.open() for non-Telegram environments.
+ */
+function openExternalLink(url: string) {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.openLink) {
+        tg.openLink(url);
+    } else {
+        window.open(url, "_blank");
+    }
+}
+
 interface SignDocumentSheetProps {
     documentId: number;
     documentTitle: string;
@@ -37,7 +51,7 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
 
             // Open eGov Mobile deeplink
             if (result.egov_mobile_link) {
-                window.location.href = result.egov_mobile_link;
+                openExternalLink(result.egov_mobile_link);
             }
 
             // Start polling for signature
@@ -174,7 +188,9 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                         {signingSession?.egov_mobile_link && (
                             <button
                                 onClick={() => {
-                                    window.location.href = signingSession.egov_mobile_link;
+                                    if (signingSession?.egov_mobile_link) {
+                                        openExternalLink(signingSession.egov_mobile_link);
+                                    }
                                 }}
                                 style={{
                                     marginTop: "20px", padding: "12px 24px",
