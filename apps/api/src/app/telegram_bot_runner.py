@@ -86,9 +86,8 @@ async def on_sign_edo_callback(callback: CallbackQuery) -> None:
         from app.core.config import settings
         backend_url = str(settings.telegram_app_url).split("/#")[0]
         # remove "/mini-app" or whatever frontend path if it's the exact domain, usually API is /api
-        # But wait, if settings.telegram_app_url is "https://domain.com/...", backend is the same host
         parsed = urllib.parse.urlparse(settings.telegram_app_url)
-        base_url = f"{parsed.scheme}://{parsed.netloc}/api" if parsed.netloc else "https://doc-mini-app-production.up.railway.app/api"
+        base_url = f"{parsed.scheme}://{parsed.netloc}/api" if parsed.netloc else "https://api.doc.onlink.kz"
         
         # Create a mock request obj or just manually call the logic
         from app.core.models.document import Document
