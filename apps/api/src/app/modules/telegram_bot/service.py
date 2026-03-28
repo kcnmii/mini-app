@@ -96,6 +96,24 @@ class TelegramBotClient:
         )
         return message.message_id
 
+    async def send_egov_signing_link(
+        self,
+        *,
+        chat_id: int,
+        text: str,
+        egov_link: str,
+    ) -> int:
+        if not self.enabled: return 0
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="📱 Открыть eGov Mobile", url=egov_link)]]
+        )
+        message = await self.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=keyboard,
+        )
+        return message.message_id
+
     async def close(self) -> None:
         if not self.enabled: return
         await self.bot.session.close()

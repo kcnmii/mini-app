@@ -179,6 +179,20 @@ async def initiate_signing(
         signer_role=req.signer_role,
     )
 
+    # 🚀 Iron-clad iOS Fallback: Send deep link to the Telegram Chat! 🚀
+    if result.get("eGovMobileLaunchLink"):
+        try:
+            from app.modules.telegram_bot.service import TelegramBotClient
+            bot = TelegramBotClient()
+            await bot.send_egov_signing_link(
+                chat_id=user_id,
+                text=f"Нажмите кнопку ниже, чтобы перейти в <b>eGov Mobile</b> и подписать документ:\n\n📄 <b>{doc.title}</b>",
+                egov_link=result["eGovMobileLaunchLink"],
+            )
+            await bot.close()
+        except Exception as e:
+            logger.warning("Failed to send eGov link to telegram: %s", e)
+
     return SignDocumentResponse(
         signing_session_id=session.id,
         egov_mobile_link=result["eGovMobileLaunchLink"],
