@@ -108,7 +108,7 @@ def _add_header(page: fitz.Page, config: StampConfig):
         fitz.Point(margin + 5, y),
         "ДОКУМЕНТ ЗАРЕГИСТРИРОВАН И ПОДПИСАН В СИСТЕМЕ ЭДО doc.onlink.kz",
         fontsize=8.5,
-        fontname="helv-bold",
+        fontname="helvb",
         color=PRIMARY_BLUE,
     )
     
@@ -170,7 +170,7 @@ def _add_footer(page: fitz.Page, config: StampConfig):
         role_label = "ОТПРАВИТЕЛЬ" if is_sender else "ПОЛУЧАТЕЛЬ"
         
         # Header of the box
-        page.insert_text(fitz.Point(x + 10, y_text), role_label, fontsize=7.5, fontname="helv-bold", color=PRIMARY_BLUE)
+        page.insert_text(fitz.Point(x + 10, y_text), role_label, fontsize=7.5, fontname="helvb", color=PRIMARY_BLUE)
         
         if not signer:
             page.insert_text(fitz.Point(x + 10, y_text + 40), "ОЖИДАНИЕ ПОДПИСИ", fontsize=9, fontname="helv", color=(0.7, 0.7, 0.7))
@@ -179,18 +179,23 @@ def _add_footer(page: fitz.Page, config: StampConfig):
         y_text += 20
         # Org info
         org_name = (signer.org_name or "").upper()
-        page.insert_text(fitz.Point(x + 10, y_text), org_name[:50], fontsize=7, fontname="helv-bold", color=VALUE_COLOR)
+        page.insert_text(fitz.Point(x + 10, y_text), org_name[:50], fontsize=7, fontname="helvb", color=VALUE_COLOR)
         if signer.org_bin:
             y_text += 10
             page.insert_text(fitz.Point(x + 10, y_text), f"БИН/ИИН: {signer.org_bin}", fontsize=7, fontname="helv", color=VALUE_COLOR)
 
         y_text += 18
+        # Date parsing helper
+        def get_date_only(dt_str: str):
+            if not dt_str: return "—"
+            return dt_str.split('T')[0] if 'T' in dt_str else dt_str.split(' ')[0]
+
         # Fields
         fields = [
             ("ФИО", signer.full_name),
             ("Права", signer.signer_title or "Первый руководитель"),
             ("Сертификат", signer.cert_serial[:30] + "..."),
-            ("Период", f"с {signer.cert_valid_from.split('T')[0]} до {signer.cert_valid_to.split('T')[0]}"),
+            ("Период", f"с {get_date_only(signer.cert_valid_from)} до {get_date_only(signer.cert_valid_to)}"),
             ("Дата подписи", signer.signed_at),
         ]
         
