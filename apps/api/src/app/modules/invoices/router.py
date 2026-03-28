@@ -531,7 +531,7 @@ async def generate_document_from_invoice(
 
     if doc_type == "act":
         template_key = "act-kz"
-        doc_title = f"Акт {doc_number}"
+        doc_title = f"{doc_number}"
         data = {
             "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
             "MyCompanyRequisiteRegisteredAddressText": (profile.supplier_address if profile else "") or "",
@@ -547,7 +547,7 @@ async def generate_document_from_invoice(
         }
     else:
         template_key = "waybill-kz"
-        doc_title = f"Накладная {doc_number}"
+        doc_title = f"{doc_number}"
         data = {
             "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
             "MyCompanyRequisiteRqBin": (profile.company_iin if profile else "") or "",

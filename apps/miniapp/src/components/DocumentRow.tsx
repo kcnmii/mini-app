@@ -11,8 +11,8 @@ interface DocumentRowProps {
 }
 
 const getDocTypeInfo = (title: string): { code: string; label: string; color: string; bg: string } => {
-    if (title.startsWith("Акт")) return { code: "АВР", label: title, color: "#34C759", bg: "rgba(52, 199, 89, 0.12)" };
-    if (title.startsWith("Накладная")) return { code: "НКЛ", label: title, color: "#FF9500", bg: "rgba(255, 149, 0, 0.12)" };
+    if (title.startsWith("Акт") || title.startsWith("АВР")) return { code: "АВР", label: title, color: "#34C759", bg: "rgba(52, 199, 89, 0.12)" };
+    if (title.startsWith("Накладная") || title.startsWith("НКЛ")) return { code: "НКЛ", label: title, color: "#FF9500", bg: "rgba(255, 149, 0, 0.12)" };
     return { code: "СФ", label: title.replace(/^Счет\s*(№|N)?\s*/i, ""), color: "var(--primary, #007AFF)", bg: "rgba(0, 122, 255, 0.12)" };
 };
 

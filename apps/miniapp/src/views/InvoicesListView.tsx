@@ -102,8 +102,8 @@ export function InvoicesListView({
         
         // Filter by Type
         if (docTypeFilter === "invoice") return false;
-        if (docTypeFilter === "avr" && !d.title.startsWith("Акт")) return false;
-        if (docTypeFilter === "waybill" && !d.title.startsWith("Накладная")) return false;
+        if (docTypeFilter === "avr" && !d.title.startsWith("Акт") && !d.title.startsWith("АВР")) return false;
+        if (docTypeFilter === "waybill" && !d.title.startsWith("Накладная") && !d.title.startsWith("НКЛ")) return false;
 
         // If the user selects a specific Status (e.g. "Paid"), and they didn't explicitly pick a non-invoice Type,
         // it makes sense to hide non-invoices, since only invoices can be "Paid".
