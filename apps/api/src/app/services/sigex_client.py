@@ -49,7 +49,7 @@ class SigexClient:
           - eGovMobileLaunchLink
           - eGovBusinessLaunchLink
         """
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
                 f"{self.base_url}/api/egovQr",
                 json={"description": description},
@@ -106,7 +106,7 @@ class SigexClient:
         last_error = None
         for attempt in range(5):
             try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with httpx.AsyncClient(timeout=60.0) as client:
                     resp = await client.post(data_url, json=payload)
                     resp.raise_for_status()
                     data = resp.json()
