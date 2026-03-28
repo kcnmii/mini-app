@@ -580,6 +580,8 @@ async def guest_document_page(share_uuid: str, db: Session = Depends(get_db)):
 @router.get("/public/{share_uuid}/pdf-b64")
 async def get_public_pdf_b64(share_uuid: str, db: Session = Depends(get_db)):
     """Return PDF document bytes as base64 for NCALayer CMS signing."""
+    from app.core import s3
+    
     share = db.query(DocumentShare).filter(
         DocumentShare.share_uuid == share_uuid,
     ).first()
@@ -590,16 +592,10 @@ async def get_public_pdf_b64(share_uuid: str, db: Session = Depends(get_db)):
     if not doc or not doc.pdf_path:
         return JSONResponse({"success": False, "error": "PDF не найден"}, status_code=404)
 
-    import os
-    pdf_path = doc.pdf_path
-    if not os.path.isabs(pdf_path):
-        pdf_path = os.path.join("/app", pdf_path)
+    pdf_bytes = await s3.download_file(doc.pdf_path)
 
-    if not os.path.exists(pdf_path):
-        return JSONResponse({"success": False, "error": f"Файл не найден: {pdf_path}"}, status_code=404)
-
-    with open(pdf_path, "rb") as f:
-        pdf_bytes = f.read()
+    if not pdf_bytes:
+        return JSONResponse({"success": False, "error": f"Файл не найден в S3"}, status_code=404)
 
     return {
         "success": True,
@@ -615,7 +611,8 @@ async def get_public_pdf_b64(share_uuid: str, db: Session = Depends(get_db)):
 @router.get("/public/{share_uuid}/pdf")
 async def download_public_pdf(share_uuid: str, db: Session = Depends(get_db)):
     """Download the PDF file."""
-    from fastapi.responses import FileResponse
+    from fastapi.responses import Response
+    from app.core import s3
     import os
 
     share = db.query(DocumentShare).filter(
@@ -628,15 +625,20 @@ async def download_public_pdf(share_uuid: str, db: Session = Depends(get_db)):
     if not doc or not doc.pdf_path:
         raise HTTPException(status_code=404, detail="PDF не найден")
 
-    pdf_path = doc.pdf_path
-    if not os.path.isabs(pdf_path):
-        pdf_path = os.path.join("/app", pdf_path)
+    pdf_bytes = await s3.download_file(doc.pdf_path)
 
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="Файл не найден в S3")
 
     filename = f"{doc.title or 'document'}.pdf"
-    return FileResponse(pdf_path, filename=filename, media_type="application/pdf")
+    if doc.pdf_path.endswith("_stamped.pdf"):
+        filename = filename.replace(".pdf", "_stamped.pdf")
+
+    return Response(
+        pdf_bytes, 
+        media_type="application/pdf", 
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # ──────────────────────────────────────────────
@@ -694,7 +696,7 @@ async def save_guest_signature(
     # Auto-stamp PDF when both parties have signed
     try:
         from app.services.stamp_trigger import maybe_stamp_document
-        maybe_stamp_document(db, doc.id)
+        await maybe_stamp_document(db, doc.id)
     except Exception as stamp_err:
         logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
 
@@ -868,7 +870,7 @@ async def _send_guest_data_background(
             # Auto-stamp PDF
             try:
                 from app.services.stamp_trigger import maybe_stamp_document
-                maybe_stamp_document(db, document_id)
+                await maybe_stamp_document(db, document_id)
             except Exception as stamp_err:
                 logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
         finally:

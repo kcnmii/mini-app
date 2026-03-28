@@ -518,7 +518,7 @@ async def _poll_and_save_signature(
             # Auto-stamp PDF when both parties have signed
             try:
                 from app.services.stamp_trigger import maybe_stamp_document
-                maybe_stamp_document(db, document_id)
+                await maybe_stamp_document(db, document_id)
             except Exception as stamp_err:
                 logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
         finally:
@@ -550,3 +550,19 @@ async def _poll_and_save_signature(
         finally:
             db.close()
 
+@router.post("/admin/stamp-all-retroactive")
+async def stamp_all_retroactive(db: Session = Depends(get_db)):
+    """Retroactively stamp all old documents that were signed before stamping was fixed."""
+    from app.services.stamp_trigger import maybe_stamp_document
+    docs = db.query(Document).filter(Document.edo_status == "signed_both").all()
+    results = []
+    
+    for doc in docs:
+        if doc.pdf_path and not doc.pdf_path.endswith("_stamped.pdf"):
+            try:
+                success = await maybe_stamp_document(db, doc.id)
+                results.append({"id": doc.id, "success": success})
+            except Exception as e:
+                results.append({"id": doc.id, "success": False, "error": str(e)})
+
+    return {"processed": len(results), "results": results}
