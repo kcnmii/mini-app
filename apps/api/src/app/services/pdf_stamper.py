@@ -81,197 +81,137 @@ def add_stamp_to_pdf(
 
 
 def _add_header(page: fitz.Page, config: StampConfig):
-    """Draw the ЭДО header at the top of the first page."""
+    """Draw a premium ЭДО header at the top of the first page."""
     width = page.rect.width
-    header_height = 60
-    margin = 28
-    font_size_small = 7
-    font_size_tiny = 6
-
-    # Shift existing content down by inserting space at the top
-    # We do this by modifying the cropbox/mediabox
+    header_height = 55
+    margin = 35
+    
+    # Text colors
+    PRIMARY_BLUE = (0.016, 0.231, 0.455)  # #043B74
+    TEXT_GRAY = (0.4, 0.4, 0.5)
+    
+    # Extend page box for header
     original_rect = page.rect
-    new_height = original_rect.height + header_height
     page.set_mediabox(fitz.Rect(0, -header_height, original_rect.width, original_rect.height))
 
-    # Draw a light background for the header
-    header_rect = fitz.Rect(0, -header_height, width, 0)
-    page.draw_rect(header_rect, color=None, fill=(0.96, 0.97, 0.99))
+    # Background
+    header_rect = fitz.Rect(margin, -header_height + 10, width - margin, -10)
+    page.draw_rect(header_rect, color=None, fill=(0.97, 0.98, 1.0))
+    
+    # Border
+    page.draw_line(fitz.Point(margin, -10), fitz.Point(width - margin, -10), color=(0.9, 0.9, 0.94), width=0.5)
 
-    # Draw a bottom line
-    page.draw_line(
-        fitz.Point(margin, -1),
-        fitz.Point(width - margin, -1),
-        color=(0.8, 0.82, 0.85),
-        width=0.5,
-    )
-
-    y = -header_height + 8
-
-    # Line 1: Service info
-    text_service = f"Документ зарегистрирован и подписан с помощью сервиса электронного документооборота ({config.edo_service_url})"
+    y = -header_height + 25
+    
+    # Main Header Text
     page.insert_text(
-        fitz.Point(margin, y + font_size_small),
-        text_service,
-        fontsize=font_size_small,
-        fontname="helv",
-        color=(0.3, 0.3, 0.3),
+        fitz.Point(margin + 5, y),
+        "ДОКУМЕНТ ЗАРЕГИСТРИРОВАН И ПОДПИСАН В СИСТЕМЕ ЭДО doc.onlink.kz",
+        fontsize=8.5,
+        fontname="helv-bold",
+        color=PRIMARY_BLUE,
     )
-
+    
     y += 12
-    # Line 2: MD5
+    # MD5 Hash text
     if config.md5_hash:
-        text_md5 = f"MD5 Hash документа: {config.md5_hash}"
         page.insert_text(
-            fitz.Point(margin, y + font_size_tiny),
-            text_md5,
-            fontsize=font_size_tiny,
+            fitz.Point(margin + 5, y),
+            f"MD5 Hash документа: {config.md5_hash}",
+            fontsize=7,
             fontname="helv",
-            color=(0.4, 0.4, 0.4),
+            color=TEXT_GRAY,
         )
 
-    y += 10
-    # Line 3: Link
+    # Verification URL at far right
     if config.doc_url:
-        text_link = f"Ссылка на электронный документ: {config.doc_url}"
         page.insert_text(
-            fitz.Point(margin, y + font_size_tiny),
-            text_link,
-            fontsize=font_size_tiny,
+            fitz.Point(width - margin - 150, y - 6),
+            "Проверить подлинность:",
+            fontsize=6,
             fontname="helv",
-            color=(0.0, 0.35, 0.7),
+            color=TEXT_GRAY,
         )
-
-    y += 10
-    # Line 4: Sender/Receiver links
-    if config.doc_url:
-        sender_link = f"Для отправителя — {config.doc_url}?role=sender"
-        receiver_link = f"Для получателя — {config.doc_url}?role=receiver"
         page.insert_text(
-            fitz.Point(margin, y + font_size_tiny),
-            sender_link,
-            fontsize=font_size_tiny,
+            fitz.Point(width - margin - 150, y + 2),
+            config.doc_url,
+            fontsize=6.5,
             fontname="helv",
-            color=(0.0, 0.35, 0.7),
-        )
-        y += 9
-        page.insert_text(
-            fitz.Point(margin, y + font_size_tiny),
-            receiver_link,
-            fontsize=font_size_tiny,
-            fontname="helv",
-            color=(0.0, 0.35, 0.7),
+            color=PRIMARY_BLUE,
         )
 
 
 def _add_footer(page: fitz.Page, config: StampConfig):
-    """Draw signature table at the bottom of the last page."""
+    """Draw a professional signature table (Uchet style) at the bottom."""
     width = page.rect.width
-    margin = 28
-    footer_height = 180
-    font_size = 7
-    font_size_label = 6
-    line_height = 10
-    qr_size = 65
-
-    # Extend page downward for footer
+    margin = 35
+    footer_height = 200
+    
+    # Style constants
+    PRIMARY_BLUE = (0.016, 0.231, 0.455)  # #043B74
+    BORDER_GRAY = (0.85, 0.85, 0.88)
+    LABEL_COLOR = (0.45, 0.45, 0.5)
+    VALUE_COLOR = (0.1, 0.1, 0.15)
+    
+    # Extend page downward
     original_rect = page.rect
-    page.set_mediabox(fitz.Rect(
-        original_rect.x0,
-        original_rect.y0,
-        original_rect.x1,
-        original_rect.y1 + footer_height,
-    ))
+    page.set_mediabox(fitz.Rect(0, 0, original_rect.width, original_rect.height + footer_height))
+    
+    footer_top = original_rect.height + 15
+    box_width = (width - 2 * margin - 20) / 2
+    
+    # Helper to draw a signer box
+    def draw_signer_box(x, y, signer: SignerInfo | None, is_sender: bool):
+        box_rect = fitz.Rect(x, y, x + box_width, y + 175)
+        # Background box
+        page.draw_rect(box_rect, color=BORDER_GRAY, width=0.5, fill=(0.99, 0.99, 1.0))
+        
+        y_text = y + 15
+        role_label = "ОТПРАВИТЕЛЬ" if is_sender else "ПОЛУЧАТЕЛЬ"
+        
+        # Header of the box
+        page.insert_text(fitz.Point(x + 10, y_text), role_label, fontsize=7.5, fontname="helv-bold", color=PRIMARY_BLUE)
+        
+        if not signer:
+            page.insert_text(fitz.Point(x + 10, y_text + 40), "ОЖИДАНИЕ ПОДПИСИ", fontsize=9, fontname="helv", color=(0.7, 0.7, 0.7))
+            return
 
-    footer_top = original_rect.height
-    content_width = width - 2 * margin
-    half = content_width / 2
+        y_text += 20
+        # Org info
+        org_name = (signer.org_name or "").upper()
+        page.insert_text(fitz.Point(x + 10, y_text), org_name[:50], fontsize=7, fontname="helv-bold", color=VALUE_COLOR)
+        if signer.org_bin:
+            y_text += 10
+            page.insert_text(fitz.Point(x + 10, y_text), f"БИН/ИИН: {signer.org_bin}", fontsize=7, fontname="helv", color=VALUE_COLOR)
 
-    # Draw separator line
-    page.draw_line(
-        fitz.Point(margin, footer_top + 8),
-        fitz.Point(width - margin, footer_top + 8),
-        color=(0.7, 0.7, 0.7),
-        width=0.5,
-    )
-
-    # Label "подпись"
-    page.insert_text(
-        fitz.Point(margin, footer_top + 20),
-        "подпись",
-        fontsize=8,
-        fontname="helv",
-        color=(0.4, 0.4, 0.4),
-    )
-
-    # Draw columns: Sender (left) | Receiver (right)
-    col_x = [margin, margin + half + 10]
-    signers = []
-    if config.sender:
-        signers.append((0, config.sender))
-    if config.receiver:
-        signers.append((1, config.receiver))
-
-    for col_idx, signer in signers:
-        x = col_x[col_idx]
-        y_start = footer_top + 35
-
-        # Vertical separator between columns
-        if col_idx == 1:
-            page.draw_line(
-                fitz.Point(margin + half + 5, footer_top + 8),
-                fitz.Point(margin + half + 5, footer_top + footer_height - 10),
-                color=(0.8, 0.8, 0.8),
-                width=0.5,
-            )
-
-        rows = [
-            ("", f"{signer.role_label}"),
-            ("", f"{signer.org_name}" + (f" ({signer.org_bin})" if signer.org_bin else "")),
+        y_text += 18
+        # Fields
+        fields = [
             ("ФИО", signer.full_name),
-            ("Права подписанта", signer.signer_title or "—"),
-            ("Период действия сертификата", f"c {signer.cert_valid_from} по {signer.cert_valid_to}" if signer.cert_valid_from else "—"),
-            ("Серийный номер сертификата", signer.cert_serial or "—"),
-            ("Дата подписания", signer.signed_at or "—"),
+            ("Права", signer.signer_title or "Первый руководитель"),
+            ("Сертификат", signer.cert_serial[:30] + "..."),
+            ("Период", f"с {signer.cert_valid_from.split('T')[0]} до {signer.cert_valid_to.split('T')[0]}"),
+            ("Дата подписи", signer.signed_at),
         ]
-
-        y = y_start
-        for label, value in rows:
-            if label:
-                # Two-column within: label + value
-                page.insert_text(
-                    fitz.Point(x, y + font_size_label),
-                    label,
-                    fontsize=font_size_label,
-                    fontname="helv",
-                    color=(0.5, 0.5, 0.5),
-                )
-                page.insert_text(
-                    fitz.Point(x + 95, y + font_size),
-                    value[:45],
-                    fontsize=font_size,
-                    fontname="helv",
-                    color=(0.15, 0.15, 0.15),
-                )
-            else:
-                # Full-width label (role/org)
-                page.insert_text(
-                    fitz.Point(x, y + font_size),
-                    value[:50],
-                    fontsize=font_size,
-                    fontname="helv",
-                    color=(0.15, 0.15, 0.15),
-                )
-            y += line_height
-
-        # QR code
+        
+        for label, val in fields:
+            page.insert_text(fitz.Point(x + 10, y_text), label, fontsize=6.5, fontname="helv", color=LABEL_COLOR)
+            page.insert_text(fitz.Point(x + 65, y_text), val[:50], fontsize=7, fontname="helv", color=VALUE_COLOR)
+            y_text += 10
+        
+        # QR Code in the corner of the box
         if config.doc_url:
             try:
                 qr_bytes = _generate_qr_png(config.doc_url + f"?role={signer.role}")
-                qr_rect = fitz.Rect(x, y + 4, x + qr_size, y + 4 + qr_size)
+                qr_size = 55
+                qr_rect = fitz.Rect(x + box_width - qr_size - 5, y + 175 - qr_size - 5, x + box_width - 5, y + 175 - 5)
                 page.insert_image(qr_rect, stream=qr_bytes)
-            except Exception as exc:
-                logger.warning("Failed to generate QR: %s", exc)
+            except Exception as e:
+                logger.warning("QR generation failed: %s", e)
+
+    # Draw both boxes
+    draw_signer_box(margin, footer_top, config.sender, True)
+    draw_signer_box(margin + box_width + 20, footer_top, config.receiver, False)
 
 
 def _generate_qr_png(data: str) -> bytes:
