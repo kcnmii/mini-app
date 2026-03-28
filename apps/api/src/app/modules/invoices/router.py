@@ -510,9 +510,28 @@ async def generate_document_from_invoice(
 
     now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%d.%m.%Y")
 
+    import re
+    # Determine sequential number for the document
+    prefix = "АВР" if doc_type == "act" else "НКЛ"
+    title_prefix = "Акт" if doc_type == "act" else "Накладная"
+    
+    last_doc = db.query(Document).filter(
+        Document.user_id == user_id,
+        Document.title.like(f"{title_prefix} {prefix}-%")
+    ).order_by(Document.id.desc()).first()
+    
+    next_num_str = "001"
+    if last_doc:
+        match = re.search(rf"{prefix}-(\d+)", last_doc.title)
+        if match:
+            padding = len(match.group(1))
+            next_num_str = str(int(match.group(1)) + 1).zfill(padding)
+            
+    doc_number = f"{prefix}-{next_num_str}"
+
     if doc_type == "act":
         template_key = "act-kz"
-        doc_title = f"Акт {inv.number}"
+        doc_title = f"Акт {doc_number}"
         data = {
             "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
             "MyCompanyRequisiteRegisteredAddressText": (profile.supplier_address if profile else "") or "",
@@ -521,19 +540,20 @@ async def generate_document_from_invoice(
             "ClientName": inv.client_name or "",
             "ClientPhone": client_phone,
             "RequisiteRegisteredAddressText": client_address,
+            "DocumentNumber": doc_number,
             "TotalQuantity": str(total_qty_int),
             "TotalSum": total_sum_formatted,
             "items": items,
         }
     else:
         template_key = "waybill-kz"
-        doc_title = f"Накладная {inv.number}"
+        doc_title = f"Накладная {doc_number}"
         data = {
             "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
             "MyCompanyRequisiteRqBin": (profile.company_iin if profile else "") or "",
             "MyCompanyRequisiteRqAccountant": (profile.executor_name if profile else "") or "",
             "RequisiteRqCompanyName": inv.client_name or "",
-            "DocumentNumber": inv.number,
+            "DocumentNumber": doc_number,
             "DocumentCreateTime": now_str,
             "TotalQuantity": str(total_qty_int),
             "TotalQuantityWords": total_qty_words,
@@ -549,7 +569,7 @@ async def generate_document_from_invoice(
         # Render DOCX
         docx_bytes = await render_service.render_document_docx(template_key, data)
 
-        safe_number = ''.join(c if c.isascii() and c.isalnum() else '-' for c in inv.number).strip('-') or 'document'
+        safe_number = ''.join(c if c.isascii() and c.isalnum() else '-' for c in doc_number).strip('-') or 'document'
         filename_prefix = f"{doc_type}-{safe_number}"
 
         # Convert to PDF
