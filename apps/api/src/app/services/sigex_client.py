@@ -120,7 +120,11 @@ class SigexClient:
                 return data
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                 last_error = exc
-                logger.warning("SIGEX send_data attempt %d failed: %s", attempt + 1, exc)
+                logger.warning("SIGEX send_data attempt %d failed: [%s] %s", attempt + 1, type(exc).__name__, exc)
+                await asyncio.sleep(1.0)
+            except TypeError as exc:
+                last_error = exc
+                logger.warning("SIGEX send_data payload TypeError attempt %d failed: %s", attempt + 1, exc)
                 await asyncio.sleep(1.0)
 
         raise SigexSigningError(f"Failed to send data after 5 attempts: {last_error}")

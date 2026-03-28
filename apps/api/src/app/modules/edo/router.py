@@ -135,9 +135,9 @@ async def initiate_signing(
     company_name = (profile.company_name if profile else "") or ""
 
     meta = [
-        {"name": "Документ", "value": doc.title},
-        {"name": "Сумма", "value": doc.total_sum},
-        {"name": "Компания", "value": company_name},
+        {"name": "Документ", "value": str(doc.title or "")},
+        {"name": "Сумма", "value": str(doc.total_sum or "0")},
+        {"name": "Компания", "value": str(company_name or "")},
     ]
 
     try:
