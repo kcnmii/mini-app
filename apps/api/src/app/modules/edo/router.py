@@ -554,7 +554,7 @@ async def _poll_and_save_signature(
 async def stamp_all_retroactive(db: Session = Depends(get_db)):
     """Retroactively stamp all old documents that were signed before stamping was fixed."""
     from app.services.stamp_trigger import maybe_stamp_document
-    docs = db.query(Document).filter(Document.edo_status == "signed_both").all()
+    docs = db.query(Document).filter(Document.edo_status.in_(["signed_both", "signed_self"])).all()
     results = []
     
     for doc in docs:

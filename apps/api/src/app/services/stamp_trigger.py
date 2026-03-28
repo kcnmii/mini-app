@@ -35,8 +35,8 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
     sender_sig = next((s for s in sigs if s.signer_role == "sender"), None)
     receiver_sig = next((s for s in sigs if s.signer_role == "receiver"), None)
 
-    if not sender_sig or not receiver_sig:
-        return False  # Not fully signed yet
+    if not sender_sig and not receiver_sig:
+        return False  # No one has signed yet
 
     # Get sender profile for org info
     profile = db.query(SupplierProfile).filter(
@@ -52,12 +52,9 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
 
     doc_url = f"{base_url}/edo/doc/{share_uuid}" if share_uuid else ""
 
-    config = StampConfig(
-        doc_url=doc_url,
-        md5_hash=doc.md5_hash or "",
-        edo_service_name="ЭДО Doc App",
-        edo_service_url="https://doc.onlink.kz",
-        sender=SignerInfo(
+    sender_info = None
+    if sender_sig:
+        sender_info = SignerInfo(
             role="sender",
             role_label="Отправитель",
             org_name=(profile.company_name if profile else "") or "",
@@ -68,8 +65,11 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
             cert_valid_to=sender_sig.certificate_valid_to.strftime("%Y-%m-%dT%H:%M:%S") if sender_sig.certificate_valid_to else "",
             signed_at=sender_sig.signed_at.strftime("%Y-%m-%d %H:%M") if sender_sig.signed_at else "",
             signer_title="Первый руководитель",
-        ),
-        receiver=SignerInfo(
+        )
+
+    receiver_info = None
+    if receiver_sig:
+        receiver_info = SignerInfo(
             role="receiver",
             role_label="Получатель",
             org_name=receiver_sig.signer_org_name or "",
@@ -80,14 +80,26 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
             cert_valid_to=receiver_sig.certificate_valid_to.strftime("%Y-%m-%dT%H:%M:%S") if receiver_sig.certificate_valid_to else "",
             signed_at=receiver_sig.signed_at.strftime("%Y-%m-%d %H:%M") if receiver_sig.signed_at else "",
             signer_title="ИП (личный ключ)",
-        ),
+        )
+
+    config = StampConfig(
+        doc_url=doc_url,
+        md5_hash=doc.md5_hash or "",
+        edo_service_name="ЭДО Doc App",
+        edo_service_url="https://doc.onlink.kz",
+        sender=sender_info,
+        receiver=receiver_info,
     )
 
-    pdf_key = doc.pdf_path
+    # ALWAYS fetch the original, unstamped PDF to prevent double-stamping
+    original_pdf_key = doc.pdf_path
+    if original_pdf_key.endswith("_stamped.pdf"):
+        original_pdf_key = original_pdf_key.replace("_stamped.pdf", ".pdf")
+
     try:
-        pdf_bytes = await s3.download_file(pdf_key)
+        pdf_bytes = await s3.download_file(original_pdf_key)
         if not pdf_bytes:
-            logger.warning("PDF not found in S3 for stamping: %s", pdf_key)
+            logger.warning("Original PDF not found in S3 for stamping: %s", original_pdf_key)
             return False
 
         # Add stamp in memory
@@ -95,12 +107,16 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
         stamped_bytes = add_stamp_to_pdf(pdf_bytes, config)
 
         # Upload stamped version
-        stamped_key = pdf_key.replace(".pdf", "_stamped.pdf")
+        stamped_key = original_pdf_key.replace(".pdf", "_stamped.pdf")
         await s3.upload_file(stamped_key, stamped_bytes)
 
         # Update document to point to stamped version
         doc.pdf_path = stamped_key
-        doc.edo_status = "signed_both"
+        # Update edo_status only if it transitioned fully
+        if sender_sig and receiver_sig:
+            doc.edo_status = "signed_both"
+        elif sender_sig:
+            doc.edo_status = "signed_self"
         db.commit()
 
         logger.info("Document %d stamped successfully (S3): %s", document_id, stamped_key)
