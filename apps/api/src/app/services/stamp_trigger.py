@@ -28,7 +28,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
 
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc or not doc.pdf_path:
-        return False
+        return "No doc or pdf_path"
 
     # Get all signatures
     sigs = db.query(Signature).filter(Signature.document_id == document_id).all()
@@ -36,7 +36,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
     receiver_sig = next((s for s in sigs if s.signer_role == "receiver"), None)
 
     if not sender_sig and not receiver_sig:
-        return False  # No one has signed yet
+        return "No signatures found in DB"
 
     # Get sender profile for org info
     profile = db.query(SupplierProfile).filter(
@@ -100,7 +100,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
         pdf_bytes = await s3.download_file(original_pdf_key)
         if not pdf_bytes:
             logger.warning("Original PDF not found in S3 for stamping: %s", original_pdf_key)
-            return False
+            return f"Original PDF not found in S3: {original_pdf_key}"
 
         # Add stamp in memory
         from app.services.pdf_stamper import add_stamp_to_pdf
