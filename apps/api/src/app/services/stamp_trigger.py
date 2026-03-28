@@ -124,4 +124,5 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
 
     except Exception as exc:
         logger.error("Failed to stamp document %d: %s", document_id, exc)
-        return False
+        import traceback
+        return f"Exception: {str(exc)} \nTrace: {traceback.format_exc()}"
