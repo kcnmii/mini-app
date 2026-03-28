@@ -444,25 +444,46 @@ async def test_sigex_page():
 @router.get("/test-sigex-generate")
 async def test_sigex_generate(format: str = "xml"):
     if format == "pdf":
-        pdf_path = "/app/tmp/output/invoice-TEST-001.pdf"
-        import os
-        # Fallback paths for local dev
-        for p in [pdf_path, "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-TEST-001.pdf",
-                  "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-002.pdf"]:
-            if os.path.exists(p):
-                pdf_path = p
-                break
-        if os.path.exists(pdf_path):
-            with open(pdf_path, "rb") as f:
-                pdf_bytes = f.read()
-            md5 = hashlib.md5(pdf_bytes).hexdigest()
-            return {
-                "xml_content": f"[PDF: {os.path.basename(pdf_path)}]",
-                "md5": md5,
-                "size_bytes": len(pdf_bytes),
-                "mime": "@file/pdf",
-            }
-        return {"xml_content": "PDF not found", "md5": "", "size_bytes": 0, "mime": ""}
+        # A tiny valid PDF string representing A4 blank page with "Test PDF Document for SIGEX"
+        pdf_bytes = b'''%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [3 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 53 >>
+stream
+BT
+/F1 24 Tf
+100 700 Td
+(Test PDF Document for SIGEX) Tj
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000282 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+384
+%%EOF'''
+        md5 = hashlib.md5(pdf_bytes).hexdigest()
+        return {
+            "xml_content": "[Сгенерированный PDF документ (437 байт)]\n\neGov Mobile покажет на экране 'Test PDF Document for SIGEX'.",
+            "md5": md5,
+            "size_bytes": len(pdf_bytes),
+            "mime": "@file/pdf",
+        }
 
     xml_content, md5 = _generate_test_xml()
     return {
@@ -481,19 +502,43 @@ async def test_sigex_sign(format: str = "xml"):
     try:
         mime = ""
         if format == "pdf":
-            import os
-            pdf_path = "/app/tmp/output/invoice-TEST-001.pdf"
-            for p in [pdf_path, "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-TEST-001.pdf",
-                      "/home/observer/Projects/new/doc-mini-app/tmp/output/invoice-002.pdf"]:
-                if os.path.exists(p):
-                    pdf_path = p
-                    break
-            with open(pdf_path, "rb") as f:
-                doc_bytes = f.read()
-            doc_b64 = base64.b64encode(doc_bytes).decode("ascii")
-            md5 = hashlib.md5(doc_bytes).hexdigest()
+            # A tiny valid PDF string representing A4 blank page with text
+            pdf_bytes = b'''%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [3 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 53 >>
+stream
+BT
+/F1 24 Tf
+100 700 Td
+(Test PDF Document for SIGEX) Tj
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000282 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+384
+%%EOF'''
+            doc_b64 = base64.b64encode(pdf_bytes).decode("ascii")
+            md5 = hashlib.md5(pdf_bytes).hexdigest()
             mime = "@file/pdf"
-            logger.info("Test SIGEX: using PDF (%d bytes)", len(doc_bytes))
+            logger.info("Test SIGEX: using tiny generated PDF (%d bytes)", len(pdf_bytes))
         else:
             xml_content, md5 = _generate_test_xml()
             doc_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("ascii")
