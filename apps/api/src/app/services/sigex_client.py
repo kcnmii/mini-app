@@ -95,7 +95,7 @@ class SigexClient:
                     "meta": meta or [],
                     "document": {
                         "file": {
-                            "mime": "",
+                            "mime": "@file/pdf",
                             "data": document_b64,
                         }
                     },

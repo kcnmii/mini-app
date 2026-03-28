@@ -604,6 +604,7 @@ async def generate_document_from_invoice(
                 docx_bytes=docx_bytes,
                 caption=f"{'📋 Акт выполненных работ' if doc_type == 'act' else '📦 Накладная'}\n{doc_title}\nКлиент: {inv.client_name}\nСумма: {total_sum_formatted} ₸",
                 user_id=user_id,
+                document_id=doc_record.id,
             )
         except Exception as e:
             # Don't fail the whole request if Telegram send fails
