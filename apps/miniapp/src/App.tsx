@@ -197,7 +197,7 @@ export function App() {
     }
   };
 
-  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", directory: "perm_contact_calendar", profile: "person" };
+  const tabIcons: Record<TabKey, string> = { home: "home", invoices: "description", directory: "archive", profile: "person" };
 
   const tabLabels: Record<TabKey, string> = { home: "Главная", invoices: "Документы", directory: "Справочник", profile: "Профиль" };
 
