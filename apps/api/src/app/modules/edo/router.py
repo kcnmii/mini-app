@@ -514,6 +514,13 @@ async def _poll_and_save_signature(
                 "Signature saved for document %d, signer=%s, role=%s",
                 document_id, signer_name, signer_role,
             )
+
+            # Auto-stamp PDF when both parties have signed
+            try:
+                from app.services.stamp_trigger import maybe_stamp_document
+                maybe_stamp_document(db, document_id)
+            except Exception as stamp_err:
+                logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
         finally:
             db.close()
 

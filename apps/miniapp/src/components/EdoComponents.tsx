@@ -263,15 +263,15 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
 // ── EDO Status Badge Component ──
 
 const EDO_STATUS_MAP: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-    draft:          { label: "Черновик",       color: "#8E8E93", bg: "rgba(142,142,147,0.12)", icon: "edit_note" },
-    awaiting_sign:  { label: "Ожидает ЭЦП",   color: "#FF9500", bg: "rgba(255,149,0,0.12)",   icon: "draw" },
-    signed_self:    { label: "Подписан вами",  color: "#007AFF", bg: "rgba(0,122,255,0.12)",   icon: "verified" },
-    sent:           { label: "Отправлен",      color: "#5856D6", bg: "rgba(88,86,214,0.12)",   icon: "send" },
-    signed_both:    { label: "Подписан",       color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "task_alt" },
-    rejected:       { label: "Отклонён",       color: "#FF3B30", bg: "rgba(255,59,48,0.12)",   icon: "cancel" },
-    esf_pending:    { label: "Ожидание ЭСФ",   color: "#FF9500", bg: "rgba(255,149,0,0.12)",   icon: "schedule" },
-    esf_submitted:  { label: "ЭСФ отправлена", color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "receipt_long" },
-    completed:      { label: "Завершён",       color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "check_circle" },
+    draft:          { label: "Черновик",           color: "#8E8E93", bg: "rgba(142,142,147,0.12)", icon: "edit_note" },
+    awaiting_sign:  { label: "Ожидает ЭЦП",       color: "#FF9500", bg: "rgba(255,149,0,0.12)",   icon: "draw" },
+    signed_self:    { label: "Подписан вами",      color: "#007AFF", bg: "rgba(0,122,255,0.12)",   icon: "verified" },
+    sent:           { label: "Ожидает контрагента",color: "#5856D6", bg: "rgba(88,86,214,0.12)",   icon: "hourglass_top" },
+    signed_both:    { label: "Подписан обеими",    color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "verified_user" },
+    rejected:       { label: "Отклонён",           color: "#FF3B30", bg: "rgba(255,59,48,0.12)",   icon: "cancel" },
+    esf_pending:    { label: "Ожидание ЭСФ",       color: "#FF9500", bg: "rgba(255,149,0,0.12)",   icon: "schedule" },
+    esf_submitted:  { label: "ЭСФ отправлена",     color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "receipt_long" },
+    completed:      { label: "Завершён",           color: "#34C759", bg: "rgba(52,199,89,0.12)",   icon: "check_circle" },
 };
 
 interface EdoStatusBadgeProps {

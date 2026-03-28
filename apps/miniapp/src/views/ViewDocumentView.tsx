@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "../components/Common";
-import { SignDocumentSheet } from "../components/EdoComponents";
-import { formatMoney } from "../utils";
-import type { InvoiceRecord, DocumentRecord } from "../types";
+import { SignDocumentSheet, EdoStatusBadge, SignatureList } from "../components/EdoComponents";
+import { formatMoney, request } from "../utils";
+import type { InvoiceRecord, DocumentRecord, ShareInfo, SignatureInfo } from "../types";
 
 interface ViewDocumentViewProps {
     setSubView: (v: any) => void;
@@ -62,6 +62,22 @@ export function ViewDocumentView({
     const [isClosingDocMenu, setIsClosingDocMenu] = useState(false);
     const [isClosingActions, setIsClosingActions] = useState(false);
     const [showSignSheet, setShowSignSheet] = useState(false);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const [isSharing, setIsSharing] = useState(false);
+    
+    // EDO Signatures
+    const [signatures, setSignatures] = useState<SignatureInfo[]>([]);
+    const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
+
+    useEffect(() => {
+        if (showDetails && selectedDoc && selectedDoc.edo_status && selectedDoc.edo_status !== 'draft') {
+            setIsLoadingSignatures(true);
+            request<{signatures?: SignatureInfo[]}>(`/edo/document/${selectedDoc.id}/signatures`)
+                .then(res => setSignatures(res.signatures || []))
+                .catch(err => console.error("Failed to load signatures:", err))
+                .finally(() => setIsLoadingSignatures(false));
+        }
+    }, [showDetails, selectedDoc?.id, selectedDoc?.edo_status]);
 
     const closeDetails = () => {
         setIsClosingDetails(true);
@@ -179,8 +195,8 @@ export function ViewDocumentView({
                             {selectedInvoice?.total_amount !== undefined ? formatMoney(selectedInvoice.total_amount) : (selectedDoc?.total_sum || "0")} ₸
                         </h1>
 
-                        {/* Status / Type Badge */}
-                        <div style={{ marginBottom: "16px" }}>
+                        {/* Status / Type Badge + EDO Status */}
+                        <div style={{ marginBottom: "16px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
                             {isNonInvoiceDoc && docTypeBadge ? (
                                 <span style={{ background: docTypeBadge.bg, color: docTypeBadge.color, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
                                     {docTypeBadge.code}
@@ -189,6 +205,10 @@ export function ViewDocumentView({
                                 <span style={{ background: activeColor.bg, color: activeColor.text, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, display: "inline-block" }}>
                                     {statusLabels[status]}
                                 </span>
+                            )}
+                            {/* EDO Status Badge */}
+                            {isNonInvoiceDoc && selectedDoc?.edo_status && selectedDoc.edo_status !== "draft" && (
+                                <EdoStatusBadge status={selectedDoc.edo_status} style={{ padding: "4px 10px", borderRadius: "8px", fontSize: "12px" }} />
                             )}
                         </div>
 
@@ -243,8 +263,8 @@ export function ViewDocumentView({
                             </div>
                         )}
 
-                        {/* ЭЦП Sign Button (Only for generated Documents like AVR/NKL) */}
-                        {selectedDoc && (
+                        {/* ЭЦП Sign Button (Only for docs not yet signed by both / not rejected) */}
+                        {selectedDoc && (!selectedDoc.edo_status || !['signed_both', 'rejected', 'completed', 'esf_submitted', 'esf_pending'].includes(selectedDoc.edo_status)) && (
                             <button
                                 onClick={() => { closeDetails(); setTimeout(() => setShowSignSheet(true), 350); }}
                                 style={{
@@ -258,8 +278,108 @@ export function ViewDocumentView({
                                 }}
                             >
                                 <Icon name="verified" style={{ fontSize: "20px" }} />
-                                Подписать ЭЦП
+                                {selectedDoc.edo_status === 'signed_self' ? 'Подписано — ожидает контрагента' : 'Подписать ЭЦП'}
                             </button>
+                        )}
+
+                        {/* Signed Both — Success message */}
+                        {selectedDoc?.edo_status === 'signed_both' && (
+                            <div style={{
+                                background: "rgba(52, 199, 89, 0.08)", borderRadius: "14px",
+                                padding: "14px 16px", marginBottom: "8px",
+                                display: "flex", alignItems: "center", gap: "10px",
+                                border: "1px solid rgba(52, 199, 89, 0.2)",
+                            }}>
+                                <Icon name="verified_user" style={{ fontSize: "24px", color: "#34C759" }} />
+                                <div>
+                                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#34C759" }}>Документ подписан обеими сторонами</div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-muted, #8e8e93)", marginTop: "2px" }}>ЭЦП сформирована, PDF обновлён со штампом</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Rejected — Warning */}
+                        {selectedDoc?.edo_status === 'rejected' && (
+                            <div style={{
+                                background: "rgba(255, 59, 48, 0.08)", borderRadius: "14px",
+                                padding: "14px 16px", marginBottom: "8px",
+                                display: "flex", alignItems: "center", gap: "10px",
+                                border: "1px solid rgba(255, 59, 48, 0.2)",
+                            }}>
+                                <Icon name="cancel" style={{ fontSize: "24px", color: "#FF3B30" }} />
+                                <div>
+                                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#FF3B30" }}>Документ отклонён контрагентом</div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-muted, #8e8e93)", marginTop: "2px" }}>Вы можете создать новый документ</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Share Button (show after sender has signed) */}
+                        {selectedDoc && selectedDoc.edo_status && ['signed_self', 'sent', 'signed_both'].includes(selectedDoc.edo_status) && (
+                            <button
+                                onClick={async () => {
+                                    if (shareUrl) {
+                                        try {
+                                            await navigator.clipboard.writeText(window.location.origin.replace('doc.onlink.kz', 'api.doc.onlink.kz') + shareUrl);
+                                            alert('Ссылка скопирована!');
+                                        } catch {
+                                            prompt('Скопируйте ссылку:', window.location.origin + shareUrl);
+                                        }
+                                        return;
+                                    }
+                                    setIsSharing(true);
+                                    try {
+                                        const result = await request<ShareInfo>('/edo/share', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ document_id: selectedDoc.id, share_type: 'link' }),
+                                        });
+                                        const fullUrl = window.location.origin.replace('doc.onlink.kz', 'api.doc.onlink.kz') + '/edo/doc/' + result.share_uuid;
+                                        setShareUrl('/edo/doc/' + result.share_uuid);
+                                        try {
+                                            await navigator.clipboard.writeText(fullUrl);
+                                            alert('Ссылка скопирована!\n' + fullUrl);
+                                        } catch {
+                                            prompt('Скопируйте ссылку:', fullUrl);
+                                        }
+                                    } catch (err: any) {
+                                        alert('Ошибка: ' + (err.message || 'Не удалось создать ссылку'));
+                                    } finally {
+                                        setIsSharing(false);
+                                    }
+                                }}
+                                disabled={isSharing}
+                                style={{
+                                    width: "100%", height: "44px", border: "none", borderRadius: "14px",
+                                    background: "var(--segment-bg, #f2f2f7)",
+                                    color: "var(--primary, #007AFF)", fontSize: "14px", fontWeight: 600,
+                                    cursor: "pointer", display: "flex", alignItems: "center",
+                                    justifyContent: "center", gap: "8px",
+                                }}
+                            >
+                                {isSharing ? (
+                                    <div className="spinner" style={{ borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent" }} />
+                                ) : (
+                                    <Icon name={shareUrl ? "content_copy" : "share"} style={{ fontSize: "18px" }} />
+                                )}
+                                {shareUrl ? 'Скопировать ссылку' : 'Поделиться с контрагентом'}
+                            </button>
+                        )}
+
+                        {/* Signature List */}
+                        {isNonInvoiceDoc && selectedDoc && (isLoadingSignatures || signatures.length > 0) && (
+                            <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--separator, #f2f2f7)" }}>
+                                <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text, #1c1c1e)", marginBottom: "12px", paddingTop: "12px" }}>
+                                    Подписи ЭЦП
+                                </div>
+                                {isLoadingSignatures ? (
+                                    <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
+                                        <div className="spinner" style={{ width: "24px", height: "24px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent", borderWidth: "2px" }} />
+                                    </div>
+                                ) : (
+                                    <SignatureList signatures={signatures} />
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
