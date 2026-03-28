@@ -35,14 +35,28 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
             });
             setSigningSession(result);
 
-            // Open eGov Mobile deeplink
+            // Open eGov Mobile deeplink safely on iOS
             if (result.egov_mobile_link) {
+                const link = result.egov_mobile_link;
                 const tg = (window as any).Telegram?.WebApp;
-                if (tg && tg.openLink) {
-                    // Try to open link natively in Telegram
-                    tg.openLink(result.egov_mobile_link);
-                } else {
-                    window.location.href = result.egov_mobile_link;
+                
+                try {
+                    // Method 1: Try native Telegram WebApp openLink first (if HTTPS)
+                    if (tg && tg.openLink && link.startsWith("http")) {
+                        tg.openLink(link, { try_instant_view: false });
+                    } else {
+                        // Method 2: Invisible Anchor Tag (best for custom schemes egovmobile:// on iOS)
+                        const a = document.createElement("a");
+                        a.href = link;
+                        a.target = "_blank";
+                        a.rel = "noopener noreferrer";
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => document.body.removeChild(a), 100);
+                    }
+                } catch (e) {
+                    // Method 3: Direct assignment fallback
+                    window.location.href = link;
                 }
             }
 
@@ -180,11 +194,22 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                         {signingSession?.egov_mobile_link && (
                             <button
                                 onClick={() => {
+                                    const link = signingSession.egov_mobile_link;
                                     const tg = (window as any).Telegram?.WebApp;
-                                    if (tg && tg.openLink) {
-                                        tg.openLink(signingSession.egov_mobile_link);
-                                    } else {
-                                        window.location.href = signingSession.egov_mobile_link;
+                                    try {
+                                        if (tg && tg.openLink && link.startsWith("http")) {
+                                            tg.openLink(link, { try_instant_view: false });
+                                        } else {
+                                            const a = document.createElement("a");
+                                            a.href = link;
+                                            a.target = "_blank";
+                                            a.rel = "noopener noreferrer";
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            setTimeout(() => document.body.removeChild(a), 100);
+                                        }
+                                    } catch (e) {
+                                        window.location.href = link;
                                     }
                                 }}
                                 style={{
