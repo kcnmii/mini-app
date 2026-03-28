@@ -558,7 +558,7 @@ async def stamp_all_retroactive(db: Session = Depends(get_db)):
     results = []
     
     for doc in docs:
-        if doc.pdf_path and not doc.pdf_path.endswith("_stamped.pdf"):
+        if doc.pdf_path:
             try:
                 success = await maybe_stamp_document(db, doc.id)
                 results.append({"id": doc.id, "success": success})
