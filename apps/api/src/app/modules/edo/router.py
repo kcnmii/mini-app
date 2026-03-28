@@ -16,7 +16,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -89,6 +90,7 @@ class PublicDocumentResponse(BaseModel):
 # ──────────────────────────────────────────────
 @router.post("/sign", response_model=SignDocumentResponse)
 async def initiate_signing(
+    request: Request,
     req: SignDocumentRequest,
     background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
@@ -182,12 +184,22 @@ async def initiate_signing(
     # 🚀 Iron-clad iOS Fallback: Send deep link to the Telegram Chat! 🚀
     if result.get("eGovMobileLaunchLink"):
         try:
+            import urllib.parse
             from app.modules.telegram_bot.service import TelegramBotClient
             bot = TelegramBotClient()
+            
+            # Telegram strictly blocks non-HTTP URLs in inline buttons.
+            # We must use our own endpoint to bounce the user to the custom scheme.
+            safe_url = urllib.parse.quote(result["eGovMobileLaunchLink"])
+            base_url = str(request.base_url).rstrip("/")
+            
+            # The bounce URL inside our API
+            redirect_url = f"{base_url}/edo/mobile-redirect?url={safe_url}"
+
             await bot.send_egov_signing_link(
                 chat_id=user_id,
                 text=f"Нажмите кнопку ниже, чтобы перейти в <b>eGov Mobile</b> и подписать документ:\n\n📄 <b>{doc.title}</b>",
-                egov_link=result["eGovMobileLaunchLink"],
+                egov_link=redirect_url,
             )
             await bot.close()
         except Exception as e:
@@ -199,6 +211,18 @@ async def initiate_signing(
         egov_business_link=result["eGovBusinessLaunchLink"],
         qr_code_b64=result["qr_code_b64"],
     )
+
+
+# ──────────────────────────────────────────────
+# GET /edo/mobile-redirect - Bounce to custom scheme
+# ──────────────────────────────────────────────
+@router.get("/mobile-redirect")
+async def mobile_redirect(url: str):
+    """
+    Bounces HTTP requests from Telegram inline buttons to custom schemes.
+    (Telegram restricts inline buttons to valid http/https URLs).
+    """
+    return RedirectResponse(url)
 
 
 # ──────────────────────────────────────────────
