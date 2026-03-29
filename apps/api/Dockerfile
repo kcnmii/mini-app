@@ -1,6 +1,11 @@
 # ── API Dockerfile ──
 FROM python:3.12-slim AS base
 
+# Install system dependencies (fonts for Cyrillic PDF rendering)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fonts-dejavu-core && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install uv for fast dependency management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
