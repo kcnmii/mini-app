@@ -528,13 +528,16 @@ async def generate_document_from_invoice(
         doc_title = f"{doc_number}"
         data = {
             "MyCompanyRequisiteRqCompanyName": (profile.company_name if profile else "") or "",
+            "MyCompanyRequisiteRqBin": (profile.company_iin if profile else "") or "",
             "MyCompanyRequisiteRegisteredAddressText": (profile.supplier_address if profile else "") or "",
             "MyCompanyPhone": (profile.phone if profile else "") or "",
             "MyCompanyRequisiteRqDirector": (profile.executor_name if profile else "") or "",
             "ClientName": inv.client_name or "",
+            "RequisiteRqBin": inv.client_bin or "",
             "ClientPhone": client_phone,
             "RequisiteRegisteredAddressText": client_address,
             "DocumentNumber": doc_number,
+            "DocumentCreateTime": now_str,
             "TotalQuantity": str(total_qty_int),
             "TotalSum": total_sum_formatted,
             "items": items,
@@ -547,6 +550,7 @@ async def generate_document_from_invoice(
             "MyCompanyRequisiteRqBin": (profile.company_iin if profile else "") or "",
             "MyCompanyRequisiteRqAccountant": (profile.executor_name if profile else "") or "",
             "RequisiteRqCompanyName": inv.client_name or "",
+            "RequisiteRqBin": inv.client_bin or "",
             "DocumentNumber": doc_number,
             "DocumentCreateTime": now_str,
             "TotalQuantity": str(total_qty_int),
@@ -584,6 +588,7 @@ async def generate_document_from_invoice(
             pdf_path=pdf_path,
             docx_path=docx_path,
             doc_type=doc_type,  # ← Critical: set doc_type for proper counting
+            receiver_bin=inv.client_bin or "",
         )
         db.add(doc_record)
         db.commit()
