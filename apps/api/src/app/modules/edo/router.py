@@ -574,3 +574,41 @@ async def stamp_all_retroactive(db: Session = Depends(get_db)):
                 results.append({"id": doc.id, "success": False, "error": str(e)})
 
     return {"processed": len(results), "results": results}
+
+
+@router.post("/admin/migrate-signatures")
+async def migrate_signatures(db: Session = Depends(get_db)):
+    """Parse old CMS signatures in DB to extract and populate missing certificate metadata."""
+    from app.services.cms_parser import parse_cms_signature
+    
+    sigs = db.query(Signature).filter(Signature.signature_type == "cms").all()
+    results = []
+    updated_count = 0
+    
+    for sig in sigs:
+        # Skip if already parsed
+        if sig.certificate_serial:
+            results.append({"id": sig.id, "status": "skipped"})
+            continue
+            
+        try:
+            cert_info = parse_cms_signature(sig.signature_data)
+            if cert_info:
+                if cert_info.subject_iin: sig.signer_iin = cert_info.subject_iin
+                if cert_info.subject_cn: sig.signer_name = cert_info.subject_cn
+                if cert_info.subject_org: sig.signer_org_name = cert_info.subject_org
+                sig.certificate_serial = cert_info.serial_hex
+                if cert_info.valid_from: sig.certificate_valid_from = cert_info.valid_from.replace(tzinfo=None)
+                if cert_info.valid_to: sig.certificate_valid_to = cert_info.valid_to.replace(tzinfo=None)
+                
+                updated_count += 1
+                results.append({"id": sig.id, "status": "updated", "serial": cert_info.serial_hex})
+            else:
+                results.append({"id": sig.id, "status": "error", "reason": "parse failed"})
+        except Exception as e:
+            results.append({"id": sig.id, "status": "error", "reason": str(e)})
+
+    if updated_count > 0:
+        db.commit()
+        
+    return {"processed": len(results), "updated": updated_count, "results": results}
