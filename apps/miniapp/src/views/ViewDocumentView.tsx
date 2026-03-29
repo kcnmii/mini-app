@@ -18,6 +18,8 @@ interface ViewDocumentViewProps {
     deleteInvoice: () => void;
     busy: string;
     animationType?: "none" | "left" | "up";
+    refreshPreview?: (docId: number) => void;
+    reloadDocuments?: () => void;
 }
 
 const IconButton = ({ icon, label, onClick, disabled, busy }: any) => (
@@ -53,7 +55,9 @@ export function ViewDocumentView({
     generateDocument,
     deleteInvoice,
     busy,
-    animationType = "left"
+    animationType = "left",
+    refreshPreview,
+    reloadDocuments,
 }: ViewDocumentViewProps) {
     const [showDocMenu, setShowDocMenu] = useState(false);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -68,6 +72,24 @@ export function ViewDocumentView({
     // EDO Signatures
     const [signatures, setSignatures] = useState<SignatureInfo[]>([]);
     const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
+
+    // Auto-restore signing sheet if there's a pending session (after eGov Mobile redirect)
+    useEffect(() => {
+        const docId = (selectedInvoice as any)?.id || selectedDoc?.id;
+        if (docId) {
+            try {
+                const saved = localStorage.getItem(`edo_signing_${docId}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    const age = Date.now() - (data.timestamp || 0);
+                    if (age < 10 * 60 * 1000 && data.sessionId) {
+                        // There's a pending session — auto-open the sign sheet
+                        setShowSignSheet(true);
+                    }
+                }
+            } catch {}
+        }
+    }, [selectedDoc?.id, selectedInvoice]);
 
     useEffect(() => {
         if (showDetails && selectedDoc && selectedDoc.edo_status && selectedDoc.edo_status !== 'draft') {
@@ -546,8 +568,14 @@ export function ViewDocumentView({
                     onClose={() => setShowSignSheet(false)}
                     onSigned={() => {
                         setShowSignSheet(false);
-                        // Refresh view
-                        setSubView(null);
+                        // Refresh the preview in-place with the stamped PDF
+                        const docId = (selectedInvoice as any)?.id || selectedDoc?.id;
+                        if (docId && refreshPreview) {
+                            refreshPreview(docId);
+                        }
+                        if (reloadDocuments) {
+                            reloadDocuments();
+                        }
                     }}
                 />
             )}

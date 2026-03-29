@@ -68,6 +68,30 @@ export function App() {
   const { items, setItems, itemDraft, setItemDraft, selectedCatalogItem, setSelectedCatalogItem, createItem, deleteItem } = useCatalog(setStatus, setBusy, setSubView);
 
   const { documents, setDocuments, loadAndPreviewOldDocument, loadAndPreviewDocument } = useDocuments(setStatus, setBusy, profile, setSubView);
+
+  // Auto-restore document view if returning from eGov Mobile with pending signing session
+  useEffect(() => {
+    try {
+      // Check all localStorage keys for pending signing sessions
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("edo_signing_")) {
+          const saved = JSON.parse(localStorage.getItem(key) || "{}");
+          const age = Date.now() - (saved.timestamp || 0);
+          if (age < 10 * 60 * 1000 && saved.sessionId) {
+            // Extract document ID from key "edo_signing_123"
+            const docId = parseInt(key.replace("edo_signing_", ""), 10);
+            if (docId && !isNaN(docId)) {
+              // Navigate to this document's preview
+              loadAndPreviewDocument(docId, invHook.setPreviewPages, invHook.setIsPdfLoading, invHook.setSelectedDocId, invHook.setSelectedInvoiceId);
+              break;
+            }
+          }
+        }
+      }
+    } catch {}
+  }, []); // Run only once on mount
+
   // Scroll to top when view changes
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -260,6 +284,21 @@ export function App() {
         deleteInvoice={() => invHook.deleteInvoice(setDocuments)}
         busy={busy}
         animationType={prevSubView === "invoiceForm" ? "none" : "left"}
+        refreshPreview={(docId) => {
+          // Reload PDF preview in-place (with a small delay for stamping to complete)
+          setTimeout(async () => {
+            invHook.setIsPdfLoading(true);
+            try {
+              const preview = await request<{ pages: { data: string }[] }>(`/documents/${docId}/preview`);
+              invHook.setPreviewPages(preview.pages.map(p => p.data));
+            } catch {
+              console.error("Failed to refresh preview");
+            } finally {
+              invHook.setIsPdfLoading(false);
+            }
+          }, 2000); // 2s delay to let stamp generation finish
+        }}
+        reloadDocuments={loadData}
       />
     );
   } else if (subView === "addClient") {

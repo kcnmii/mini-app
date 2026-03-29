@@ -31,12 +31,39 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
     const [isClosing, setIsClosing] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    const STORAGE_KEY = `edo_signing_${documentId}`;
+
     const close = () => {
         setIsClosing(true);
         if (pollRef.current) clearInterval(pollRef.current);
         setTimeout(() => {
             onClose();
         }, 300);
+    };
+
+    const startPolling = (sessionId: number) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            try {
+                const status = await request<SigningStatusInfo>(
+                    `/edo/signing-status/${sessionId}`
+                );
+                if (status.status === "signed") {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    // Clean up localStorage
+                    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+                    setStep("success");
+                    setTimeout(() => onSigned(), 1500);
+                } else if (status.status === "expired" || status.status === "error") {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+                    setStep("error");
+                    setErrorMsg(status.status === "expired" ? "Время подписания истекло" : "Ошибка подписания");
+                }
+            } catch {
+                // Ignore polling errors
+            }
+        }, 3000);
     };
 
     const initiateSign = async () => {
@@ -49,41 +76,78 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
             });
             setSigningSession(result);
 
+            // Save to localStorage so we can resume after eGov Mobile redirect
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    sessionId: result.signing_session_id,
+                    egovLink: result.egov_mobile_link,
+                    timestamp: Date.now(),
+                }));
+            } catch {}
+
             // Open eGov Mobile deeplink
             if (result.egov_mobile_link) {
                 openExternalLink(result.egov_mobile_link);
             }
 
             // Start polling for signature
-            pollRef.current = setInterval(async () => {
-                try {
-                    const status = await request<SigningStatusInfo>(
-                        `/edo/signing-status/${result.signing_session_id}`
-                    );
-                    if (status.status === "signed") {
-                        if (pollRef.current) clearInterval(pollRef.current);
-                        setStep("success");
-                        setTimeout(() => onSigned(), 1500);
-                    } else if (status.status === "expired" || status.status === "error") {
-                        if (pollRef.current) clearInterval(pollRef.current);
-                        setStep("error");
-                        setErrorMsg(status.status === "expired" ? "Время подписания истекло" : "Ошибка подписания");
-                    }
-                } catch {
-                    // Ignore polling errors
-                }
-            }, 3000);
+            startPolling(result.signing_session_id);
         } catch (err: any) {
             setStep("error");
             setErrorMsg(err.message || "Ошибка подключения к SIGEX");
         }
     };
 
+    // On mount: check if there's a pending signing session from before eGov redirect
     useEffect(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                const age = Date.now() - (data.timestamp || 0);
+                // Only restore if less than 10 minutes old
+                if (age < 10 * 60 * 1000 && data.sessionId) {
+                    setStep("waiting");
+                    setSigningSession({
+                        signing_session_id: data.sessionId,
+                        egov_mobile_link: data.egovLink || "",
+                        egov_business_link: "",
+                        qr_code_b64: "",
+                    });
+                    startPolling(data.sessionId);
+                } else {
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            }
+        } catch {}
+
         return () => {
             if (pollRef.current) clearInterval(pollRef.current);
         };
     }, []);
+
+    // When the user returns from eGov Mobile, the page might become visible again
+    // Immediately check signature status on visibility change
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible" && step === "waiting" && signingSession) {
+                // Immediately check status when user comes back
+                request<SigningStatusInfo>(
+                    `/edo/signing-status/${signingSession.signing_session_id}`
+                ).then(status => {
+                    if (status.status === "signed") {
+                        if (pollRef.current) clearInterval(pollRef.current);
+                        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+                        setStep("success");
+                        setTimeout(() => onSigned(), 1500);
+                    }
+                }).catch(() => {});
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => document.removeEventListener("visibilitychange", handleVisibility);
+    }, [step, signingSession]);
 
     return (
         <div
