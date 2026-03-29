@@ -37,24 +37,27 @@ async def get_document_stats(
 
 @router.get("/next-number")
 async def get_next_invoice_number(
+    doc_type: str = "invoice",
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    last_doc = db.query(Document).filter(Document.user_id == user_id).order_by(Document.id.desc()).first()
-    if not last_doc:
-        return {"next_number": "СФ-001"}
-    
-    # Try to extract number from title "Счет № 001" or "invoice-001"
-    match = re.search(r'(\d+)', last_doc.title)
-    if match:
-        num = int(match.group(1))
-        # Preserving padding if possible
-        padding = len(match.group(1))
-        next_num = str(num + 1).zfill(padding)
-        # Prefix "СФ-" is common in KZ
-        return {"next_number": f"СФ-{next_num}"}
-    
-    return {"next_number": "СФ-001"}
+    # Map doc_type to prefix
+    prefix_map = {
+        "invoice": "СФ",
+        "act": "АВР",
+        "waybill": "НКЛ",
+    }
+    prefix = prefix_map.get(doc_type, "СФ")
+
+    # Count documents of this specific type for the user
+    count = db.query(Document).filter(
+        Document.user_id == user_id,
+        Document.doc_type == doc_type,
+    ).count()
+
+    next_num = str(count + 1).zfill(3)
+    return {"next_number": f"{prefix}-{next_num}"}
+
 
 
 @router.get("/{document_id}")
@@ -254,6 +257,27 @@ async def delete_document(
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    # Delete related EDO records first (FK constraints may block cascaded delete in Postgres)
+    from app.core.db import Signature, SigningSession, DocumentShare, EsfRecord
+    db.query(Signature).filter(Signature.document_id == document_id).delete(synchronize_session=False)
+    db.query(SigningSession).filter(SigningSession.document_id == document_id).delete(synchronize_session=False)
+    db.query(DocumentShare).filter(DocumentShare.document_id == document_id).delete(synchronize_session=False)
+    db.query(EsfRecord).filter(EsfRecord.document_id == document_id).delete(synchronize_session=False)
+    db.query(DocumentItem).filter(DocumentItem.document_id == document_id).delete(synchronize_session=False)
+
+    # Clean up S3 files
+    try:
+        from app.core import s3
+        if doc.pdf_path:
+            await s3.delete_file(doc.pdf_path)
+            # Also try stamped version
+            stamped = doc.pdf_path.replace(".pdf", "_stamped.pdf")
+            await s3.delete_file(stamped)
+        if doc.docx_path:
+            await s3.delete_file(doc.docx_path)
+    except Exception:
+        pass  # Non-critical
 
     db.delete(doc)
     db.commit()

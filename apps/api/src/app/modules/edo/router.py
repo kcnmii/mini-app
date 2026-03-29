@@ -474,14 +474,55 @@ async def _poll_and_save_signature(
         from app.services.cms_parser import parse_cms_signature
         cert_info = parse_cms_signature(cms_signature_b64)
 
-        # Save to DB
+        # ── SECURITY: Validate signer identity ──
         db = SessionLocal()
         try:
+            cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+
+            if signer_role == "sender":
+                # Sender: IIN from certificate must match profile IIN
+                profile = db.query(SupplierProfile).filter(
+                    SupplierProfile.user_id == user_id
+                ).first()
+                expected_iin = (profile.company_iin if profile else "").strip() if profile else ""
+
+                if expected_iin and cert_iin and cert_iin != expected_iin:
+                    logger.warning(
+                        "SECURITY: Sender IIN mismatch! Profile=%s, Certificate=%s, doc=%d",
+                        expected_iin, cert_iin, document_id,
+                    )
+                    session = db.query(SigningSession).filter(
+                        SigningSession.id == signing_session_id
+                    ).first()
+                    if session:
+                        session.status = "error"
+                    db.commit()
+                    return  # Reject the signature
+
+            elif signer_role == "receiver":
+                # Receiver: IIN from certificate must match document receiver_bin
+                doc_check = db.query(Document).filter(Document.id == document_id).first()
+                expected_receiver = (doc_check.receiver_bin if doc_check else "").strip() if doc_check else ""
+
+                if expected_receiver and cert_iin and cert_iin != expected_receiver:
+                    logger.warning(
+                        "SECURITY: Receiver IIN mismatch! Expected=%s, Certificate=%s, doc=%d",
+                        expected_receiver, cert_iin, document_id,
+                    )
+                    session = db.query(SigningSession).filter(
+                        SigningSession.id == signing_session_id
+                    ).first()
+                    if session:
+                        session.status = "error"
+                    db.commit()
+                    return  # Reject the signature
+
+            # ── Identity verified — save signature ──
             now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             sig = Signature(
                 document_id=document_id,
-                signer_iin=cert_info.subject_iin if cert_info else signer_iin,
+                signer_iin=cert_iin or signer_iin,
                 signer_name=cert_info.subject_cn if cert_info else signer_name,
                 signer_org_name=cert_info.subject_org if cert_info else "",
                 signer_role=signer_role,
@@ -519,8 +560,8 @@ async def _poll_and_save_signature(
 
             db.commit()
             logger.info(
-                "Signature saved for document %d, signer=%s, role=%s",
-                document_id, signer_name, signer_role,
+                "Signature saved for document %d, signer=%s (IIN=%s), role=%s",
+                document_id, cert_info.subject_cn if cert_info else signer_name, cert_iin, signer_role,
             )
 
             # Auto-stamp PDF when both parties have signed

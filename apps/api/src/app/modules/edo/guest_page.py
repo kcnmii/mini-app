@@ -50,8 +50,14 @@ class GuestRejectRequest(BaseModel):
 # GET /edo/doc/{share_uuid} — Guest HTML page
 # ──────────────────────────────────────────────
 @router.get("/doc/{share_uuid}", response_class=HTMLResponse)
-async def guest_document_page(share_uuid: str, db: Session = Depends(get_db)):
-    """Render a full HTML guest page for the counterparty."""
+async def guest_document_page(share_uuid: str, role: str = "receiver", db: Session = Depends(get_db)):
+    """Render a full HTML guest page for the counterparty.
+    
+    Query params:
+        role: 'sender' or 'receiver' — determines the viewing perspective.
+              - sender sees: receiver info first ("Кому")
+              - receiver sees: sender info first ("От кого")
+    """
 
     share = db.query(DocumentShare).filter(
         DocumentShare.share_uuid == share_uuid,
@@ -256,8 +262,9 @@ async def guest_document_page(share_uuid: str, db: Session = Depends(get_db)):
     </div>
 
     <div class="container">
-        <!-- Sender Info -->
-        <div class="card">
+        <!-- Context-aware info cards based on viewer role -->
+        {''.join([
+            f'''<div class="card">
             <div class="card-title">📤 Отправитель</div>
             <div class="info-row">
                 <span class="info-label">Организация</span>
@@ -267,7 +274,31 @@ async def guest_document_page(share_uuid: str, db: Session = Depends(get_db)):
                 <span class="info-label">БИН/ИИН</span>
                 <span class="info-value" style="font-family: monospace;">{sender_bin}</span>
             </div>
-        </div>
+        </div>''',
+            f'''<div class="card">
+            <div class="card-title">📥 Получатель</div>
+            <div class="info-row">
+                <span class="info-label">Контрагент</span>
+                <span class="info-value">{doc.client_name or '—'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">БИН/ИИН</span>
+                <span class="info-value" style="font-family: monospace;">{doc.receiver_bin or getattr(doc, 'client_bin', '') or '—'}</span>
+            </div>
+        </div>'''
+        ] if role == 'sender' else [
+            f'''<div class="card">
+            <div class="card-title">📤 От кого</div>
+            <div class="info-row">
+                <span class="info-label">Организация</span>
+                <span class="info-value">{sender_name}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">БИН/ИИН</span>
+                <span class="info-value" style="font-family: monospace;">{sender_bin}</span>
+            </div>
+        </div>'''
+        ])}
 
         <!-- Document Info -->
         <div class="card">
@@ -276,10 +307,6 @@ async def guest_document_page(share_uuid: str, db: Session = Depends(get_db)):
                 <span class="status-badge" style="background: {status_color}15; color: {status_color};">{status_text}</span>
             </div>
             <div class="amount">{doc.total_sum or '0'} ₸</div>
-            <div class="info-row">
-                <span class="info-label">Получатель</span>
-                <span class="info-value">{doc.client_name or '—'}</span>
-            </div>
             <div class="info-row">
                 <span class="info-label">Дата</span>
                 <span class="info-value">{doc.created_at.strftime('%d.%m.%Y') if doc.created_at else '—'}</span>
@@ -678,9 +705,26 @@ async def save_guest_signature(
     from app.services.cms_parser import parse_cms_signature
     cert_info = parse_cms_signature(req.cms_signature_b64)
 
+    # ── SECURITY: Validate receiver IIN/BIN ──
+    cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+    expected_receiver = (doc.receiver_bin or "").strip()
+    # Fallback: use client_bin from the invoice if receiver_bin is empty
+    if not expected_receiver:
+        expected_receiver = (getattr(doc, 'client_bin', '') or "").strip()
+
+    if expected_receiver and cert_iin and cert_iin != expected_receiver:
+        logger.warning(
+            "SECURITY: Guest NCALayer receiver IIN mismatch! Expected=%s, Certificate=%s, doc=%d",
+            expected_receiver, cert_iin, doc.id,
+        )
+        return JSONResponse(
+            {"success": False, "error": f"ИИН/БИН вашего сертификата ({cert_iin}) не совпадает с получателем документа ({expected_receiver}). Подпись отклонена."},
+            status_code=403,
+        )
+
     sig = Signature(
         document_id=doc.id,
-        signer_iin=cert_info.subject_iin if cert_info else (req.signer_iin or ""),
+        signer_iin=cert_iin or (req.signer_iin or ""),
         signer_name=cert_info.subject_cn if cert_info else (req.signer_name or "Контрагент"),
         signer_org_name=cert_info.subject_org if cert_info else (req.signer_org or ""),
         signer_role="receiver",
@@ -700,7 +744,7 @@ async def save_guest_signature(
     share.signed_at = now
 
     db.commit()
-    logger.info("Guest signature saved for doc %d (share %s)", doc.id, share_uuid)
+    logger.info("Guest signature saved for doc %d (share %s), IIN=%s", doc.id, share_uuid, cert_iin)
 
     # Auto-stamp PDF when both parties have signed
     try:
@@ -849,9 +893,29 @@ async def _send_guest_data_background(
         try:
             now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+            # ── SECURITY: Validate receiver IIN/BIN ──
+            cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+            doc = db.query(Document).filter(Document.id == document_id).first()
+            expected_receiver = (doc.receiver_bin if doc else "").strip() if doc else ""
+            if not expected_receiver and doc:
+                expected_receiver = (getattr(doc, 'client_bin', '') or "").strip()
+
+            if expected_receiver and cert_iin and cert_iin != expected_receiver:
+                logger.warning(
+                    "SECURITY: Guest eGov Mobile receiver IIN mismatch! Expected=%s, Certificate=%s, doc=%d",
+                    expected_receiver, cert_iin, document_id,
+                )
+                session = db.query(SigningSession).filter(
+                    SigningSession.id == signing_session_id
+                ).first()
+                if session:
+                    session.status = "error"
+                db.commit()
+                return  # Reject the signature
+
             sig = Signature(
                 document_id=document_id,
-                signer_iin=cert_info.subject_iin if cert_info else "",
+                signer_iin=cert_iin or "",
                 signer_name=cert_info.subject_cn if cert_info else "Контрагент",
                 signer_org_name=cert_info.subject_org if cert_info else "",
                 signer_role="receiver",
@@ -863,7 +927,6 @@ async def _send_guest_data_background(
             )
             db.add(sig)
 
-            doc = db.query(Document).filter(Document.id == document_id).first()
             if doc:
                 doc.edo_status = "signed_both"
                 doc.countersigned_at = now
@@ -881,7 +944,7 @@ async def _send_guest_data_background(
                 share.signed_at = now
 
             db.commit()
-            logger.info("Guest eGov Mobile signature saved for doc %d", document_id)
+            logger.info("Guest eGov Mobile signature saved for doc %d, IIN=%s", document_id, cert_iin)
 
             # Auto-stamp PDF
             try:

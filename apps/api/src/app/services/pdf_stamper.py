@@ -63,6 +63,8 @@ class SignerInfo:
 class StampConfig:
     """Configuration for the PDF stamp."""
     doc_url: str = ""
+    sender_url: str = ""   # URL for sender's link in header
+    receiver_url: str = "" # URL for receiver's link in header
     md5_hash: str = ""
     sender: SignerInfo | None = None
     receiver: SignerInfo | None = None
@@ -181,17 +183,19 @@ def _draw_header_on_page(page: fitz.Page, config: StampConfig, width: float):
             color=DARK,
         )
         y += 10
+        sender_link = config.sender_url or f"{config.doc_url}?role=sender"
         page.insert_text(
             fitz.Point(margin, y),
-            f"Для отправителя - {config.doc_url}?category_id=1",
+            f"Для отправителя - {sender_link}",
             fontsize=6.5,
             fontname=font_r,
             color=BLUE,
         )
         y += 10
+        receiver_link = config.receiver_url or f"{config.doc_url}?role=receiver"
         page.insert_text(
             fitz.Point(margin, y),
-            f"Для получателя - {config.doc_url}?category_id=6",
+            f"Для получателя - {receiver_link}",
             fontsize=6.5,
             fontname=font_r,
             color=BLUE,

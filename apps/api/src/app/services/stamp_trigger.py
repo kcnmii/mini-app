@@ -89,8 +89,13 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
             signer_title="Личный ключ физического лица (ИП)",
         )
 
+    sender_url = f"{doc_url}?role=sender" if doc_url else ""
+    receiver_url = f"{doc_url}?role=receiver" if doc_url else ""
+
     config = StampConfig(
         doc_url=doc_url,
+        sender_url=sender_url,
+        receiver_url=receiver_url,
         md5_hash=doc.md5_hash or "",
         edo_service_name="ЭДО Doc App",
         edo_service_url="https://doc.onlink.kz",

@@ -511,22 +511,16 @@ async def generate_document_from_invoice(
     now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%d.%m.%Y")
 
     import re
-    # Determine sequential number for the document
+    # Determine sequential number for the document based on doc_type field, not title
     prefix = "АВР" if doc_type == "act" else "НКЛ"
-    title_prefix = "Акт" if doc_type == "act" else "Накладная"
     
-    last_doc = db.query(Document).filter(
+    # Count existing documents of this type for the user
+    existing_count = db.query(Document).filter(
         Document.user_id == user_id,
-        Document.title.like(f"{title_prefix} {prefix}-%")
-    ).order_by(Document.id.desc()).first()
+        Document.doc_type == doc_type,
+    ).count()
     
-    next_num_str = "001"
-    if last_doc:
-        match = re.search(rf"{prefix}-(\d+)", last_doc.title)
-        if match:
-            padding = len(match.group(1))
-            next_num_str = str(int(match.group(1)) + 1).zfill(padding)
-            
+    next_num_str = str(existing_count + 1).zfill(3)
     doc_number = f"{prefix}-{next_num_str}"
 
     if doc_type == "act":
@@ -579,7 +573,7 @@ async def generate_document_from_invoice(
         pdf_path = await render_service.save_file(f"{filename_prefix}.pdf", pdf_bytes, user_id=user_id)
         docx_path = await render_service.save_file(f"{filename_prefix}.docx", docx_bytes, user_id=user_id)
 
-        # Save document record
+        # Save document record with correct doc_type
         doc_record = Document(
             user_id=user_id,
             title=doc_title,
@@ -589,6 +583,7 @@ async def generate_document_from_invoice(
             total_sum_in_words=total_sum_words,
             pdf_path=pdf_path,
             docx_path=docx_path,
+            doc_type=doc_type,  # ← Critical: set doc_type for proper counting
         )
         db.add(doc_record)
         db.commit()
