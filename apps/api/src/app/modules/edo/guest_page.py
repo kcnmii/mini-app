@@ -87,6 +87,16 @@ async def guest_document_page(share_uuid: str, role: str = "receiver", db: Sessi
     sender_name = (profile.company_name if profile else "") or "Неизвестный отправитель"
     sender_bin = (profile.company_iin if profile else "") or ""
 
+    display_receiver_bin = (doc.receiver_bin or "").strip()
+    if not display_receiver_bin and getattr(doc, 'payload_json', None):
+        try:
+            import json
+            payload = json.loads(doc.payload_json)
+            display_receiver_bin = str(payload.get('CLIENT_IIN') or "").strip()
+        except Exception:
+            pass
+
+
     # Get signatures
     sigs = db.query(Signature).filter(Signature.document_id == doc.id).all()
 
@@ -283,7 +293,7 @@ async def guest_document_page(share_uuid: str, role: str = "receiver", db: Sessi
             </div>
             <div class="info-row">
                 <span class="info-label">БИН/ИИН</span>
-                <span class="info-value" style="font-family: monospace;">{doc.receiver_bin or getattr(doc, 'client_bin', '') or '—'}</span>
+                <span class="info-value" style="font-family: monospace;">{display_receiver_bin or '—'}</span>
             </div>
         </div>'''
         ] if role == 'sender' else [
@@ -708,9 +718,14 @@ async def save_guest_signature(
     # ── SECURITY: Validate receiver IIN/BIN ──
     cert_iin = (cert_info.subject_iin if cert_info else "").strip()
     expected_receiver = (doc.receiver_bin or "").strip()
-    # Fallback: use client_bin from the invoice if receiver_bin is empty
-    if not expected_receiver:
-        expected_receiver = (getattr(doc, 'client_bin', '') or "").strip()
+    # Fallback: use CLIENT_IIN from payload_json if receiver_bin is empty
+    if not expected_receiver and doc and getattr(doc, 'payload_json', None):
+        try:
+            import json
+            payload = json.loads(doc.payload_json)
+            expected_receiver = str(payload.get('CLIENT_IIN') or "").strip()
+        except Exception:
+            pass
 
     if expected_receiver and cert_iin and cert_iin != expected_receiver:
         logger.warning(
@@ -897,8 +912,13 @@ async def _send_guest_data_background(
             cert_iin = (cert_info.subject_iin if cert_info else "").strip()
             doc = db.query(Document).filter(Document.id == document_id).first()
             expected_receiver = (doc.receiver_bin if doc else "").strip() if doc else ""
-            if not expected_receiver and doc:
-                expected_receiver = (getattr(doc, 'client_bin', '') or "").strip()
+            if not expected_receiver and doc and getattr(doc, 'payload_json', None):
+                try:
+                    import json
+                    payload = json.loads(doc.payload_json)
+                    expected_receiver = str(payload.get('CLIENT_IIN') or "").strip()
+                except Exception:
+                    pass
 
             if expected_receiver and cert_iin and cert_iin != expected_receiver:
                 logger.warning(

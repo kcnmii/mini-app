@@ -224,6 +224,8 @@ async def save_invoice_document(
         total_sum_in_words=invoice.total_sum_in_words,
         pdf_path=pdf_path,
         docx_path=docx_path,
+        doc_type="invoice",
+        receiver_bin=invoice.client_iin or "",
         payload_json=invoice.model_dump_json(by_alias=True),
     )
     db.add(new_doc)
