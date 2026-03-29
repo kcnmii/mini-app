@@ -60,6 +60,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
             org_name=(profile.company_name if profile else "") or "",
             org_bin=(profile.company_iin if profile else "") or "",
             full_name=sender_sig.signer_name or "",
+            iin=sender_sig.signer_iin or "",
             cert_serial=sender_sig.certificate_serial or "",
             cert_valid_from=sender_sig.certificate_valid_from.strftime("%Y-%m-%dT%H:%M:%S") if sender_sig.certificate_valid_from else "",
             cert_valid_to=sender_sig.certificate_valid_to.strftime("%Y-%m-%dT%H:%M:%S") if sender_sig.certificate_valid_to else "",
@@ -75,11 +76,12 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
             org_name=receiver_sig.signer_org_name or "",
             org_bin="",
             full_name=receiver_sig.signer_name or "",
+            iin=receiver_sig.signer_iin or "",
             cert_serial=receiver_sig.certificate_serial or "",
             cert_valid_from=receiver_sig.certificate_valid_from.strftime("%Y-%m-%dT%H:%M:%S") if receiver_sig.certificate_valid_from else "",
             cert_valid_to=receiver_sig.certificate_valid_to.strftime("%Y-%m-%dT%H:%M:%S") if receiver_sig.certificate_valid_to else "",
             signed_at=receiver_sig.signed_at.strftime("%Y-%m-%d %H:%M") if receiver_sig.signed_at else "",
-            signer_title="ИП (личный ключ)",
+            signer_title="Личный ключ физического лица (ИП)",
         )
 
     config = StampConfig(
