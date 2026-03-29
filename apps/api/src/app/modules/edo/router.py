@@ -470,6 +470,10 @@ async def _poll_and_save_signature(
 
         cms_signature_b64 = signatures[0]
 
+        # Extract certificate metadata from CMS signature
+        from app.services.cms_parser import parse_cms_signature
+        cert_info = parse_cms_signature(cms_signature_b64)
+
         # Save to DB
         db = SessionLocal()
         try:
@@ -477,11 +481,15 @@ async def _poll_and_save_signature(
 
             sig = Signature(
                 document_id=document_id,
-                signer_iin=signer_iin,
-                signer_name=signer_name,
+                signer_iin=cert_info.subject_iin if cert_info else signer_iin,
+                signer_name=cert_info.subject_cn if cert_info else signer_name,
+                signer_org_name=cert_info.subject_org if cert_info else "",
                 signer_role=signer_role,
                 signature_data=cms_signature_b64,
                 signature_type="cms",
+                certificate_serial=cert_info.serial_hex if cert_info else "",
+                certificate_valid_from=cert_info.valid_from.replace(tzinfo=None) if cert_info and cert_info.valid_from else None,
+                certificate_valid_to=cert_info.valid_to.replace(tzinfo=None) if cert_info and cert_info.valid_to else None,
                 signed_at=now,
             )
             db.add(sig)

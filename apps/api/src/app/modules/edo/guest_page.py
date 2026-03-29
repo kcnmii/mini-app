@@ -674,13 +674,19 @@ async def save_guest_signature(
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+    # Parse CMS to extract certificate metadata
+    from app.services.cms_parser import parse_cms_signature
+    cert_info = parse_cms_signature(req.cms_signature_b64)
+
     sig = Signature(
         document_id=doc.id,
-        signer_iin=req.signer_iin or "",
-        signer_name=req.signer_name or "Контрагент",
-        signer_org_name=req.signer_org or "",
+        signer_iin=cert_info.subject_iin if cert_info else (req.signer_iin or ""),
+        signer_name=cert_info.subject_cn if cert_info else (req.signer_name or "Контрагент"),
+        signer_org_name=cert_info.subject_org if cert_info else (req.signer_org or ""),
         signer_role="receiver",
-        certificate_serial=req.certificate_serial or "",
+        certificate_serial=cert_info.serial_hex if cert_info else (req.certificate_serial or ""),
+        certificate_valid_from=cert_info.valid_from.replace(tzinfo=None) if cert_info and cert_info.valid_from else None,
+        certificate_valid_to=cert_info.valid_to.replace(tzinfo=None) if cert_info and cert_info.valid_to else None,
         signature_data=req.cms_signature_b64,
         signed_at=now,
     )
@@ -835,16 +841,23 @@ async def _send_guest_data_background(
 
         cms_b64 = signatures[0]
 
+        # Parse CMS to extract certificate metadata
+        from app.services.cms_parser import parse_cms_signature
+        cert_info = parse_cms_signature(cms_b64)
+
         db = SessionLocal()
         try:
             now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             sig = Signature(
                 document_id=document_id,
-                signer_iin="",
-                signer_name="Контрагент",
-                signer_org_name="",
+                signer_iin=cert_info.subject_iin if cert_info else "",
+                signer_name=cert_info.subject_cn if cert_info else "Контрагент",
+                signer_org_name=cert_info.subject_org if cert_info else "",
                 signer_role="receiver",
+                certificate_serial=cert_info.serial_hex if cert_info else "",
+                certificate_valid_from=cert_info.valid_from.replace(tzinfo=None) if cert_info and cert_info.valid_from else None,
+                certificate_valid_to=cert_info.valid_to.replace(tzinfo=None) if cert_info and cert_info.valid_to else None,
                 signature_data=cms_b64,
                 signed_at=now,
             )
