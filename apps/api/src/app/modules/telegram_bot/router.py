@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, Depends
 import httpx
+from sqlalchemy.orm import Session
+from app.core.db import get_db
 
 from app.core.cors import cors_preflight_response
 from app.core.auth import get_current_user_id
@@ -16,6 +18,7 @@ render_service = RenderService()
 async def send_invoice_to_telegram(
     payload: TelegramSendInvoiceRequest,
     user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
 ) -> TelegramSendInvoiceResponse:
     invoice_payload = payload.payload or _sample_invoice_payload()
     filename = f"invoice-{''.join(char if char.isascii() and char.isalnum() else '-' for char in invoice_payload.invoice_number).strip('-') or 'document'}.pdf"
@@ -52,13 +55,12 @@ async def send_invoice_to_telegram(
         if client_iin and isinstance(client_iin, str):
             clean_bin = client_iin.strip()
             if len(clean_bin) == 12:
-                from sqlalchemy.orm import Session
-                from app.core.db import get_db_session, Invoice, SupplierProfile, NewInvoiceItem
+                from app.core.db import Invoice, SupplierProfile, NewInvoiceItem
                 from datetime import datetime, timezone
                 import uuid
                 
-                with get_db_session() as db:
-                    target_profile = db.query(SupplierProfile).filter(SupplierProfile.company_iin == clean_bin).first()
+                target_profiles = db.query(SupplierProfile).filter(SupplierProfile.company_iin == clean_bin).all()
+                for target_profile in target_profiles:
                     if target_profile and target_profile.user_id != user_id:
                         sender_profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
                         sender_name = sender_profile.company_name if sender_profile else "Неизвестно"

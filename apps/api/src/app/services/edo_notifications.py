@@ -41,28 +41,20 @@ async def notify_incoming_document(db: Session, document: Document) -> bool:
     if not receiver_bin:
         return False
 
-    # Find receiver by IIN/BIN
-    receiver_profile = db.query(SupplierProfile).filter(
+    # Find all receivers by IIN/BIN
+    receiver_profiles = db.query(SupplierProfile).filter(
         SupplierProfile.company_iin == receiver_bin
-    ).first()
+    ).all()
 
-    if not receiver_profile:
+    if not receiver_profiles:
         return False  # Not a registered user
 
-    receiver_user_id = receiver_profile.user_id
-
-    # Automatically map the document to the receiver's user_id so they don't lose it if they change IIN
-    if document.receiver_user_id != receiver_user_id:
-        document.receiver_user_id = receiver_user_id
+    # Automatically map the document to the first receiver's user_id 
+    # to maintain history if their IIN changes.
+    first_user_id = receiver_profiles[0].user_id
+    if document.receiver_user_id != first_user_id:
+        document.receiver_user_id = first_user_id
         db.commit()
-
-    # Don't notify yourself
-    if receiver_user_id == document.user_id:
-        return False
-
-    # Check notifications are enabled
-    if not receiver_profile.notifications_enabled:
-        return False
 
     # Get sender info
     sender_profile = _get_profile(db, document.user_id)
@@ -81,15 +73,23 @@ async def notify_incoming_document(db: Session, document: Document) -> bool:
     )
 
     bot = TelegramBotClient()
+    success = False
     try:
-        await bot.send_message(chat_id=receiver_user_id, text=msg)
-        logger.info("Sent incoming document notification to user %d for doc %d", receiver_user_id, document.id)
-        return True
-    except Exception as e:
-        logger.error("Failed to send incoming document notification to %d: %s", receiver_user_id, e)
-        return False
+        for profile in receiver_profiles:
+            if profile.user_id == document.user_id:
+                continue
+            if not profile.notifications_enabled:
+                continue
+            try:
+                await bot.send_message(chat_id=profile.user_id, text=msg)
+                logger.info("Sent incoming document notification to user %d for doc %d", profile.user_id, document.id)
+                success = True
+            except Exception as e:
+                logger.error("Failed to send incoming document notification to %d: %s", profile.user_id, e)
     finally:
         await bot.close()
+    
+    return success
 
 
 async def notify_document_countersigned(db: Session, document: Document, signer_name: str) -> bool:
