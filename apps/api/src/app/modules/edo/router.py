@@ -284,15 +284,12 @@ async def save_nca_signature(
         return JSONResponse({"success": False, "error": "Документ не найден"}, status_code=404)
         
     # Verify the CMS document matches SIGEX
+    from app.services.cms_parser import parse_cms_signature
     try:
-        cms_info = await sigex.get_signature_info(req.cms_signature_b64)
+        cert_info = parse_cms_signature(req.cms_signature_b64)
     except Exception as exc:
         logger.error("NCALayer CMS validation failed: %s", exc)
         return JSONResponse({"success": False, "error": f"Ошибка проверки подписи: {exc}"}, status_code=400)
-
-    cert_info = None
-    if cms_info and isinstance(cms_info, list) and len(cms_info) > 0:
-        cert_info = cms_info[0]
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     sig = Signature(
