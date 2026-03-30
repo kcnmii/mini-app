@@ -47,6 +47,25 @@ class GuestRejectRequest(BaseModel):
 
 
 # ──────────────────────────────────────────────
+# GET /edo/document/{document_id} — Redirect legacy QR codes to safe UUID URL
+# ──────────────────────────────────────────────
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+@router.get("/document/{document_id}", response_class=RedirectResponse)
+async def redirect_legacy_document(document_id: int, role: str = "receiver", db: Session = Depends(get_db)):
+    """Redirect older stamped PDFs (which didn't have a share link) to their share_uuid page."""
+    share = db.query(DocumentShare).filter(DocumentShare.document_id == document_id).first()
+    
+    if not share:
+        # Create share implicitly if accessed via old QR code
+        import uuid
+        share = DocumentShare(document_id=document_id, share_uuid=str(uuid.uuid4()))
+        db.add(share)
+        db.commit()
+
+    return RedirectResponse(f"/edo/doc/{share.share_uuid}?role={role}")
+
+# ──────────────────────────────────────────────
 # GET /edo/doc/{share_uuid} — Guest HTML page
 # ──────────────────────────────────────────────
 @router.get("/doc/{share_uuid}", response_class=HTMLResponse)

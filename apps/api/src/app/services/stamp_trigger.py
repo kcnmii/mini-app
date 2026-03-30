@@ -48,14 +48,18 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
     share = db.query(DocumentShare).filter(
         DocumentShare.document_id == document_id,
     ).first()
-    share_uuid = share.share_uuid if share else ""
+    
+    if not share:
+        import uuid
+        share = DocumentShare(
+            document_id=document_id,
+            share_uuid=str(uuid.uuid4())
+        )
+        db.add(share)
+        db.commit()
 
-    doc_url = ""
-    if share_uuid:
-        doc_url = f"{base_url}/edo/doc/{share_uuid}"
-    else:
-        # Fallback: use document ID-based URL for stamps without shares
-        doc_url = f"{base_url}/edo/document/{document_id}"
+    share_uuid = share.share_uuid
+    doc_url = f"{base_url}/edo/doc/{share_uuid}"
 
     sender_info = None
     if sender_sig:
