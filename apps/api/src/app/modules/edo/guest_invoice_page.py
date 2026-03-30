@@ -537,8 +537,7 @@ async def submit_guest_invoice(
         payload_json=json.dumps(template_data, ensure_ascii=False),
         edo_status="sent",
         share_uuid=share_uuid,
-        created_at=now,
-        updated_at=now
+        created_at=now
     )
     db.add(doc)
     db.commit()

@@ -125,8 +125,7 @@ async def send_invoice_to_telegram(
                         payload_json=json.dumps(payload_json, ensure_ascii=False),
                         edo_status="sent",
                         share_uuid=share_uuid,
-                        created_at=now,
-                        updated_at=now
+                        created_at=now
                     )
                     db.add(doc)
                     db.commit()
