@@ -717,6 +717,7 @@ async def save_guest_signature(
 
     # ── SECURITY: Validate receiver IIN/BIN ──
     cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+    cert_bin = (getattr(cert_info, "subject_bin", "") if cert_info else "").strip()
     expected_receiver = (doc.receiver_bin or "").strip()
     # Fallback: use CLIENT_IIN from payload_json if receiver_bin is empty
     if not expected_receiver and doc and getattr(doc, 'payload_json', None):
@@ -727,10 +728,11 @@ async def save_guest_signature(
         except Exception:
             pass
 
-    if expected_receiver and cert_iin and cert_iin != expected_receiver:
+    cert_ids = [c for c in (cert_iin, cert_bin) if c]
+    if expected_receiver and cert_ids and expected_receiver not in cert_ids:
         logger.warning(
             "SECURITY: Guest NCALayer receiver IIN mismatch! Expected=%s, Certificate=%s, doc=%d",
-            expected_receiver, cert_iin, doc.id,
+            expected_receiver, cert_ids, doc.id,
         )
         return JSONResponse(
             {"success": False, "error": f"ИИН/БИН вашего сертификата ({cert_iin}) не совпадает с получателем документа ({expected_receiver}). Подпись отклонена."},
@@ -910,6 +912,7 @@ async def _send_guest_data_background(
 
             # ── SECURITY: Validate receiver IIN/BIN ──
             cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+            cert_bin = (getattr(cert_info, "subject_bin", "") if cert_info else "").strip()
             doc = db.query(Document).filter(Document.id == document_id).first()
             expected_receiver = (doc.receiver_bin if doc else "").strip() if doc else ""
             if not expected_receiver and doc and getattr(doc, 'payload_json', None):
@@ -920,10 +923,11 @@ async def _send_guest_data_background(
                 except Exception:
                     pass
 
-            if expected_receiver and cert_iin and cert_iin != expected_receiver:
+            cert_ids = [c for c in (cert_iin, cert_bin) if c]
+            if expected_receiver and cert_ids and expected_receiver not in cert_ids:
                 logger.warning(
-                    "SECURITY: Guest eGov Mobile receiver IIN mismatch! Expected=%s, Certificate=%s, doc=%d",
-                    expected_receiver, cert_iin, document_id,
+                    "SECURITY: Guest eGov Mobile receiver IIN/BIN mismatch! Expected=%s, Certificate=%s, doc=%d",
+                    expected_receiver, cert_ids, document_id,
                 )
                 session = db.query(SigningSession).filter(
                     SigningSession.id == signing_session_id
