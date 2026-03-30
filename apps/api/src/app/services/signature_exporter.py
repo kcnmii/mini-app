@@ -51,10 +51,9 @@ class SignatureExporter:
             zf.writestr(f"{doc.title or 'document'}.xml", xml_content)
 
             # 3. ATTACHED CMS (including data)
-            # This is what ezSigner.kz expects for one-file verification
             for i, s in enumerate(sigs):
                 role_suffix = "sender" if s.signer_role == "sender" else "receiver"
-                cms_filename = f"signature_{i+1}_{role_suffix}_WITH_DATA.cms"
+                cms_filename = f"signature_{i+1}_{role_suffix}.cms"
                 attached_cms = self._create_attached_cms(pdf_bytes, s.signature_data)
                 if attached_cms:
                     zf.writestr(cms_filename, attached_cms)
@@ -71,8 +70,7 @@ class SignatureExporter:
 
     def _create_attached_cms(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
         """
-        Manually construct an Attached CMS from Detached signature data.
-        Injects the original data bytes into the ContentInfo structure.
+        Construct an Attached CMS compatible with ezSigner.kz.
         """
         if not detached_sig_b64:
             return None
@@ -86,60 +84,41 @@ class SignatureExporter:
             if content_info['content_type'].native != 'signed_data':
                 return raw_cms
             
-            # Create a copy and inject the content
             signed_data = content_info['content']
             
-            # Set the actual data content
-            signed_data['encapsulated_content_info']['content_type'] = 'data'
-            signed_data['encapsulated_content_info']['content'] = data_bytes
+            # Correct field name for ASN.1 EncapContentInfo in asn1crypto is 'encap_content_info'
+            encap = signed_data['encap_content_info']
+            encap['content_type'] = 'data'
+            encap['content'] = data_bytes
             
             return content_info.dump()
         except Exception as e:
             logger.error("Failed to inject data into CMS: %s", e)
+            # Fallback to detached if injection fails, but logs show 'encap_content_info' should solve it
             return base64.b64decode(detached_sig_b64)
 
     def _generate_xml_metadata(self, doc: Document, sigs: list[Signature], pdf_bytes: bytes) -> bytes:
         md5_hash = hashlib.md5(pdf_bytes).hexdigest()
-        
         xml_lines = [
             '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
             '<root>',
             f'  <document-id>{doc.id}</document-id>',
-            f'  <title>{doc.title or ""}</title>',
             f'  <md5-hash>{md5_hash}</md5-hash>',
             '  <signatures>'
         ]
-
         for s in sigs:
-            xml_lines.append(f'    <signature role="{s.signer_role}">')
-            xml_lines.append(f'      <signer-name>{s.signer_name or ""}</signer-name>')
-            xml_lines.append(f'      <signer-iin>{s.signer_iin or ""}</signer-iin>')
-            xml_lines.append(f'      <signed-at>{s.signed_at.isoformat() if s.signed_at else ""}</signed-at>')
-            xml_lines.append('    </signature>')
-
+            xml_lines.append(f'    <signature role="{s.signer_role}">{s.signer_name}</signature>')
         xml_lines.append('  </signatures>')
         xml_lines.append('</root>')
-        
         return "\n".join(xml_lines).encode("utf-8")
 
     def _generate_text_report(self, doc: Document, sigs: list[Signature]) -> str:
         report = [
-            f"ОТЧЕТ О ПОДПИСАНИИ ДОКУМЕНТА №{doc.id}",
-            f"Название: {doc.title}",
+            f"ДОКУМЕНТ №{doc.id}",
+            f"Тема: {doc.title}",
             "-" * 40,
-            "ИНСТРУКЦИЯ ДЛЯ EZSIGNER.KZ:",
-            "1. Зайдите на https://ezsigner.kz/#!/main",
-            "2. Выберите раздел 'Проверить документ'",
-            "3. Загрузите в поле только ОДИН файл из архива (файл с расширением .cms)",
-            "4. Система сама извлечет документ и проверит подписи.",
-            "-" * 40,
-            "СПИСОК ПОДПИСЕЙ:",
-            ""
+            "ИНСТРУКЦИЯ:",
+            "1. Загрузите файл .cms на ezsigner.kz",
+            "-" * 40
         ]
-
-        for i, s in enumerate(sigs, 1):
-            report.append(f"{i}. {s.signer_name or '—'} (ИИН: {s.signer_iin or '—'})")
-            report.append(f"   Дата: {s.signed_at.strftime('%d.%m.%Y %H:%M') if s.signed_at else '—'}")
-            report.append("")
-
         return "\n".join(report)
