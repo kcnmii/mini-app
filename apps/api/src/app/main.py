@@ -18,6 +18,7 @@ from app.modules.banks.router import router as banks_router
 from app.modules.edo.router import router as edo_router
 from app.modules.edo.test_page import router as edo_test_router
 from app.modules.edo.guest_page import router as edo_guest_router
+from app.modules.edo.guest_invoice_page import router as edo_guest_invoice_router
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(
@@ -41,6 +42,7 @@ app.include_router(banks_router)
 app.include_router(edo_router)
 app.include_router(edo_test_router)
 app.include_router(edo_guest_router)
+app.include_router(edo_guest_invoice_router)
 
 @app.on_event("startup")
 async def startup() -> None:

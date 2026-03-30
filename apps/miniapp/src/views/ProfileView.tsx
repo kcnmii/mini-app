@@ -113,6 +113,32 @@ export function ProfileView({
                     <Icon name="add_circle" /> Добавить счет
                 </button>
             </div>
+
+            <div className="section-title">Ссылка для приема счетов</div>
+            <div className="ios-group" style={{ padding: "16px", background: "var(--card)" }}>
+                <p style={{ margin: "0 0 12px", fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                    Отправьте эту ссылку вашим контрагентам. Они смогут выставить вам счет онлайн без регистрации и NCALayer.
+                </p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <input 
+                        type="text" 
+                        readOnly 
+                        value={profile.profile_uuid ? `https://api.doc-app.kz/api/edo/guest-invoice/${profile.profile_uuid}` : "Ссылка генерируется..."}
+                        style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1px solid var(--border)", background: "var(--bg)", fontSize: "13px", color: "var(--text)", outline: "none" }}
+                    />
+                    <button 
+                        onClick={() => {
+                            if (profile.profile_uuid) {
+                                navigator.clipboard.writeText(`https://api.doc-app.kz/api/edo/guest-invoice/${profile.profile_uuid}`);
+                                setStatus("Ссылка скопирована");
+                            }
+                        }}
+                        style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: "10px", padding: "0 16px", fontWeight: 600, cursor: "pointer", transition: "0.2s" }}
+                    >
+                        Копировать
+                    </button>
+                </div>
+            </div>
             <div className="section-title">Оформление документов</div>
             <div className="ios-group">
                 <ImageUploadRow label="Логотип" hint="PNG или JPG, макс. 2МБ" imageType="logo" onStatusChange={setStatus} onSuccess={refreshProfileImages} />

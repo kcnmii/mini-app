@@ -7,7 +7,7 @@ export const emptyProfile: SupplierProfileData = {
     company_name: "", company_iin: "", company_iic: "", company_bic: "", company_kbe: "",
     beneficiary_bank: "", payment_code: "", supplier_name: "", supplier_iin: "",
     supplier_address: "", executor_name: "", position: "", phone: "", email: "", notifications_enabled: true,
-    logo_path: "", signature_path: "", stamp_path: "",
+    logo_path: "", signature_path: "", stamp_path: "", profile_uuid: "",
 };
 
 export const AVATAR_COLORS = [

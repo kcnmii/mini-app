@@ -137,6 +137,7 @@ export type SupplierProfileData = {
     payment_code: string; supplier_name: string; supplier_iin: string;
     supplier_address: string; executor_name: string; position: string;
     phone: string; email: string; notifications_enabled: boolean; logo_path: string; signature_path: string; stamp_path: string;
+    profile_uuid?: string;
 };
 
 // ── EDO Types ──
@@ -181,4 +182,18 @@ export type SigningStatusInfo = {
 export type ShareInfo = {
     share_url: string;
     share_uuid: string;
+};
+
+export type IncomingDocumentRecord = {
+    id: number;
+    title: string;
+    client_name: string;
+    total_sum: string;
+    doc_type: string;
+    edo_status: string;
+    created_at: string;
+    sender_name: string;
+    sender_bin: string;
+    share_uuid: string | null;
+    is_incoming: true;
 };

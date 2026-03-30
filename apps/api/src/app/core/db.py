@@ -155,6 +155,7 @@ class SupplierProfile(Base):
     __tablename__ = "supplier_profile"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(BigInteger, nullable=False, unique=True, index=True)
+    profile_uuid = Column(String(36), nullable=True, unique=True, index=True)  # Public link for guest invoices
     company_name = Column(Text, default="")
     notifications_enabled = Column(Boolean, default=True)
     company_iin = Column(Text, default="")

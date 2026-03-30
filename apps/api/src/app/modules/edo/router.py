@@ -226,11 +226,74 @@ async def get_signing_status(
 
 
 # ──────────────────────────────────────────────
+# GET /edo/incoming — Documents sent TO the current user
+# ──────────────────────────────────────────────
+@router.get("/incoming")
+async def get_incoming_documents(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Get documents that were sent TO the current user.
+    Matching is done by IIN/BIN: document.receiver_bin == profile.company_iin.
+    """
+    profile = db.query(SupplierProfile).filter(
+        SupplierProfile.user_id == user_id
+    ).first()
+
+    if not profile or not (profile.company_iin or "").strip():
+        return []
+
+    my_iin = profile.company_iin.strip()
+
+    # Find documents where receiver_bin matches MY IIN/BIN
+    # AND the document was signed by sender (at least signed_self)
+    # AND the document is NOT mine (sender is different user)
+    docs = db.query(Document).filter(
+        Document.receiver_bin == my_iin,
+        Document.user_id != user_id,
+        Document.edo_status.in_(["signed_self", "sent", "signed_both", "rejected"]),
+    ).order_by(Document.created_at.desc()).limit(100).all()
+
+    result = []
+    for d in docs:
+        # Get sender info
+        sender_profile = db.query(SupplierProfile).filter(
+            SupplierProfile.user_id == d.user_id
+        ).first()
+        sender_name = (sender_profile.company_name if sender_profile else "") or "Неизвестный"
+        sender_bin = (sender_profile.company_iin if sender_profile else "") or ""
+
+        # Get or create share for this doc
+        share = db.query(DocumentShare).filter(
+            DocumentShare.document_id == d.id
+        ).first()
+        share_uuid = share.share_uuid if share else None
+
+        result.append({
+            "id": d.id,
+            "title": d.title,
+            "client_name": d.client_name,
+            "total_sum": d.total_sum,
+            "doc_type": d.doc_type or "invoice",
+            "edo_status": d.edo_status or "draft",
+            "created_at": d.created_at.isoformat() if d.created_at else "",
+            "sender_name": sender_name,
+            "sender_bin": sender_bin,
+            "share_uuid": share_uuid,
+            "is_incoming": True,
+        })
+
+    return result
+
+
+# ──────────────────────────────────────────────
 # POST /edo/share — Share document with counterparty
 # ──────────────────────────────────────────────
 @router.post("/share", response_model=ShareDocumentResponse)
 async def share_document(
     req: ShareDocumentRequest,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
@@ -264,6 +327,9 @@ async def share_document(
         doc.edo_status = "sent"
 
     db.commit()
+
+    # Notify receiver if they are a registered user
+    background_tasks.add_task(_notify_incoming_async, doc.id)
 
     # The share URL will be served by the frontend or a public API
     share_url = f"/doc/{share_id}"
@@ -570,6 +636,15 @@ async def _poll_and_save_signature(
                 await maybe_stamp_document(db, document_id)
             except Exception as stamp_err:
                 logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
+
+            # Notify document owner that counterparty signed
+            if signer_role == "receiver" and doc and doc.edo_status == "signed_both":
+                try:
+                    from app.services.edo_notifications import notify_document_countersigned
+                    signer_display = cert_info.subject_cn if cert_info else signer_name
+                    await notify_document_countersigned(db, doc, signer_display)
+                except Exception as notif_err:
+                    logger.warning("Countersign notification failed (non-critical): %s", notif_err)
         finally:
             db.close()
 
@@ -598,6 +673,21 @@ async def _poll_and_save_signature(
             db.commit()
         finally:
             db.close()
+
+
+async def _notify_incoming_async(document_id: int):
+    """Background task to notify the receiver about an incoming document."""
+    from app.core.db import SessionLocal
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if doc:
+            from app.services.edo_notifications import notify_incoming_document
+            await notify_incoming_document(db, doc)
+    except Exception as e:
+        logger.warning("Incoming document notification failed (non-critical): %s", e)
+    finally:
+        db.close()
 
 @router.post("/admin/stamp-all-retroactive")
 async def stamp_all_retroactive(db: Session = Depends(get_db)):

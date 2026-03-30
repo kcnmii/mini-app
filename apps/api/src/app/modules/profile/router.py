@@ -21,11 +21,16 @@ IMAGE_FIELDS = {"logo", "signature", "stamp"}
 
 
 def _get_or_create_profile(db: Session, user_id: int) -> SupplierProfileModel:
+    import uuid as _uuid
     profile = db.query(SupplierProfileModel).filter(SupplierProfileModel.user_id == user_id).first()
     if profile:
+        # Backfill profile_uuid if missing
+        if not profile.profile_uuid:
+            profile.profile_uuid = str(_uuid.uuid4())
+            db.commit()
         return profile
 
-    new_profile = SupplierProfileModel(user_id=user_id)
+    new_profile = SupplierProfileModel(user_id=user_id, profile_uuid=str(_uuid.uuid4()))
     db.add(new_profile)
     db.commit()
     db.refresh(new_profile)

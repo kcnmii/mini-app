@@ -573,6 +573,12 @@ async def guest_document_page(share_uuid: str, role: str = "receiver", db: Sessi
                 <h3 style="font-weight: 700; margin-bottom: 4px;">Документ подписан!</h3>
                 <p style="color: #6b7280; font-size: 14px;">Ваша электронная подпись успешно наложена</p>
             </div>
+            <div style="margin-top: 16px; background: linear-gradient(135deg, #007AFF11, #5856D611); border: 1px solid #007AFF22; border-radius: 16px; padding: 20px; text-align: center;">
+                <div style="font-size: 28px; margin-bottom: 8px;">📱</div>
+                <h4 style="font-weight: 700; font-size: 15px; margin-bottom: 6px; color: #1c1c1e;">Управляйте документами за 30 секунд</h4>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 12px; line-height: 1.5;">Выставляйте счета, подписывайте ЭЦП и получайте уведомления об оплате в Telegram</p>
+                <a href="https://t.me/DocOnlinkBot" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #007AFF, #5856D6); color: #fff; padding: 10px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; text-decoration: none;">Начать бесплатно</a>
+            </div>
         `;
     }}
 
@@ -606,6 +612,20 @@ async def guest_document_page(share_uuid: str, role: str = "receiver", db: Sessi
         window.open(`${{API_BASE}}/edo/public/${{SHARE_UUID}}/pdf`, '_blank');
     }}
 </script>
+
+<!-- CTA Promo Block -->
+<div style="max-width: 480px; margin: 24px auto 40px; padding: 0 16px;">
+    <div style="background: linear-gradient(135deg, #f0f9ff, #f5f3ff); border: 1px solid #e0e7ff; border-radius: 16px; padding: 20px; text-align: center;">
+        <div style="font-size: 16px; margin-bottom: 4px;">📨</div>
+        <p style="color: #6b7280; font-size: 12px; line-height: 1.4; margin-bottom: 10px;">
+            Получайте входящие документы и уведомления об оплате автоматически
+        </p>
+        <a href="https://t.me/DocOnlinkBot" target="_blank" 
+           style="color: #007AFF; font-weight: 600; font-size: 13px; text-decoration: none;">
+            Попробовать Doc App →
+        </a>
+    </div>
+</div>
 </body>
 </html>"""
     return HTMLResponse(content=html)
@@ -769,6 +789,14 @@ async def save_guest_signature(
         await maybe_stamp_document(db, doc.id)
     except Exception as stamp_err:
         logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
+
+    # Notify document owner about counterparty's signature
+    try:
+        from app.services.edo_notifications import notify_document_countersigned
+        signer_display = cert_info.subject_cn if cert_info else (req.signer_name or "Контрагент")
+        await notify_document_countersigned(db, doc, signer_display)
+    except Exception as notif_err:
+        logger.warning("Countersign notification failed (non-critical): %s", notif_err)
 
     return {"success": True, "message": "Подпись сохранена"}
 
@@ -976,6 +1004,15 @@ async def _send_guest_data_background(
                 await maybe_stamp_document(db, document_id)
             except Exception as stamp_err:
                 logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
+
+            # Notify document owner about counterparty's signature
+            if doc and doc.edo_status == "signed_both":
+                try:
+                    from app.services.edo_notifications import notify_document_countersigned
+                    signer_display = cert_info.subject_cn if cert_info else "Контрагент"
+                    await notify_document_countersigned(db, doc, signer_display)
+                except Exception as notif_err:
+                    logger.warning("Countersign notification failed (non-critical): %s", notif_err)
         finally:
             db.close()
 
@@ -1039,6 +1076,14 @@ async def reject_document(
     db.commit()
 
     logger.info("Document %d rejected via share %s. Comment: %s", doc.id, share_uuid, req.comment)
+
+    # Notify document owner about rejection
+    try:
+        from app.services.edo_notifications import notify_document_rejected
+        await notify_document_rejected(db, doc, req.comment)
+    except Exception as notif_err:
+        logger.warning("Rejection notification failed (non-critical): %s", notif_err)
+
     return {"success": True, "message": "Документ отклонён"}
 
 

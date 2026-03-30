@@ -21,6 +21,7 @@ class SupplierProfile(BaseModel):
     logo_path: str = ""
     signature_path: str = ""
     stamp_path: str = ""
+    profile_uuid: str = ""
 
 
 class SupplierProfileUpdate(BaseModel):

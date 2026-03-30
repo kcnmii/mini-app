@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon, ActionSheet } from "../components/Common";
 import { NavBar } from "../components/NavBar";
 import { InvoiceRow } from "../components/InvoiceRow";
 import { DocumentRow } from "../components/DocumentRow";
-import type { InvoiceRecord, DocumentRecord } from "../types";
-import { request } from "../utils";
+import { EdoStatusBadge } from "../components/EdoComponents";
+import type { InvoiceRecord, DocumentRecord, IncomingDocumentRecord } from "../types";
+import { request, getAvatarColor } from "../utils";
 
 import { type DocTypeFilter } from "./DocumentFilterView";
 
@@ -50,6 +51,11 @@ export function InvoicesListView({
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
 
+    // Incoming documents state
+    const [incomingDocs, setIncomingDocs] = useState<IncomingDocumentRecord[]>([]);
+    const [isLoadingIncoming, setIsLoadingIncoming] = useState(false);
+    const [incomingLoaded, setIncomingLoaded] = useState(false);
+
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const [isClosingCreateMenu, setIsClosingCreateMenu] = useState(false);
 
@@ -60,6 +66,23 @@ export function InvoicesListView({
             setIsClosingCreateMenu(false);
         }, 300);
     };
+
+    // Load incoming documents when tab switches
+    useEffect(() => {
+        if (activeTab === "incoming" && !incomingLoaded) {
+            setIsLoadingIncoming(true);
+            request<IncomingDocumentRecord[]>("/edo/incoming")
+                .then(data => {
+                    setIncomingDocs(data);
+                    setIncomingLoaded(true);
+                })
+                .catch(err => {
+                    console.error("Failed to load incoming docs:", err);
+                    setStatus("Ошибка загрузки входящих");
+                })
+                .finally(() => setIsLoadingIncoming(false));
+        }
+    }, [activeTab, incomingLoaded]);
 
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -198,11 +221,103 @@ export function InvoicesListView({
 
             <div className="content-area">
                 {activeTab === "incoming" ? (
-                    <div className="empty-state full-height">
-                        <div className="empty-state-icon"><Icon name="inbox" /></div>
-                        <div className="empty-state-title">Входящие документы отсутствуют</div>
-                        <div className="empty-state-text">Ожидайте поступления новых документов</div>
-                    </div>
+                    isLoadingIncoming ? (
+                        <div className="empty-state full-height">
+                            <div className="spinner" style={{ width: "28px", height: "28px", borderColor: "var(--primary, #007AFF)", borderTopColor: "transparent", borderWidth: "3px" }} />
+                        </div>
+                    ) : incomingDocs.length === 0 ? (
+                        <div className="empty-state full-height">
+                            <div className="empty-state-icon"><Icon name="inbox" /></div>
+                            <div className="empty-state-title">Входящие документы отсутствуют</div>
+                            <div className="empty-state-text">Когда контрагенты отправят вам документы на подписание — они появятся здесь</div>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ height: "12px" }} />
+                            <div style={{ padding: "0 16px" }}>
+                                {incomingDocs.map(doc => {
+                                    const typeInfo = doc.doc_type === "act" 
+                                        ? { code: "АВР", color: "#34C759", bg: "rgba(52,199,89,0.12)" }
+                                        : doc.doc_type === "waybill"
+                                        ? { code: "НКЛ", color: "#FF9500", bg: "rgba(255,149,0,0.12)" }
+                                        : { code: "ДОК", color: "var(--primary, #007AFF)", bg: "rgba(0,122,255,0.12)" };
+                                    
+                                    const avatarColor = getAvatarColor(doc.sender_name);
+                                    const initials = doc.sender_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+                                    
+                                    return (
+                                        <div 
+                                            key={`inc-${doc.id}`}
+                                            className="doc-row clickable"
+                                            onClick={() => {
+                                                if (doc.share_uuid) {
+                                                    // Open via share link preview
+                                                    loadAndPreviewDocument(doc.id);
+                                                }
+                                            }}
+                                            style={{ 
+                                                marginBottom: "8px", 
+                                                background: "var(--card, #fff)", 
+                                                borderRadius: "16px", 
+                                                padding: "14px 16px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "12px",
+                                            }}
+                                        >
+                                            {/* Sender avatar */}
+                                            <div style={{
+                                                width: "44px", height: "44px", borderRadius: "14px",
+                                                background: `linear-gradient(135deg, ${avatarColor}22, ${avatarColor}44)`,
+                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                fontSize: "15px", fontWeight: 700, color: avatarColor,
+                                                flexShrink: 0,
+                                            }}>
+                                                {initials || "?"}
+                                            </div>
+                                            
+                                            {/* Content */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                                                    <span style={{ 
+                                                        fontSize: "14px", fontWeight: 600, 
+                                                        color: "var(--text, #1c1c1e)",
+                                                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                                    }}>
+                                                        {doc.sender_name}
+                                                    </span>
+                                                </div>
+                                                <div style={{ 
+                                                    fontSize: "13px", color: "var(--text-muted, #8e8e93)",
+                                                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                                    marginBottom: "6px",
+                                                }}>
+                                                    {doc.title} {doc.total_sum ? `· ${doc.total_sum} ₸` : ""}
+                                                </div>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                                    <span style={{ 
+                                                        background: typeInfo.bg, color: typeInfo.color, 
+                                                        padding: "2px 8px", borderRadius: "6px", 
+                                                        fontSize: "11px", fontWeight: 700 
+                                                    }}>
+                                                        {typeInfo.code}
+                                                    </span>
+                                                    <EdoStatusBadge status={doc.edo_status} style={{ padding: "2px 8px" }} />
+                                                    <span style={{ fontSize: "11px", color: "var(--text-muted, #8e8e93)" }}>
+                                                        {new Date(doc.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Arrow */}
+                                            <Icon name="chevron_right" style={{ color: "var(--text-muted, #8e8e93)", fontSize: "20px", flexShrink: 0 }} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="spacer-24" />
+                        </>
+                    )
                 ) : (
                     !hasAnyOutgoingContent ? (
                         filteredDocs.length === 0 ? (
