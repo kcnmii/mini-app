@@ -372,7 +372,7 @@ async def get_incoming_documents(
         share = db.query(DocumentShare).filter(
             DocumentShare.document_id == d.id
         ).first()
-        share_uuid = share.share_uuid if share else None
+        share_uuid = share.share_uuid if share else d.share_uuid
 
         result.append({
             "id": d.id,

@@ -66,9 +66,17 @@ async def get_document(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    if doc.user_id != user_id:
+        # Verify if user is the receiver
+        from app.core.db import SupplierProfile
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
     doc_data = {
         "id": doc.id,
@@ -111,9 +119,17 @@ async def get_document_pdf(
     from fastapi.responses import Response
     from app.core import s3
 
-    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    if doc.user_id != user_id:
+        # Verify if user is the receiver
+        from app.core.db import SupplierProfile
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
     # If file exists on S3 — return immediately
     if doc.pdf_path:
@@ -164,9 +180,17 @@ async def get_document_preview(
     from fastapi.responses import Response as FastResponse
     from app.core import s3
 
-    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    if doc.user_id != user_id:
+        # Verify if user is the receiver
+        from app.core.db import SupplierProfile
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
     pdf_bytes = None
     if doc.pdf_path:
