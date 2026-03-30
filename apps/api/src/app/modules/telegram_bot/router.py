@@ -55,81 +55,86 @@ async def send_invoice_to_telegram(
         if client_iin and isinstance(client_iin, str):
             clean_bin = client_iin.strip()
             if len(clean_bin) == 12:
-                from app.core.db import Invoice, SupplierProfile, NewInvoiceItem
+                from app.core.db import SupplierProfile, Document
+                from app.core.config import settings
                 from datetime import datetime, timezone
                 import uuid
+                import json
                 
                 target_profiles = db.query(SupplierProfile).filter(SupplierProfile.company_iin == clean_bin).all()
-                for target_profile in target_profiles:
-                    if target_profile and target_profile.user_id != user_id:
-                        sender_profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
-                        sender_name = sender_profile.company_name if sender_profile else "Неизвестно"
-                        sender_bin = sender_profile.company_iin if sender_profile else ""
+                if target_profiles and any(tp.user_id != user_id for tp in target_profiles):
+                    sender_profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+                    sender_name = sender_profile.company_name if sender_profile else "Неизвестно"
+                    
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    
+                    r_id = str(uuid.uuid4())
+                    s3_pdf_key = await render_service.save_file(f"invoice-{r_id}.pdf", pdf_bytes, user_id=user_id)
+                    pdf_url = f"{settings.s3_endpoint_url}/{settings.s3_bucket_name}/{s3_pdf_key}"
+                    
+                    inv_num = getattr(invoice_payload, "invoice_number", "")
+                    if not inv_num and isinstance(invoice_payload, dict):
+                        inv_num = invoice_payload.get("invoice_number", "")
+                    if not inv_num and isinstance(invoice_payload, dict):
+                        inv_num = invoice_payload.get("INVOICE_NUMBER", "")
                         
-                        now = datetime.now(timezone.utc).replace(tzinfo=None)
-                        invoice_number = f"ВХОД-{str(uuid.uuid4()).replace('-', '')[:6].upper()}"
-                        
-                        # Calculate total from payload items
-                        items = getattr(invoice_payload, "items", [])
-                        if isinstance(invoice_payload, dict):
-                            items = invoice_payload.get("items", [])
-                        
-                        def parse_amt(val) -> float:
-                            if not val: return 0.0
-                            if isinstance(val, str):
-                                val = val.replace("\xa0", "").replace(" ", "").replace(",", ".")
-                            try:
-                                return float(val)
-                            except:
-                                return 0.0
-                        
-                        total_amount = 0.0
-                        for it in items:
-                            q_val = it.get("quantity", 0) if isinstance(it, dict) else getattr(it, "quantity", 0)
-                            p_val = it.get("price", 0) if isinstance(it, dict) else getattr(it, "price", 0)
-                            total_amount += parse_amt(q_val) * parse_amt(p_val)
-                        
-                        inv = Invoice(
-                            user_id=target_profile.user_id,
-                            number=invoice_number,
-                            date=now,
-                            client_name=sender_name,
-                            client_bin=sender_bin,
-                            status="incoming",
-                            total_amount=total_amount,
-                            created_at=now,
-                            updated_at=now
-                        )
-                        db.add(inv)
-                        db.flush()
-                        
-                        for it in items:
-                            q_val = it.get("quantity", 0) if isinstance(it, dict) else getattr(it, "quantity", 0)
-                            p_val = it.get("price", 0) if isinstance(it, dict) else getattr(it, "price", 0)
-                            n = it.get("name", "") if isinstance(it, dict) else getattr(it, "name", "")
-                            u = it.get("unit", "шт") if isinstance(it, dict) else getattr(it, "unit", "шт")
-                            
-                            q = parse_amt(q_val)
-                            p = parse_amt(p_val)
-                            line = NewInvoiceItem(
-                                invoice_id=inv.id,
-                                name=n,
-                                quantity=str(q),
-                                price=str(p),
-                                total=str(q * p),
-                                unit=u
-                            )
-                            db.add(line)
-                            
-                        db.commit()
-                        
-                        # Send notification to target
+                    title = f"Счет на оплату № {inv_num}" if (inv_num and str(inv_num).strip()) else "Счет на оплату"
+                    
+                    items = getattr(invoice_payload, "items", [])
+                    if isinstance(invoice_payload, dict):
+                        items = invoice_payload.get("items", [])
+                    
+                    def parse_amt(val) -> float:
+                        if not val: return 0.0
+                        if isinstance(val, str):
+                            val = val.replace("\xa0", "").replace(" ", "").replace(",", ".")
                         try:
-                            from app.services.edo_notifications import notify_incoming_invoice
-                            await notify_incoming_invoice(db, target_profile.user_id, inv, sender_name)
-                        except Exception as e:
-                            import logging
-                            logging.getLogger(__name__).warning(f"Failed to notify incoming invoice: {e}")
+                            return float(val)
+                        except:
+                            return 0.0
+                    
+                    total_amount = 0.0
+                    for it in items:
+                        q_val = it.get("quantity", 0) if isinstance(it, dict) else getattr(it, "quantity", 0)
+                        p_val = it.get("price", 0) if isinstance(it, dict) else getattr(it, "price", 0)
+                        total_amount += parse_amt(q_val) * parse_amt(p_val)
+
+                    payload_json = invoice_payload.model_dump() if hasattr(invoice_payload, "model_dump") else (
+                        invoice_payload.dict() if hasattr(invoice_payload, "dict") else invoice_payload
+                    )
+                    if isinstance(payload_json, dict) and "items" in payload_json:
+                        payload_json["items"] = [
+                            it.model_dump() if hasattr(it, "model_dump") else (
+                                it.dict() if hasattr(it, "dict") else it
+                            ) for it in payload_json["items"]
+                        ]
+                        
+                    share_uuid = str(uuid.uuid4())
+                    
+                    doc = Document(
+                        user_id=user_id,
+                        receiver_bin=clean_bin,
+                        title=title,
+                        client_name=target_profiles[0].company_name or "",
+                        total_sum=str(total_amount),
+                        doc_type="invoice",
+                        doc_file_url=pdf_url,
+                        payload_json=json.dumps(payload_json, ensure_ascii=False),
+                        edo_status="sent",
+                        share_uuid=share_uuid,
+                        created_at=now,
+                        updated_at=now
+                    )
+                    db.add(doc)
+                    db.commit()
+                    db.refresh(doc)
+                    
+                    try:
+                        from app.services.edo_notifications import notify_incoming_document
+                        await notify_incoming_document(db, doc)
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).warning(f"Failed to notify incoming document: {e}")
         # -------------------------------------------------------------------
 
     except Exception as exc:

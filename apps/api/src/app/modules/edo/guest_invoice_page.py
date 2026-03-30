@@ -448,48 +448,114 @@ async def submit_guest_invoice(
         SupplierProfile.profile_uuid == profile_uuid
     ).first()
 
-    if not profile:
-        return JSONResponse({"success": False, "error": "Пользователь не найден"}, status_code=404)
+    from app.modules.render.service import RenderService
+    import json
+    from app.core.config import settings
+    from app.core.db import Document
 
     target_user_id = profile.user_id
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    invoice_number = f"ВХОД-{str(uuid.uuid4()).replace('-', '')[:6].upper()}"
+    invoice_number = str(uuid.uuid4()).replace("-", "")[:6].upper()
+    title = f"Счет на оплату № {invoice_number} (От гостя)"
 
-    # Create Invoice with incoming flag (client_bin represents the SENDER here)
-    inv = Invoice(
-        user_id=target_user_id,
-        number=invoice_number,
-        date=now,
+    # Build basic data for the template renderer
+    items_data = []
+    total_num = 0.0
+    for i, it in enumerate(payload.items):
+        t = it.quantity * it.price
+        total_num += t
+        items_data.append({
+            "number": i + 1,
+            "name": it.name,
+            "quantity": str(it.quantity),
+            "unit": it.unit,
+            "price": str(it.price),
+            "total": str(t),
+            "code": ""
+        })
+
+    words = str(total_num)
+
+    template_data = {
+        "INVOICE_NUMBER": invoice_number,
+        "INVOICE_DATE": now.strftime("%d.%m.%Y"),
+        "CONTRACT": "Без договора",
+        "SUPPLIER_NAME": payload.sender_name,
+        "SUPPLIER_IIN": payload.sender_bin,
+        "SUPPLIER_ADDRESS": "",
+        "COMPANY_NAME": profile.company_name or "",
+        "COMPANY_IIN": profile.company_iin or "",
+        "COMPANY_IIC": profile.bank_account or "",
+        "COMPANY_BIC": profile.bank_bic or "",
+        "COMPANY_KBE": profile.kbe or "",
+        "BENEFICIARY_BANK": profile.bank_name or "",
+        "PAYMENT_CODE": "",
+        "CLIENT_NAME": profile.company_name or "",
+        "CLIENT_IIN": profile.company_iin or "",
+        "CLIENT_ADDRESS": profile.address or "",
+        "EXECUTOR_NAME": payload.sender_name,
+        "POSITION": "",
+        "VAT": "Без НДС",
+        "ITEMS_TOTAL_LINE": str(total_num),
+        "TOTAL_SUM": str(total_num),
+        "TOTAL_SUM_IN_WORDS": words,
+        "items": items_data,
+        "LOGO": "",
+        "SIG": "",
+        "STAMP": "",
+    }
+
+    render_service = RenderService()
+    try:
+        docx_bytes = await render_service.render_document_docx("invoice-kz", template_data)
+        pdf_bytes = await render_service.convert_docx_to_pdf(f"invoice-{invoice_number}.docx", docx_bytes)
+        
+        s3_pdf_key = await render_service.save_file(f"invoice-{invoice_number}.pdf", pdf_bytes, user_id=0)
+        pdf_url = f"{settings.s3_endpoint_url}/{settings.s3_bucket_name}/{s3_pdf_key}"
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to generate guest invoice PDF: {e}")
+        return JSONResponse({"success": False, "error": "Ошибка генерации документа"}, status_code=500)
+
+    # Note: For guest invoices, the sender is unauthenticated (user_id=0).
+    # The receiver is target_user_id.
+    share_uuid = str(uuid.uuid4())
+    
+    doc = Document(
+        user_id=0, # 0 means created by guest sender.
+        receiver_user_id=target_user_id,
+        receiver_bin=payload.sender_bin, # Keep sender bin so it doesn't conflict
+        title=title,
         client_name=payload.sender_name,
-        client_bin=payload.sender_bin,
-        status="incoming",  # Incoming magic status
-        total_amount=payload.total,
+        total_sum=str(total_num),
+        doc_type="invoice",
+        doc_file_url=pdf_url,
+        payload_json=json.dumps(template_data, ensure_ascii=False),
+        edo_status="sent",
+        share_uuid=share_uuid,
         created_at=now,
         updated_at=now
     )
-    db.add(inv)
-    db.flush()
-
-    for it in payload.items:
-        line = NewInvoiceItem(
-            invoice_id=inv.id,
-            name=it.name,
-            quantity=it.quantity,
-            price=it.price,
-            total=it.quantity * it.price,
-            unit=it.unit
-        )
-        db.add(line)
-
+    db.add(doc)
     db.commit()
+    db.refresh(doc)
 
     # Notify target user
     try:
-        from app.services.edo_notifications import notify_incoming_invoice
-        await notify_incoming_invoice(db, target_user_id, inv, payload.sender_name)
+        bot_msg = (
+            f"📥 <b>Новый гостевой счет!</b>\n\n"
+            f"От: <b>{payload.sender_name}</b>\n"
+            f"Документ: <code>{title}</code>\n"
+            f"Сумма: <b>{total_num} ₸</b>\n\n"
+            f"🔗 Откройте приложение для просмотра."
+        )
+        from app.modules.telegram_bot.service import TelegramBotClient
+        bot = TelegramBotClient()
+        await bot.send_message(chat_id=target_user_id, text=bot_msg)
+        await bot.close()
     except Exception as e:
         import logging
-        logging.getLogger(__name__).warning("Failed to notify incoming invoice: %s", e)
+        logging.getLogger(__name__).warning("Failed to notify guest invoice: %s", e)
 
     return {"success": True, "invoice_number": invoice_number}

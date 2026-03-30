@@ -259,6 +259,8 @@ export function InvoicesListView({
                                         ? { code: "АВР", color: "#34C759", bg: "rgba(52,199,89,0.12)" }
                                         : doc.doc_type === "waybill"
                                         ? { code: "НКЛ", color: "#FF9500", bg: "rgba(255,149,0,0.12)" }
+                                        : doc.doc_type === "invoice"
+                                        ? { code: "СЧ", color: "#AF52DE", bg: "rgba(175,82,222,0.12)" }
                                         : { code: "ДОК", color: "var(--primary, #007AFF)", bg: "rgba(0,122,255,0.12)" };
                                     
                                     const avatarColor = getAvatarColor(doc.sender_name);
