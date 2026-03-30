@@ -74,16 +74,20 @@ async def send_invoice_to_telegram(
                         if isinstance(invoice_payload, dict):
                             items = invoice_payload.get("items", [])
                         
+                        def parse_amt(val) -> float:
+                            if not val: return 0.0
+                            if isinstance(val, str):
+                                val = val.replace("\xa0", "").replace(" ", "").replace(",", ".")
+                            try:
+                                return float(val)
+                            except:
+                                return 0.0
+                        
                         total_amount = 0.0
                         for it in items:
-                            if isinstance(it, dict):
-                                qty = float(it.get("quantity", 0))
-                                price = float(it.get("price", 0))
-                                total_amount += qty * price
-                            else:
-                                qty = float(getattr(it, "quantity", 0))
-                                price = float(getattr(it, "price", 0))
-                                total_amount += qty * price
+                            q_val = it.get("quantity", 0) if isinstance(it, dict) else getattr(it, "quantity", 0)
+                            p_val = it.get("price", 0) if isinstance(it, dict) else getattr(it, "price", 0)
+                            total_amount += parse_amt(q_val) * parse_amt(p_val)
                         
                         inv = Invoice(
                             user_id=target_profile.user_id,
@@ -100,10 +104,13 @@ async def send_invoice_to_telegram(
                         db.flush()
                         
                         for it in items:
-                            q = float(it.get("quantity", 0)) if isinstance(it, dict) else float(getattr(it, "quantity", 0))
-                            p = float(it.get("price", 0)) if isinstance(it, dict) else float(getattr(it, "price", 0))
+                            q_val = it.get("quantity", 0) if isinstance(it, dict) else getattr(it, "quantity", 0)
+                            p_val = it.get("price", 0) if isinstance(it, dict) else getattr(it, "price", 0)
                             n = it.get("name", "") if isinstance(it, dict) else getattr(it, "name", "")
                             u = it.get("unit", "шт") if isinstance(it, dict) else getattr(it, "unit", "шт")
+                            
+                            q = parse_amt(q_val)
+                            p = parse_amt(p_val)
                             line = NewInvoiceItem(
                                 invoice_id=inv.id,
                                 name=n,
