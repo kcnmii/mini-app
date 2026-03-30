@@ -54,6 +54,36 @@ async def on_docx_callback(callback: CallbackQuery) -> None:
         await callback.answer("Произошла ошибка при отправке файла.", show_alert=True)
 
 
+async def on_zip_src_callback(callback: CallbackQuery) -> None:
+    if not callback.data or not callback.data.startswith("zip_src:"):
+        await callback.answer()
+        return
+
+    _, doc_id_str = callback.data.split(":")
+    doc_id = int(doc_id_str)
+
+    await callback.answer("⏳ Собираем архив с подписями...")
+
+    from app.core.db import SessionLocal
+    from app.services.signature_exporter import SignatureExporter
+
+    db = SessionLocal()
+    try:
+        exporter = SignatureExporter(db)
+        zip_bytes, filename = await exporter.generate_zip_package(doc_id)
+
+        await callback.message.answer_document(
+            document=BufferedInputFile(zip_bytes, filename=filename),
+            caption=f"📦 Исходники и ЭЦП подписи для документа №{doc_id}.\n\n"
+                    f"Файл .cms можно проверить на ezsigner.kz"
+        )
+    except Exception as e:
+        logging.error(f"Error sending zip source: {e}")
+        await callback.answer(f"Ошибка при сборке архива: {e}", show_alert=True)
+    finally:
+        db.close()
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     client = TelegramBotClient()
@@ -61,6 +91,7 @@ async def main() -> None:
     dp.message.register(on_start, CommandStart())
     dp.message.register(on_web_app_data, F.web_app_data)
     dp.callback_query.register(on_docx_callback, F.data.startswith("docx:"))
+    dp.callback_query.register(on_zip_src_callback, F.data.startswith("zip_src:"))
 
     try:
         await dp.start_polling(client.bot)

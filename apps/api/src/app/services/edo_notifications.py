@@ -108,12 +108,18 @@ async def notify_document_countersigned(db: Session, document: Document, signer_
         f"Документ: <code>{document.title}</code>\n"
         f"Подписант: <b>{signer_name}</b>\n"
         f"Сумма: <b>{document.total_sum or '—'} ₸</b>\n\n"
-        f"Документ подписан обеими сторонами. PDF со штампом ЭЦП обновлён."
+        f"Документ подписан обеими сторонами. PDF со штампом ЭЦП обновлён.\n"
+        f"Вы можете скачать исходники для внешней проверки ниже."
     )
 
     bot = TelegramBotClient()
     try:
-        await bot.send_message(chat_id=owner_id, text=msg)
+        # Pass document_id to show the ZIP download button
+        await bot.send_message(
+            chat_id=owner_id, 
+            text=msg, 
+            document_id=document.id if document.edo_status == "signed_both" else None
+        )
         logger.info("Sent countersigned notification to user %d for doc %d", owner_id, document.id)
         return True
     except Exception as e:
