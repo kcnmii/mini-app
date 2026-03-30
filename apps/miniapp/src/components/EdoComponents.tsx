@@ -20,11 +20,12 @@ function openExternalLink(url: string) {
 interface SignDocumentSheetProps {
     documentId: number;
     documentTitle: string;
+    signerRole?: "sender" | "receiver";
     onClose: () => void;
     onSigned: () => void;
 }
 
-export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned }: SignDocumentSheetProps) {
+export function SignDocumentSheet({ documentId, documentTitle, signerRole = "sender", onClose, onSigned }: SignDocumentSheetProps) {
     const [step, setStep] = useState<"init" | "waiting" | "success" | "error">("init");
     const [signingSession, setSigningSession] = useState<SigningSessionInfo | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
@@ -72,7 +73,7 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
             const result = await request<SigningSessionInfo>("/edo/sign", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ document_id: documentId, signer_role: "sender" }),
+                body: JSON.stringify({ document_id: documentId, signer_role: signerRole }),
             });
             setSigningSession(result);
 
@@ -95,6 +96,67 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
         } catch (err: any) {
             setStep("error");
             setErrorMsg(err.message || "Ошибка подключения к SIGEX");
+        }
+    };
+
+    const initiateNcaSign = async () => {
+        try {
+            setStep("waiting");
+            // 1. WebSocket connection to NCALayer
+            const connectNca = () => new Promise<WebSocket>((resolve, reject) => {
+                const ws = new WebSocket('wss://127.0.0.1:13579/');
+                ws.onopen = () => resolve(ws);
+                ws.onerror = () => reject(new Error('NCALayer не запущен на вашем устройстве или отклонено подключение.'));
+            });
+
+            const ws = await connectNca();
+
+            // 2. Fetch PDF base 64
+            const docResp = await request<{success: boolean; pdf_b64: string}>(`/edo/pdf-b64/${documentId}`);
+            if (!docResp.success) throw new Error("Не удалось получить PDF для NCALayer");
+
+            // 3. Request NCALayer CMS signature
+            const signResult = await new Promise<string>((resolve, reject) => {
+                const handler = (event: MessageEvent) => {
+                    const res = JSON.parse(event.data);
+                    ws.removeEventListener('message', handler);
+                    if (res.code === "200") {
+                        resolve(res.responseObject);
+                    } else if (res.code === "NONE") {
+                        reject(new Error("Вы отменили выбор сертификата."));
+                    } else {
+                        reject(new Error("NCALayer: " + (res.message || 'Ошибка')));
+                    }
+                };
+                ws.addEventListener('message', handler);
+                ws.send(JSON.stringify({
+                    module: "kz.gov.pki.knca.commonUtils",
+                    method: "createCMSSignatureFromBase64",
+                    args: ["PKCS12", "SIGNATURE", docResp.pdf_b64, false]
+                }));
+            });
+
+            // 4. Send CMS signature back to backend
+            const saveResp = await request<{success: boolean; message: string}>("/edo/sign/nca", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    document_id: documentId,
+                    cms_signature_b64: signResult,
+                    signer_role: signerRole
+                })
+            });
+
+            if (saveResp.success) {
+                setStep("success");
+                setTimeout(() => onSigned(), 1500);
+            } else {
+                throw new Error(saveResp.message || 'Ошибка сохранения подписи NCALayer');
+            }
+
+        } catch (err: any) {
+            setStep("error");
+            setErrorMsg(err.message || "Ошибка подписания через NCALayer");
         }
     };
 
@@ -220,8 +282,23 @@ export function SignDocumentSheet({ documentId, documentTitle, onClose, onSigned
                                 boxShadow: "0 4px 16px rgba(0, 122, 255, 0.3)",
                             }}
                         >
-                            <Icon name="draw" style={{ fontSize: "22px" }} />
-                            Подписать через eGov Mobile
+                            <Icon name="phone_iphone" style={{ fontSize: "22px" }} />
+                            Подписать eGov Mobile
+                        </button>
+
+                        <button
+                            onClick={initiateNcaSign}
+                            style={{
+                                width: "100%", height: "52px", border: "1px solid var(--border, #c6c6c8)", borderRadius: "14px",
+                                background: "var(--segment-bg, #f2f2f7)",
+                                color: "var(--text, #1c1c1e)", fontSize: "17px", fontWeight: 600,
+                                cursor: "pointer", display: "flex", alignItems: "center",
+                                justifyContent: "center", gap: "10px", marginTop: "12px",
+                                transition: "0.2s"
+                            }}
+                        >
+                            <Icon name="security" style={{ fontSize: "22px" }} />
+                            Подписать NCALayer (на ПК)
                         </button>
                     </>
                 )}

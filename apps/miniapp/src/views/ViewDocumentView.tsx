@@ -565,6 +565,7 @@ export function ViewDocumentView({
                 <SignDocumentSheet
                     documentId={(selectedInvoice as any)?.id || selectedDoc?.id || 0}
                     documentTitle={title}
+                    signerRole={(selectedDoc as any)?.is_incoming ? "receiver" : "sender"}
                     onClose={() => setShowSignSheet(false)}
                     onSigned={() => {
                         setShowSignSheet(false);

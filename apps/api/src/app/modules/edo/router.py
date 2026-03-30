@@ -44,6 +44,16 @@ class SignDocumentRequest(BaseModel):
     signer_role: str = "sender"  # sender | receiver
 
 
+class SignNcaRequest(BaseModel):
+    document_id: int
+    cms_signature_b64: str
+    signer_role: str = "sender"
+    signer_iin: str = ""
+    signer_name: str = ""
+    signer_org: str = ""
+    certificate_serial: str = ""
+
+
 class SignDocumentResponse(BaseModel):
     signing_session_id: int
     egov_mobile_link: str
@@ -223,6 +233,96 @@ async def get_signing_status(
             result.signer_name = sig.signer_name
 
     return result
+
+
+# ──────────────────────────────────────────────
+# GET /edo/pdf-b64/{document_id} — Get PDF for NCALayer signing
+# ──────────────────────────────────────────────
+@router.get("/pdf-b64/{document_id}")
+async def get_document_pdf_b64(
+    document_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    doc = db.query(Document).filter(
+        Document.id == document_id,
+        Document.user_id == user_id,
+    ).first()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Документ не найден")
+        
+    if not doc.pdf_path:
+        raise HTTPException(status_code=400, detail="PDF не сформирован")
+        
+    from app.core import s3
+    pdf_bytes = await s3.download_file(doc.pdf_path)
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="Файл документа отсутствует")
+        
+    import base64
+    b64 = base64.b64encode(pdf_bytes).decode("ascii")
+    return {"success": True, "pdf_b64": b64}
+
+
+# ──────────────────────────────────────────────
+# POST /edo/sign/nca — Save NCALayer signature directly
+# ──────────────────────────────────────────────
+@router.post("/sign/nca")
+async def save_nca_signature(
+    req: SignNcaRequest,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    from fastapi.responses import JSONResponse
+    doc = db.query(Document).filter(
+        Document.id == req.document_id,
+        Document.user_id == user_id,
+    ).first()
+    
+    if not doc:
+        return JSONResponse({"success": False, "error": "Документ не найден"}, status_code=404)
+        
+    # Verify the CMS document matches SIGEX
+    try:
+        cms_info = await sigex.get_signature_info(req.cms_signature_b64)
+    except Exception as exc:
+        logger.error("NCALayer CMS validation failed: %s", exc)
+        return JSONResponse({"success": False, "error": f"Ошибка проверки подписи: {exc}"}, status_code=400)
+
+    cert_info = None
+    if cms_info and isinstance(cms_info, list) and len(cms_info) > 0:
+        cert_info = cms_info[0]
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    sig = Signature(
+        document_id=doc.id,
+        signer_iin=req.signer_iin or (cert_info.subject_iin if cert_info else ""),
+        signer_name=req.signer_name or (cert_info.subject_cn if cert_info else "Пользователь"),
+        signer_org_name=req.signer_org or (cert_info.subject_org if cert_info else ""),
+        signer_role=req.signer_role,
+        certificate_serial=req.certificate_serial or (cert_info.serial_hex if cert_info else ""),
+        certificate_valid_from=cert_info.valid_from.replace(tzinfo=None) if cert_info and cert_info.valid_from else None,
+        certificate_valid_to=cert_info.valid_to.replace(tzinfo=None) if cert_info and cert_info.valid_to else None,
+        signature_data=req.cms_signature_b64,
+        signed_at=now,
+    )
+    db.add(sig)
+
+    if req.signer_role == "sender":
+        doc.edo_status = "signed_self"
+        if not doc.signed_at:
+            doc.signed_at = now
+    else:
+        doc.edo_status = "signed_both"
+        if not doc.countersigned_at:
+            doc.countersigned_at = now
+
+    db.commit()
+
+    # If sender and link is standard, you might also share it dynamically
+    # For now, just mark signed_self
+    return {"success": True, "message": "Документ успешно подписан"}
 
 
 # ──────────────────────────────────────────────
