@@ -258,7 +258,11 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
 </div>
 
 <script>
-    const API_BASE = '/api';
+    // Determine API base: if we're on /edo/..., we might need /api or just /
+    // If the current path doesn't have /api but mini-app uses it, 
+    // it usually means Nginx handles /api by stripping it.
+    const API_BASE = window.location.pathname.startsWith('/api') ? '/api' : '';
+    console.log('Using API_BASE:', API_BASE);
     const PROFILE_UUID = '{profile_uuid}';
     
     let kycData = null;

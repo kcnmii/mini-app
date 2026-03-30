@@ -98,50 +98,55 @@ async def search_bin_details(bin_number: str, client: httpx.AsyncClient = None):
                         if chief_match:
                             director = chief_match.group(1)
                             
-                        name_match = re.search(r'name_ru:\s*(["\'].*?(?<!\\)["\'])', content)
+                        # Try title first (new kyc.kz), then name_ru (old)
+                        name_match = re.search(r'(?:title|name_ru):\s*(["\'].*?(?<!\\)["\'])', content)
                         if name_match:
                             try:
-                                name = json.loads(name_match.group(1).replace("\\'", "'"))
+                                name_val = name_match.group(1).replace("\\'", "'")
+                                name = json.loads(name_val) if name_val.startswith('"') else name_val.strip("'")
                             except:
                                 name = name_match.group(1).strip('"\'')
                                 
                         addr_match = re.search(r'official_address:\s*(["\'].*?(?<!\\)["\'])', content)
                         if addr_match:
                             try:
-                                address = json.loads(addr_match.group(1).replace("\\'", "'"))
+                                addr_val = addr_match.group(1).replace("\\'", "'")
+                                address = json.loads(addr_val) if addr_val.startswith('"') else addr_val.strip("'")
                             except:
                                 address = addr_match.group(1).strip('"\'')
                         break
                         
-                # Fallback to parsing meta description
-                if not name:
-                    name_match = re.search(r'Проверить\s+(.*?)\s+на благонадёжность', desc)
-                    name = name_match.group(1).strip() if name_match else ""
+                # Fallback to parsing meta description if JSON failed
+                if not name or name.lower() == "undefined":
+                    # Try to extract from "Проверить ... на благонадёжность" or "Проверить ..., БИН ..."
+                    name_match = re.search(r'Проверить\s+(.*?)\s+(?:на благонадёжность|, БИН|, ИИН)', desc)
+                    if name_match:
+                        name = name_match.group(1).strip().strip('"').strip("'")
                 
-                if not director:
-                    director_match = re.search(r'Руководитель\s+(.*?),\s+', desc)
-                    director = director_match.group(1).strip() if director_match else ""
+                if not director or director.lower() == "undefined":
+                    director_match = re.search(r'Руководитель\s+(.*?)(?:,|\s+\|)', desc)
+                    if director_match:
+                        director = director_match.group(1).strip()
                 
-                if not address:
-                    if director:
-                        parts = desc.split(f"Руководитель {director},")
+                if not address or address.lower() == "undefined":
+                    # Address is often after BIN/IIN and before OKED or |
+                    addr_match = re.search(r'(?:БИН|ИИН)\s+\d{12},\s+(.*?)(?:,\s+ОКЭД|\s+\|)', desc)
+                    if addr_match:
+                        address = addr_match.group(1).strip()
                     else:
-                        parts = desc.split(f"БИН {clean_bin},")
-                        if len(parts) < 2:
-                             parts = desc.split(f"ИИН {clean_bin},")
-                             
-                    if len(parts) > 1:
-                        rest = parts[1]
-                        addr_end = rest.find(", ОКЭД")
-                        if addr_end == -1:
-                             addr_end = rest.find(" |")
-                        
-                        if addr_end != -1:
-                            address = rest[:addr_end].strip()
+                        # desperate fallback - splitting
+                        if director:
+                            parts = desc.split(f"Руководитель {director},")
                         else:
-                            address = rest.strip()
+                            parts = desc.split(f"БИН {clean_bin},") if f"БИН {clean_bin}" in desc else desc.split(f"ИИН {clean_bin},")
                             
-                    address = address.strip(',')
+                        if len(parts) > 1:
+                            rest = parts[1]
+                            addr_end = rest.find(", ОКЭД")
+                            if addr_end == -1: addr_end = rest.find(" |")
+                            address = rest[:addr_end].strip() if addr_end != -1 else rest.strip()
+                            
+                    address = (address or "").strip(',')
                 
                 name = normalize_org_name(name)
                 if name.lower() == "undefined" or not name:
