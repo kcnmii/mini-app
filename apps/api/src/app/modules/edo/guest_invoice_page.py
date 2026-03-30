@@ -71,6 +71,7 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
             --text: #1c1c1e;
             --text-secondary: #8e8e93;
             --border: #e5e5ea;
+            --success: #34C759;
         }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -94,6 +95,7 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
             border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
         }}
         .btn:active {{ transform: scale(0.98); opacity: 0.9; }}
+        .btn:disabled {{ opacity: 0.5; pointer-events: none; }}
         .btn-outline {{ background: transparent; color: var(--primary); border: 2px dashed var(--primary); }}
         
         .totals {{ margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; }}
@@ -104,6 +106,76 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
         }}
         
         .hidden {{ display: none !important; }}
+        
+        /* KYC Result Card */
+        .kyc-result {{
+            margin-top: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border: 1px solid #86efac;
+            border-radius: 12px;
+            animation: slideDown 0.4s ease;
+        }}
+        .kyc-result .kyc-row {{
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+        }}
+        .kyc-result .kyc-label {{
+            color: var(--text-secondary);
+            font-size: 12px;
+        }}
+        .kyc-result .kyc-value {{
+            font-weight: 600;
+            text-align: right;
+            max-width: 65%;
+        }}
+        .kyc-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }}
+        .kyc-badge.success {{
+            background: #dcfce7;
+            color: #166534;
+        }}
+        .kyc-badge.loading {{
+            background: #dbeafe;
+            color: #1e40af;
+        }}
+        .kyc-badge.error {{
+            background: #fee2e2;
+            color: #991b1b;
+        }}
+        
+        @keyframes slideDown {{
+            from {{ opacity: 0; transform: translateY(-10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        
+        .bin-input-wrapper {{
+            position: relative;
+        }}
+        .bin-input-wrapper .status-icon {{
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }}
+        
+        @keyframes spin {{
+            to {{ transform: translateY(-50%) rotate(360deg); }}
+        }}
+        .bin-input-wrapper .spinner-icon {{
+            animation: spin 1s linear infinite;
+        }}
     </style>
 </head>
 <body>
@@ -119,26 +191,23 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
         <div class="card">
             <div class="section-title">Ваши данные</div>
             <div class="form-group">
-                <label>Название Вашей компании / ИП</label>
-                <input type="text" id="senderName" required placeholder="Например: ТОО Ромашка">
-            </div>
-            <div class="form-group">
-                <label>БИН / ИИН</label>
-                <input type="text" id="senderBin" required placeholder="Для подстановки в акт" pattern="\\d{{12}}" maxlength="12" inputmode="numeric">
-            </div>
-            <div style="display: flex; gap: 12px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>Email (опц.)</label>
-                    <input type="email" id="senderEmail" placeholder="Для уведомлений">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>Телефон (опц.)</label>
-                    <input type="tel" id="senderPhone" placeholder="+7 777...">
+                <label>БИН / ИИН вашей компании</label>
+                <div class="bin-input-wrapper">
+                    <input type="text" id="senderBin" required placeholder="Введите 12 цифр" pattern="\\d{{12}}" maxlength="12" inputmode="numeric" autocomplete="off">
+                    <span class="status-icon" id="binStatusIcon"></span>
                 </div>
             </div>
+            
+            <!-- КYC Result — hidden until BIN is resolved -->
+            <div id="kyc-result-container" class="hidden"></div>
+            
+            <!-- Hidden fields populated by KYC -->
+            <input type="hidden" id="senderName" value="">
+            <input type="hidden" id="senderAddress" value="">
+            <input type="hidden" id="senderDirector" value="">
         </div>
 
-        <div class="card">
+        <div class="card" id="items-card">
             <div class="section-title">Позиции счёта</div>
             <div id="items-container">
                 <div class="item-row">
@@ -155,7 +224,7 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
             </div>
         </div>
 
-        <button type="submit" class="btn" id="submit-btn" style="box-shadow: 0 4px 12px rgba(0,122,255,0.3);">📤 Отправить счёт</button>
+        <button type="submit" class="btn" id="submit-btn" disabled style="box-shadow: 0 4px 12px rgba(0,122,255,0.3);">📤 Отправить счёт</button>
     </form>
     
     <!-- CTA Block -->
@@ -192,6 +261,91 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
     const API_BASE = '/api';
     const PROFILE_UUID = '{profile_uuid}';
     
+    let kycData = null;
+    let kycLookupTimer = null;
+    
+    // BIN/IIN input handler — auto-lookup via KYC API
+    const binInput = document.getElementById('senderBin');
+    const statusIcon = document.getElementById('binStatusIcon');
+    const kycContainer = document.getElementById('kyc-result-container');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    binInput.addEventListener('input', function() {{
+        const val = this.value.replace(/\\D/g, '');
+        this.value = val;
+        
+        // Reset state
+        kycData = null;
+        kycContainer.classList.add('hidden');
+        kycContainer.innerHTML = '';
+        statusIcon.innerHTML = '';
+        submitBtn.disabled = true;
+        document.getElementById('senderName').value = '';
+        
+        if (val.length === 12) {{
+            // Show loading
+            statusIcon.innerHTML = '<span class="spinner-icon">⏳</span>';
+            
+            clearTimeout(kycLookupTimer);
+            kycLookupTimer = setTimeout(() => lookupBin(val), 300);
+        }}
+    }});
+    
+    async function lookupBin(bin) {{
+        try {{
+            const resp = await fetch(`${{API_BASE}}/clients/search-bin/${{bin}}`);
+            if (!resp.ok) {{
+                statusIcon.innerHTML = '❌';
+                kycContainer.classList.remove('hidden');
+                kycContainer.innerHTML = `
+                    <div class="kyc-badge error">❌ Организация не найдена</div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Проверьте правильность ИИН/БИН и попробуйте снова.</p>
+                `;
+                return;
+            }}
+            
+            const data = await resp.json();
+            kycData = data;
+            
+            // Fill hidden fields
+            document.getElementById('senderName').value = data.name || '';
+            document.getElementById('senderAddress').value = data.address || '';
+            document.getElementById('senderDirector').value = data.director || '';
+            
+            statusIcon.innerHTML = '✅';
+            
+            // Show beautiful result card
+            const typeLabel = data.type === 'IP' ? 'ИП' : 'ТОО / Юр. лицо';
+            kycContainer.classList.remove('hidden');
+            kycContainer.innerHTML = `
+                <div class="kyc-result">
+                    <div class="kyc-badge success">✓ Данные найдены</div>
+                    <div class="kyc-row">
+                        <span class="kyc-label">Название</span>
+                        <span class="kyc-value">${{data.name || '—'}}</span>
+                    </div>
+                    <div class="kyc-row">
+                        <span class="kyc-label">Тип</span>
+                        <span class="kyc-value">${{typeLabel}}</span>
+                    </div>
+                    ${{data.director ? `<div class="kyc-row"><span class="kyc-label">Руководитель</span><span class="kyc-value">${{data.director}}</span></div>` : ''}}
+                    ${{data.address ? `<div class="kyc-row"><span class="kyc-label">Адрес</span><span class="kyc-value" style="font-size:12px;">${{data.address}}</span></div>` : ''}}
+                </div>
+            `;
+            
+            // Enable submit
+            submitBtn.disabled = false;
+            
+        }} catch (err) {{
+            statusIcon.innerHTML = '⚠️';
+            kycContainer.classList.remove('hidden');
+            kycContainer.innerHTML = `
+                <div class="kyc-badge error">⚠️ Ошибка сети</div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Попробуйте ещё раз позже.</p>
+            `;
+        }}
+    }}
+    
     function calculateTotal() {{
         let total = 0;
         document.querySelectorAll('.item-row').forEach(row => {{
@@ -224,6 +378,11 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
     document.getElementById('invoice-form').addEventListener('submit', async (e) => {{
         e.preventDefault();
         
+        if (!kycData) {{
+            alert('Сначала введите корректный ИИН/БИН');
+            return;
+        }}
+        
         const btn = document.getElementById('submit-btn');
         btn.disabled = true;
         btn.textContent = 'Отправка...';
@@ -241,8 +400,8 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
         const payload = {{
             sender_name: document.getElementById('senderName').value.trim(),
             sender_bin: document.getElementById('senderBin').value.trim(),
-            sender_email: document.getElementById('senderEmail').value.trim(),
-            sender_phone: document.getElementById('senderPhone').value.trim(),
+            sender_email: '',
+            sender_phone: '',
             items: items,
             total: calculateTotal()
         }};

@@ -71,6 +71,7 @@ class Document(Base):
     edo_status = Column(String(30), default="draft")   # draft | awaiting_sign | signed_self | sent | signed_both | rejected | esf_pending | esf_submitted | completed
     share_uuid = Column(String(36), nullable=True, unique=True, index=True)
     sender_user_id = Column(BigInteger, nullable=True)
+    receiver_user_id = Column(BigInteger, index=True, nullable=True)
     receiver_bin = Column(String(12), default="")
     receiver_name = Column(Text, default="")
     md5_hash = Column(String(32), default="")

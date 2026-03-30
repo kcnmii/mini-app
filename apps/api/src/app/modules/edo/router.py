@@ -348,11 +348,13 @@ async def get_incoming_documents(
 
     my_iin = profile.company_iin.strip()
 
-    # Find documents where receiver_bin matches MY IIN/BIN
+    from sqlalchemy import or_
+
+    # Find documents where receiver_bin matches MY IIN/BIN OR mapped to my user_id
     # AND the document was signed by sender (at least signed_self)
     # AND the document is NOT mine (sender is different user)
     docs = db.query(Document).filter(
-        Document.receiver_bin == my_iin,
+        or_(Document.receiver_bin == my_iin, Document.receiver_user_id == user_id),
         Document.user_id != user_id,
         Document.edo_status.in_(["signed_self", "sent", "signed_both", "rejected"]),
     ).order_by(Document.created_at.desc()).limit(100).all()
@@ -410,19 +412,28 @@ async def share_document(
 
     share_id = str(uuid.uuid4())
 
+    doc_recipient_bin = req.recipient_bin
+    if not doc_recipient_bin and not doc.receiver_bin and doc.payload_json:
+        try:
+            import json
+            payload = json.loads(doc.payload_json)
+            doc_recipient_bin = str(payload.get("CLIENT_IIN") or "").strip()
+        except:
+            pass
+
     share = DocumentShare(
         document_id=doc.id,
         share_uuid=share_id,
         share_type=req.share_type,
         recipient_email=req.recipient_email,
         recipient_name=req.recipient_name,
-        recipient_bin=req.recipient_bin,
+        recipient_bin=doc_recipient_bin,
     )
     db.add(share)
 
     # Update document receiver info
-    if req.recipient_bin:
-        doc.receiver_bin = req.recipient_bin
+    if doc_recipient_bin:
+        doc.receiver_bin = doc_recipient_bin
     if req.recipient_name:
         doc.receiver_name = req.recipient_name
     if doc.edo_status == "signed_self":

@@ -64,6 +64,19 @@ async def update_profile(
     for key, value in fields.items():
         setattr(profile_model, key, value)
 
+    # ── EDO Linkage Fix ──
+    # If the user changed their IIN/BIN, or is just saving their profile,
+    # find all documents sent to this user's stated IIN/BIN and lock them
+    # to this specific user_id so they don't lose them if they change IIN/BIN later.
+    if profile_model.company_iin:
+        my_bin = profile_model.company_iin.strip()
+        if my_bin:
+            from app.core.db import Document
+            db.query(Document).filter(
+                Document.receiver_bin == my_bin,
+                Document.receiver_user_id.is_(None)
+            ).update({"receiver_user_id": user_id}, synchronize_session=False)
+
     db.commit()
     db.refresh(profile_model)
 

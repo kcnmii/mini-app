@@ -51,6 +51,11 @@ async def notify_incoming_document(db: Session, document: Document) -> bool:
 
     receiver_user_id = receiver_profile.user_id
 
+    # Automatically map the document to the receiver's user_id so they don't lose it if they change IIN
+    if document.receiver_user_id != receiver_user_id:
+        document.receiver_user_id = receiver_user_id
+        db.commit()
+
     # Don't notify yourself
     if receiver_user_id == document.user_id:
         return False
