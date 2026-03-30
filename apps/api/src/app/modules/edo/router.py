@@ -361,12 +361,15 @@ async def get_incoming_documents(
 
     result = []
     for d in docs:
-        # Get sender info
-        sender_profile = db.query(SupplierProfile).filter(
-            SupplierProfile.user_id == d.user_id
-        ).first()
-        sender_name = (sender_profile.company_name if sender_profile else "") or "Неизвестный"
-        sender_bin = (sender_profile.company_iin if sender_profile else "") or ""
+        if d.user_id == 0:
+            sender_name = d.client_name or "Гость"
+            sender_bin = ""  # Could store in payload_json if needed
+        else:
+            sender_profile = db.query(SupplierProfile).filter(
+                SupplierProfile.user_id == d.user_id
+            ).first()
+            sender_name = (sender_profile.company_name if sender_profile else "") or "Неизвестный"
+            sender_bin = (sender_profile.company_iin if sender_profile else "") or ""
 
         # Get or create share for this doc
         share = db.query(DocumentShare).filter(
