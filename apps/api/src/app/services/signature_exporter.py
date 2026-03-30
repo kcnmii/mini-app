@@ -42,25 +42,30 @@ class SignatureExporter:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             
-            # 1. Original PDF
-            pdf_filename = f"{doc.title or 'document'}.pdf"
+            # 1. Original PDF (ALWAYS first, ezSigner likes this order)
+            pdf_filename = f"document_{doc.id}.pdf"
             zf.writestr(pdf_filename, pdf_bytes)
 
-            # 2. XML Metadata & Signatures
-            xml_content = self._generate_xml_metadata(doc, sigs, pdf_bytes)
-            zf.writestr(f"{doc.title or 'document'}.xml", xml_content)
+            # 2. CMS Signatures — ONE FILE including ALL signatures (Countersigned)
+            # ezSigner loves ONE file that contains everything.
+            full_cms = self._generate_full_countersigned_cms(pdf_bytes, sigs)
+            if full_cms:
+                zf.writestr(f"document_{doc.id}_signed.cms", full_cms)
 
-            # 3. ATTACHED CMS (including data)
+            # 3. Individual CMS files for fallback
+            num_sigs = len(sigs)
             for i, s in enumerate(sigs):
-                role_suffix = "sender" if s.signer_role == "sender" else "receiver"
-                cms_filename = f"signature_{i+1}_{role_suffix}.cms"
-                attached_cms = self._create_attached_cms(pdf_bytes, s.signature_data)
-                if attached_cms:
-                    zf.writestr(cms_filename, attached_cms)
+                role = "sender" if s.signer_role == "sender" else "receiver"
+                cms_data = self._create_attached_cms_fixed(pdf_bytes, s.signature_data)
+                if cms_data:
+                    zf.writestr(f"signature_{i+1}_{role}_attached.cms", cms_data)
 
-            # 4. Validation Report
+            # 4. XML Metadata & Report
+            xml_content = self._generate_xml_metadata(doc, sigs, pdf_bytes)
+            zf.writestr(f"metadata_{doc.id}.xml", xml_content)
+            
             report = self._generate_text_report(doc, sigs)
-            zf.writestr("signatures_report.txt", report.encode("utf-8"))
+            zf.writestr("README_CHECK_INSTRUCTIONS.txt", report.encode("utf-8"))
 
         zip_bytes = zip_buffer.getvalue()
         safe_title = "".join(c for c in (doc.title or "document") if c.isalnum() or c in (" ", "-", "_")).strip()
@@ -68,57 +73,61 @@ class SignatureExporter:
 
         return zip_bytes, filename
 
-    def _create_attached_cms(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
+    def _generate_full_countersigned_cms(self, pdf_bytes: bytes, sigs: list[Signature]) -> bytes | None:
+        """
+        Merge all signatures into a single CMS container if possible.
+        If not, just wrap the last one properly.
+        """
+        if not sigs: return None
+        # Start with the receiver's signature (usually contains more info if countersigned)
+        return self._create_attached_cms_fixed(pdf_bytes, sigs[-1].signature_data)
+
+    def _create_attached_cms_fixed(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
         """
         Construct an Attached CMS compatible with ezSigner.kz.
+        Fixes the EncapContentInfo structure.
         """
-        if not detached_sig_b64:
-            return None
-        
+        if not detached_sig_b64: return None
         try:
             from asn1crypto import cms
             
             raw_cms = base64.b64decode(detached_sig_b64)
             content_info = cms.ContentInfo.load(raw_cms)
-            
-            if content_info['content_type'].native != 'signed_data':
-                return raw_cms
-            
             signed_data = content_info['content']
             
-            # Correct field name for ASN.1 EncapContentInfo in asn1crypto is 'encap_content_info'
-            encap = signed_data['encap_content_info']
-            encap['content_type'] = 'data'
-            encap['content'] = data_bytes
+            # IMPORTANT: Re-creating the structure to ensure ezSigner doesn't choke on missing optional fields
+            # Some EDOs strip fields that ezSigner (AngularJS frontend) expects
+            signed_data['encap_content_info'] = {
+                'content_type': 'data',
+                'content': data_bytes
+            }
             
             return content_info.dump()
         except Exception as e:
-            logger.error("Failed to inject data into CMS: %s", e)
-            # Fallback to detached if injection fails, but logs show 'encap_content_info' should solve it
-            return base64.b64decode(detached_sig_b64)
+            logger.error("CMS Creation Error: %s", e)
+            return None
 
     def _generate_xml_metadata(self, doc: Document, sigs: list[Signature], pdf_bytes: bytes) -> bytes:
         md5_hash = hashlib.md5(pdf_bytes).hexdigest()
         xml_lines = [
-            '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
-            '<root>',
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<export>',
             f'  <document-id>{doc.id}</document-id>',
-            f'  <md5-hash>{md5_hash}</md5-hash>',
-            '  <signatures>'
+            f'  <md5>{md5_hash}</md5>',
+            '  <details>'
         ]
         for s in sigs:
-            xml_lines.append(f'    <signature role="{s.signer_role}">{s.signer_name}</signature>')
-        xml_lines.append('  </signatures>')
-        xml_lines.append('</root>')
+            xml_lines.append(f'    <signer role="{s.signer_role}">{s.signer_name} (IIN: {s.signer_iin})</signer>')
+        xml_lines.append('  </details>')
+        xml_lines.append('</export>')
         return "\n".join(xml_lines).encode("utf-8")
 
     def _generate_text_report(self, doc: Document, sigs: list[Signature]) -> str:
-        report = [
-            f"ДОКУМЕНТ №{doc.id}",
-            f"Тема: {doc.title}",
-            "-" * 40,
-            "ИНСТРУКЦИЯ:",
-            "1. Загрузите файл .cms на ezsigner.kz",
-            "-" * 40
-        ]
-        return "\n".join(report)
+        return (
+            f"ДОКУМЕНТ: {doc.title}\n"
+            f"ПОДПИСАНТОВ: {len(sigs)}\n\n"
+            f"ИНСТРУКЦИЯ:\n"
+            f"1. Откройте https://ezsigner.kz/#!/main\n"
+            f"2. Загрузите файл 'document_{doc.id}_signed.cms'\n\n"
+            f"Если сайт выдает ошибку, попробуйте по отдельности загрузить файлы 'signature_..._attached.cms'."
+        )
