@@ -189,7 +189,7 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
 </div>
 
 <script>
-    const API_BASE = '{settings.api_base_url or "/api"}';
+    const API_BASE = '/api';
     const PROFILE_UUID = '{profile_uuid}';
     
     function calculateTotal() {{
