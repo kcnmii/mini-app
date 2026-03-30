@@ -317,8 +317,13 @@ async def save_nca_signature(
 
     db.commit()
 
-    # If sender and link is standard, you might also share it dynamically
-    # For now, just mark signed_self
+    # Apply physical stamps to PDF
+    try:
+        from app.services.stamp_trigger import maybe_stamp_document
+        await maybe_stamp_document(db, doc.id)
+    except Exception as stamp_err:
+        logger.warning("PDF stamp failed (non-critical): %s", stamp_err)
+
     return {"success": True, "message": "Документ успешно подписан"}
 
 
