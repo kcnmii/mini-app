@@ -70,7 +70,7 @@ async def send_invoice_to_telegram(
                     
                     r_id = str(uuid.uuid4())
                     s3_pdf_key = await render_service.save_file(f"invoice-{r_id}.pdf", pdf_bytes, user_id=user_id)
-                    pdf_url = f"{settings.s3_endpoint_url}/{settings.s3_bucket_name}/{s3_pdf_key}"
+                    pdf_url = f"{settings.s3_endpoint}/{settings.s3_bucket}/{s3_pdf_key}"
                     
                     inv_num = getattr(invoice_payload, "invoice_number", "")
                     if not inv_num and isinstance(invoice_payload, dict):

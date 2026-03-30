@@ -512,7 +512,7 @@ async def submit_guest_invoice(
         pdf_bytes = await render_service.convert_docx_to_pdf(f"invoice-{invoice_number}.docx", docx_bytes)
         
         s3_pdf_key = await render_service.save_file(f"invoice-{invoice_number}.pdf", pdf_bytes, user_id=0)
-        pdf_url = f"{settings.s3_endpoint_url}/{settings.s3_bucket_name}/{s3_pdf_key}"
+        pdf_url = f"{settings.s3_endpoint}/{settings.s3_bucket}/{s3_pdf_key}"
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Failed to generate guest invoice PDF: {e}")
