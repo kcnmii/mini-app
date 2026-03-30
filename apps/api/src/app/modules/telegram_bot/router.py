@@ -43,6 +43,86 @@ async def send_invoice_to_telegram(
             caption=payload.caption,
             user_id=user_id,
         )
+        
+        # --- NEW LOGIC: Send to counterparty's "Incoming" if they exist ---
+        client_iin = getattr(invoice_payload, "client_iin", None) or getattr(invoice_payload, "CLIENT_IIN", None)
+        if isinstance(invoice_payload, dict):
+            client_iin = invoice_payload.get("CLIENT_IIN") or invoice_payload.get("client_iin")
+            
+        if client_iin and isinstance(client_iin, str):
+            clean_bin = client_iin.strip()
+            if len(clean_bin) == 12:
+                from sqlalchemy.orm import Session
+                from app.core.db import get_db_session, Invoice, SupplierProfile, NewInvoiceItem
+                from datetime import datetime, timezone
+                import uuid
+                
+                with get_db_session() as db:
+                    target_profile = db.query(SupplierProfile).filter(SupplierProfile.company_iin == clean_bin).first()
+                    if target_profile and target_profile.user_id != user_id:
+                        sender_profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+                        sender_name = sender_profile.company_name if sender_profile else "Неизвестно"
+                        sender_bin = sender_profile.company_iin if sender_profile else ""
+                        
+                        now = datetime.now(timezone.utc).replace(tzinfo=None)
+                        invoice_number = f"ВХОД-{str(uuid.uuid4()).replace('-', '')[:6].upper()}"
+                        
+                        # Calculate total from payload items
+                        items = getattr(invoice_payload, "items", [])
+                        if isinstance(invoice_payload, dict):
+                            items = invoice_payload.get("items", [])
+                        
+                        total_amount = 0.0
+                        for it in items:
+                            if isinstance(it, dict):
+                                qty = float(it.get("quantity", 0))
+                                price = float(it.get("price", 0))
+                                total_amount += qty * price
+                            else:
+                                qty = float(getattr(it, "quantity", 0))
+                                price = float(getattr(it, "price", 0))
+                                total_amount += qty * price
+                        
+                        inv = Invoice(
+                            user_id=target_profile.user_id,
+                            number=invoice_number,
+                            date=now,
+                            client_name=sender_name,
+                            client_bin=sender_bin,
+                            status="incoming",
+                            total_amount=total_amount,
+                            created_at=now,
+                            updated_at=now
+                        )
+                        db.add(inv)
+                        db.flush()
+                        
+                        for it in items:
+                            q = float(it.get("quantity", 0)) if isinstance(it, dict) else float(getattr(it, "quantity", 0))
+                            p = float(it.get("price", 0)) if isinstance(it, dict) else float(getattr(it, "price", 0))
+                            n = it.get("name", "") if isinstance(it, dict) else getattr(it, "name", "")
+                            u = it.get("unit", "шт") if isinstance(it, dict) else getattr(it, "unit", "шт")
+                            line = NewInvoiceItem(
+                                invoice_id=inv.id,
+                                name=n,
+                                quantity=str(q),
+                                price=str(p),
+                                total=str(q * p),
+                                unit=u
+                            )
+                            db.add(line)
+                            
+                        db.commit()
+                        
+                        # Send notification to target
+                        try:
+                            from app.services.edo_notifications import notify_incoming_invoice
+                            await notify_incoming_invoice(db, target_profile.user_id, inv, sender_name)
+                        except Exception as e:
+                            import logging
+                            logging.getLogger(__name__).warning(f"Failed to notify incoming invoice: {e}")
+        # -------------------------------------------------------------------
+
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"telegram_send_error: {exc}") from exc
     finally:
