@@ -1103,6 +1103,13 @@ async def reject_document(
     except Exception as notif_err:
         logger.warning("Rejection notification failed (non-critical): %s", notif_err)
 
+    # Stamp the document so the PDF shows "ОТКЛОНЕН"
+    try:
+        from app.services.stamp_trigger import maybe_stamp_document
+        await maybe_stamp_document(db, doc.id)
+    except Exception as stamp_err:
+        logger.warning("PDF stamp failed on rejection (non-critical): %s", stamp_err)
+
     return {"success": True, "message": "Документ отклонён"}
 
 

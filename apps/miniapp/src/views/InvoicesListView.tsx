@@ -84,6 +84,25 @@ export function InvoicesListView({
         }
     }, [activeTab, incomingLoaded]);
 
+    // BACKGROUND POLLING for incoming docs status updates
+    useEffect(() => {
+        if (activeTab !== "incoming") return;
+        
+        const interval = setInterval(async () => {
+             try {
+                const updated = await request<IncomingDocumentRecord[]>("/edo/incoming");
+                // Only update state if JSON changed to prevent flickering
+                if (JSON.stringify(updated) !== JSON.stringify(incomingDocs)) {
+                    setIncomingDocs(updated);
+                }
+             } catch (e) {
+                 console.error("Background poll failed:", e);
+             }
+        }, 15000); // 15 seconds polling interval for list view
+
+        return () => clearInterval(interval);
+    }, [activeTab, incomingDocs]);
+
     const toggleSelect = (id: number) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };

@@ -101,6 +101,35 @@ export function ViewDocumentView({
         }
     }, [showDetails, selectedDoc?.id, selectedDoc?.edo_status]);
 
+    // Polling for status updates (Rejected/Signed) when preview is open
+    useEffect(() => {
+        const docId = (selectedInvoice as any)?.id || selectedDoc?.id;
+        if (!docId || showSignSheet) return; // Don't poll while signing sheet is open (it has its own poll)
+
+        // Only poll for transient states
+        const isTransient = selectedDoc?.edo_status === 'sent' || selectedDoc?.edo_status === 'signed_self';
+        if (!isTransient) return;
+
+        const interval = setInterval(async () => {
+            try {
+                // Fetch document details from backend to check for status change
+                const isInv = !!selectedInvoice;
+                const endpoint = isInv ? `/invoices/${docId}` : `/documents/${docId}`;
+                const freshDoc = await request<any>(endpoint);
+                
+                if (freshDoc && freshDoc.edo_status !== selectedDoc?.edo_status) {
+                    // Status changed! Refresh everything
+                    if (refreshPreview) refreshPreview(docId);
+                    if (reloadDocuments) reloadDocuments();
+                }
+            } catch (e) {
+                console.error("Polling error:", e);
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [selectedDoc?.id, selectedDoc?.edo_status, showSignSheet]);
+
     const closeDetails = () => {
         setIsClosingDetails(true);
         setTimeout(() => {

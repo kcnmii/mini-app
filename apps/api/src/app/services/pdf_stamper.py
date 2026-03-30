@@ -70,6 +70,7 @@ class StampConfig:
     receiver: SignerInfo | None = None
     edo_service_name: str = "ЭДО Doc App"
     edo_service_url: str = "https://doc.onlink.kz"
+    doc_status: str = ""
 
 
 def _register_fonts(page: fitz.Page) -> tuple[str, str]:
@@ -382,7 +383,7 @@ def _add_footer_page(doc: fitz.Document, config: StampConfig, page_width: float,
             col_y = _draw_signer_column(margin + col_width, signer, role_label)
         max_y_bottom = max(max_y_bottom, col_y)
 
-    # If only sender signed, show "Получатель" column with "ОЖИДАНИЕ ПОДПИСИ"
+    # If only sender signed, show "Получатель" column with "ОЖИДАНИЕ ПОДПИСИ" or "ОТКЛОНЕН"
     if config.sender and not config.receiver:
         x = margin + col_width + pad
         y = table_top + 14
@@ -394,16 +395,18 @@ def _add_footer_page(doc: fitz.Document, config: StampConfig, page_width: float,
             color=DARK,
         )
         y += 30
+        
+        is_rejected = config.doc_status == "rejected"
         new_page.insert_text(
             fitz.Point(x, y),
-            "Ожидание подписи...",
-            fontsize=8,
-            fontname=font_r,
-            color=(0.6, 0.6, 0.6),
+            "ОТКЛОНЕН" if is_rejected else "Ожидание подписи...",
+            fontsize=9 if is_rejected else 8,
+            fontname=font_b if is_rejected else font_r,
+            color=(0.8, 0.0, 0.0) if is_rejected else (0.6, 0.6, 0.6),
         )
         max_y_bottom = max(max_y_bottom, y + 20)
 
-    # If only receiver signed, show "Отправитель" column with "ОЖИДАНИЕ ПОДПИСИ"
+    # If only receiver signed, show "Отправитель" column with "ОЖИДАНИЕ ПОДПИСИ" or "ОТКЛОНЕН"
     if config.receiver and not config.sender:
         x = margin + pad
         y = table_top + 14
@@ -415,12 +418,14 @@ def _add_footer_page(doc: fitz.Document, config: StampConfig, page_width: float,
             color=DARK,
         )
         y += 30
+        
+        is_rejected = config.doc_status == "rejected"
         new_page.insert_text(
             fitz.Point(x, y),
-            "Ожидание подписи...",
-            fontsize=8,
-            fontname=font_r,
-            color=(0.6, 0.6, 0.6),
+            "ОТКЛОНЕН" if is_rejected else "Ожидание подписи...",
+            fontsize=9 if is_rejected else 8,
+            fontname=font_b if is_rejected else font_r,
+            color=(0.8, 0.0, 0.0) if is_rejected else (0.6, 0.6, 0.6),
         )
         max_y_bottom = max(max_y_bottom, y + 20)
 

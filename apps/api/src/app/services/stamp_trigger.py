@@ -105,6 +105,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
         edo_service_url="https://doc.onlink.kz",
         sender=sender_info,
         receiver=receiver_info,
+        doc_status=doc.edo_status or "",
     )
 
     # ALWAYS fetch the original, unstamped PDF to prevent double-stamping
