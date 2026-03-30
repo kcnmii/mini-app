@@ -6,7 +6,7 @@ import type { SupplierProfileData, TelegramWebApp } from "../types";
 
 // Quick copy of getAvatarColor from utils (or we should import it)
 // We'll import it from App.tsx's parent context or utils
-import { getAvatarColor } from "../utils";
+import { getAvatarColor, API_BASE_URL } from "../utils";
 
 interface ProfileViewProps {
     tgUser: any;
@@ -123,13 +123,14 @@ export function ProfileView({
                     <input 
                         type="text" 
                         readOnly 
-                        value={profile.profile_uuid ? `https://api.doc-app.kz/api/edo/guest-invoice/${profile.profile_uuid}` : "Ссылка генерируется..."}
+                        value={profile.profile_uuid ? (API_BASE_URL.startsWith('http') ? `${API_BASE_URL}/edo/guest-invoice/${profile.profile_uuid}` : `${window.location.origin}${API_BASE_URL}/edo/guest-invoice/${profile.profile_uuid}`) : "Ссылка генерируется..."}
                         style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1px solid var(--border)", background: "var(--bg)", fontSize: "13px", color: "var(--text)", outline: "none" }}
                     />
                     <button 
                         onClick={() => {
                             if (profile.profile_uuid) {
-                                navigator.clipboard.writeText(`https://api.doc-app.kz/api/edo/guest-invoice/${profile.profile_uuid}`);
+                                const link = API_BASE_URL.startsWith('http') ? `${API_BASE_URL}/edo/guest-invoice/${profile.profile_uuid}` : `${window.location.origin}${API_BASE_URL}/edo/guest-invoice/${profile.profile_uuid}`;
+                                navigator.clipboard.writeText(link);
                                 setStatus("Ссылка скопирована");
                             }
                         }}
