@@ -123,12 +123,7 @@ async def maybe_stamp_document(db: Session, document_id: int, base_url: str = "h
         from app.services.pdf_stamper import add_stamp_to_pdf
         stamped_bytes = add_stamp_to_pdf(pdf_bytes, config)
 
-        # Upload stamped version
-        stamped_key = original_pdf_key.replace(".pdf", "_stamped.pdf")
-        await s3.upload_file(stamped_key, stamped_bytes)
 
-        # Update document to point to stamped version
-        doc.pdf_path = stamped_key
         # Update edo_status only if it transitioned fully
         if sender_sig and receiver_sig:
             doc.edo_status = "signed_both"
