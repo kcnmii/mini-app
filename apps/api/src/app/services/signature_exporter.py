@@ -73,32 +73,8 @@ class SignatureExporter:
         """
         if not sigs: return None
         # Start with the receiver's signature (usually contains more info if countersigned)
-        return self._create_attached_cms_fixed(pdf_bytes, sigs[-1].signature_data)
 
-    def _create_attached_cms_fixed(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
-        """
-        Construct an Attached CMS compatible with ezSigner.kz.
-        Fixes the EncapContentInfo structure.
-        """
-        if not detached_sig_b64: return None
-        try:
-            from asn1crypto import cms
-            
-            raw_cms = base64.b64decode(detached_sig_b64)
-            content_info = cms.ContentInfo.load(raw_cms)
-            signed_data = content_info['content']
-            
-            # IMPORTANT: Re-creating the structure to ensure ezSigner doesn't choke on missing optional fields
-            # Some EDOs strip fields that ezSigner (AngularJS frontend) expects
-            signed_data['encap_content_info'] = {
-                'content_type': 'data',
-                'content': data_bytes
-            }
-            
-            return content_info.dump()
-        except Exception as e:
-            logger.error("CMS Creation Error: %s", e)
-            return None
+
 
     def _generate_xml_metadata(self, doc: Document, sigs: list[Signature], pdf_bytes: bytes) -> bytes:
         md5_hash = hashlib.md5(pdf_bytes).hexdigest()
