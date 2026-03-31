@@ -916,3 +916,26 @@ async def migrate_signatures(db: Session = Depends(get_db)):
         db.commit()
         
     return {"processed": len(results), "updated": updated_count, "results": results}
+
+# ──────────────────────────────────────────────
+# POST /edo/admin/clear-all-previews — Clear all PDF preview caches
+# ──────────────────────────────────────────────
+@router.get("/admin/clear-all-previews")
+async def clear_all_previews(db: Session = Depends(get_db)):
+    """Delete all cached .preview.json files from S3 to force regeneration."""
+    from app.core import s3
+    docs = db.query(Document).all()
+    deleted = 0
+    for doc in docs:
+        if not doc.pdf_path: continue
+        try:
+            await s3.delete_file(f"{doc.pdf_path}.preview.json")
+            deleted += 1
+            original = doc.pdf_path.replace("_stamped.pdf", ".pdf")
+            if original != doc.pdf_path:
+                await s3.delete_file(f"{original}.preview.json")
+                deleted += 1
+        except Exception:
+            pass
+    return {"success": True, "message": f"Попытка удаления кэшей завершена ({deleted} запросов). Обновите страницу."}
+
