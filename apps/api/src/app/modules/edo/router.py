@@ -128,11 +128,16 @@ async def initiate_signing(
         if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
             raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
-    # Get PDF bytes for signing
+    # Get PDF bytes for signing — always use original unstamped PDF
     from app.core import s3
     pdf_bytes = None
     if doc.pdf_path:
-        pdf_bytes = await s3.download_file(doc.pdf_path)
+        original_key = doc.pdf_path
+        if original_key.endswith("_stamped.pdf"):
+            original_key = original_key.replace("_stamped.pdf", ".pdf")
+        pdf_bytes = await s3.download_file(original_key)
+        if not pdf_bytes:
+            pdf_bytes = await s3.download_file(doc.pdf_path)
 
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="PDF документа не найден для подписания")
@@ -268,7 +273,12 @@ async def get_document_pdf_b64(
         raise HTTPException(status_code=400, detail="PDF не сформирован")
         
     from app.core import s3
-    pdf_bytes = await s3.download_file(doc.pdf_path)
+    original_key = doc.pdf_path
+    if original_key.endswith("_stamped.pdf"):
+        original_key = original_key.replace("_stamped.pdf", ".pdf")
+    pdf_bytes = await s3.download_file(original_key)
+    if not pdf_bytes:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Файл документа отсутствует")
         

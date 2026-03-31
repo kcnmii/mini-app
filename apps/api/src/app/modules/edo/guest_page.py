@@ -668,8 +668,12 @@ async def get_public_pdf_b64(share_uuid: str, db: Session = Depends(get_db)):
     if not doc or not doc.pdf_path:
         return JSONResponse({"success": False, "error": "PDF не найден"}, status_code=404)
 
-    pdf_bytes = await s3.download_file(doc.pdf_path)
-
+    original_key = doc.pdf_path
+    if original_key.endswith("_stamped.pdf"):
+        original_key = original_key.replace("_stamped.pdf", ".pdf")
+    pdf_bytes = await s3.download_file(original_key)
+    if not pdf_bytes:
+        pdf_bytes = await s3.download_file(doc.pdf_path)
     if not pdf_bytes:
         return JSONResponse({"success": False, "error": f"Файл не найден в S3"}, status_code=404)
 
