@@ -39,36 +39,29 @@ class SignatureExporter:
             Signature.document_id == document_id
         ).order_by(Signature.signed_at.asc()).all()
 
+        safe_title = "".join(c for c in (doc.title or "document") if c.isalnum() or c in (" ", "-", "_")).strip()
+        
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             
-            # 1. Original PDF (ALWAYS first, ezSigner likes this order)
-            pdf_filename = f"document_{doc.id}.pdf"
+            # 1. Original PDF
+            pdf_filename = f"{safe_title}.pdf"
             zf.writestr(pdf_filename, pdf_bytes)
 
             # 2. CMS Signatures — ONE FILE including ALL signatures (Countersigned)
-            # ezSigner loves ONE file that contains everything.
+            # ezSigner requires the extension to match exactly what it expects (e.g. .pdf.cms)
+            # and it must be a single attached CMS file containing the data.
             full_cms = self._generate_full_countersigned_cms(pdf_bytes, sigs)
-            if full_cms:
-                zf.writestr(f"document_{doc.id}_signed.cms", full_cms)
-
-            # 3. Individual CMS files for fallback
-            num_sigs = len(sigs)
-            for i, s in enumerate(sigs):
-                role = "sender" if s.signer_role == "sender" else "receiver"
-                cms_data = self._create_attached_cms_fixed(pdf_bytes, s.signature_data)
-                if cms_data:
-                    zf.writestr(f"signature_{i+1}_{role}_attached.cms", cms_data)
-
-            # 4. XML Metadata & Report
-            xml_content = self._generate_xml_metadata(doc, sigs, pdf_bytes)
-            zf.writestr(f"metadata_{doc.id}.xml", xml_content)
             
-            report = self._generate_text_report(doc, sigs)
-            zf.writestr("README_CHECK_INSTRUCTIONS.txt", report.encode("utf-8"))
+            cms_filename = f"{safe_title}.pdf.cms"
+            if full_cms:
+                zf.writestr(cms_filename, full_cms)
+            else:
+                # Extreme fallback, just put the last signature as is
+                if sigs and sigs[-1].signature_data:
+                    zf.writestr(f"{safe_title}_raw.cms", base64.b64decode(sigs[-1].signature_data))
 
         zip_bytes = zip_buffer.getvalue()
-        safe_title = "".join(c for c in (doc.title or "document") if c.isalnum() or c in (" ", "-", "_")).strip()
         filename = f"signatures_{safe_title}_{document_id}.zip"
 
         return zip_bytes, filename
@@ -110,24 +103,25 @@ class SignatureExporter:
     def _generate_xml_metadata(self, doc: Document, sigs: list[Signature], pdf_bytes: bytes) -> bytes:
         md5_hash = hashlib.md5(pdf_bytes).hexdigest()
         xml_lines = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<export>',
+            '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
+            '<root>',
             f'  <document-id>{doc.id}</document-id>',
-            f'  <md5>{md5_hash}</md5>',
-            '  <details>'
+            f'  <md5-hash>{md5_hash}</md5-hash>',
+            '  <signatures>'
         ]
         for s in sigs:
-            xml_lines.append(f'    <signer role="{s.signer_role}">{s.signer_name} (IIN: {s.signer_iin})</signer>')
-        xml_lines.append('  </details>')
-        xml_lines.append('</export>')
+            xml_lines.append(f'    <signature role="{s.signer_role}">{s.signer_name}</signature>')
+        xml_lines.append('  </signatures>')
+        xml_lines.append('</root>')
         return "\n".join(xml_lines).encode("utf-8")
 
     def _generate_text_report(self, doc: Document, sigs: list[Signature]) -> str:
-        return (
-            f"ДОКУМЕНТ: {doc.title}\n"
-            f"ПОДПИСАНТОВ: {len(sigs)}\n\n"
-            f"ИНСТРУКЦИЯ:\n"
-            f"1. Откройте https://ezsigner.kz/#!/main\n"
-            f"2. Загрузите файл 'document_{doc.id}_signed.cms'\n\n"
-            f"Если сайт выдает ошибку, попробуйте по отдельности загрузить файлы 'signature_..._attached.cms'."
-        )
+        report = [
+            f"ДОКУМЕНТ №{doc.id}",
+            f"Тема: {doc.title}",
+            "-" * 40,
+            "ИНСТРУКЦИЯ:",
+            "1. Загрузите файл .cms на ezsigner.kz",
+            "-" * 40
+        ]
+        return "\n".join(report)
