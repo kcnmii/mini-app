@@ -70,6 +70,7 @@ async def get_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
+    is_incoming = False
     if doc.user_id != user_id:
         # Verify if user is the receiver
         from app.core.db import SupplierProfile
@@ -77,6 +78,7 @@ async def get_document(
         my_bin = profile.company_iin if profile else ""
         if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
             raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
+        is_incoming = True
 
     doc_data = {
         "id": doc.id,
@@ -91,6 +93,7 @@ async def get_document(
         "contract_id": doc.contract_id,
         "share_uuid": doc.share_uuid,
         "created_at": doc.created_at,
+        "is_incoming": is_incoming,
     }
 
     if not doc_data.get("payload_json"):
@@ -239,6 +242,14 @@ async def save_invoice_document(
     except (ValueError, AttributeError):
         total_amount = 0.0
 
+    receiver_bin = invoice.client_iin or ""
+    receiver_user_id = 0
+    if receiver_bin:
+        from app.core.db import SupplierProfile
+        receiver_profile = db.query(SupplierProfile).filter(SupplierProfile.company_iin == receiver_bin).first()
+        if receiver_profile:
+            receiver_user_id = receiver_profile.user_id
+
     new_doc = Document(
         user_id=user_id,
         title=f"Счет № {invoice.invoice_number}",
@@ -249,7 +260,8 @@ async def save_invoice_document(
         pdf_path=pdf_path,
         docx_path=docx_path,
         doc_type="invoice",
-        receiver_bin=invoice.client_iin or "",
+        receiver_bin=receiver_bin,
+        receiver_user_id=receiver_user_id,
         payload_json=invoice.model_dump_json(by_alias=True),
     )
     db.add(new_doc)

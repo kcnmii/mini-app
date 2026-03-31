@@ -56,6 +56,18 @@ export function useDocuments(setStatus: (s: string) => void, setBusy: (b: any) =
         setSelectedInvoiceId(null);
         setSubView("viewDocument");
         try {
+            // Fetch document details to ensure it's in state (CRITICAL for incoming documents)
+            const fullDoc = await request<DocumentRecord & { is_incoming?: boolean }>(`/documents/${id}`);
+            setDocuments(prev => {
+                const idx = prev.findIndex(d => d.id === id);
+                if (idx >= 0) {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], ...fullDoc };
+                    return next;
+                }
+                return [fullDoc, ...prev];
+            });
+
             const preview = await request<{ pages: { data: string }[] }>(`/documents/${id}/preview`);
             setPreviewPages(preview.pages.map(p => p.data));
         } catch {

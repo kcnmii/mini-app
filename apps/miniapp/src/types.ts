@@ -85,6 +85,7 @@ export type DocumentRecord = {
     id: number; title: string; client_name: string; total_sum: string;
     total_sum_in_words: string; pdf_path: string; docx_path: string; created_at: string;
     edo_status?: string; doc_type?: string; share_uuid?: string;
+    is_incoming?: boolean;
 };
 
 export type DocumentStats = {

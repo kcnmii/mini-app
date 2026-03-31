@@ -116,11 +116,17 @@ async def initiate_signing(
     """
     doc = db.query(Document).filter(
         Document.id == req.document_id,
-        Document.user_id == user_id,
     ).first()
 
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    # Access control: creator OR authorized receiver
+    if doc.user_id != user_id:
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
     # Get PDF bytes for signing
     from app.core import s3
@@ -246,11 +252,17 @@ async def get_document_pdf_b64(
 ):
     doc = db.query(Document).filter(
         Document.id == document_id,
-        Document.user_id == user_id,
     ).first()
     
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    # Access control: creator OR authorized receiver
+    if doc.user_id != user_id:
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
         
     if not doc.pdf_path:
         raise HTTPException(status_code=400, detail="PDF не сформирован")
@@ -277,11 +289,17 @@ async def save_nca_signature(
     from fastapi.responses import JSONResponse
     doc = db.query(Document).filter(
         Document.id == req.document_id,
-        Document.user_id == user_id,
     ).first()
     
     if not doc:
         return JSONResponse({"success": False, "error": "Документ не найден"}, status_code=404)
+
+    # Access control: creator OR authorized receiver
+    if doc.user_id != user_id:
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            return JSONResponse({"success": False, "error": "У вас нет доступа"}, status_code=403)
         
     # Verify the CMS document matches SIGEX
     from app.services.cms_parser import parse_cms_signature
@@ -437,6 +455,9 @@ async def share_document(
     # Update document receiver info
     if doc_recipient_bin:
         doc.receiver_bin = doc_recipient_bin
+        profile_match = db.query(SupplierProfile).filter(SupplierProfile.company_iin == doc_recipient_bin).first()
+        if profile_match:
+            doc.receiver_user_id = profile_match.user_id
     if req.recipient_name:
         doc.receiver_name = req.recipient_name
     if doc.edo_status == "signed_self":
@@ -533,11 +554,17 @@ async def get_document_signatures(
     """Get all signatures for a document."""
     doc = db.query(Document).filter(
         Document.id == document_id,
-        Document.user_id == user_id,
     ).first()
 
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    # Access control: creator OR authorized receiver
+    if doc.user_id != user_id:
+        profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+        my_bin = profile.company_iin if profile else ""
+        if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
     sigs = db.query(Signature).filter(
         Signature.document_id == document_id,
