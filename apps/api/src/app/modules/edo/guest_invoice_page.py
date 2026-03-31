@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -446,15 +446,17 @@ async def guest_invoice_form(profile_uuid: str, db: Session = Depends(get_db)):
 async def submit_guest_invoice(
     profile_uuid: str,
     payload: GuestInvoicePayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     profile = db.query(SupplierProfile).filter(
         SupplierProfile.profile_uuid == profile_uuid
     ).first()
 
-    from app.modules.render.service import RenderService
+    if not profile:
+        return JSONResponse({"success": False, "error": "Пользователь не найден"}, status_code=404)
+
     import json
-    from app.core.config import settings
     from app.core.db import Document
 
     target_user_id = profile.user_id
@@ -510,24 +512,11 @@ async def submit_guest_invoice(
         "STAMP": "",
     }
 
-    render_service = RenderService()
-    try:
-        docx_bytes = await render_service.render_document_docx("invoice-kz", template_data)
-        pdf_bytes = await render_service.convert_docx_to_pdf(f"invoice-{invoice_number}.docx", docx_bytes)
-        
-        s3_pdf_key = await render_service.save_file(f"invoice-{invoice_number}.pdf", pdf_bytes, user_id=0)
-        pdf_url = f"{settings.s3_endpoint}/{settings.s3_bucket}/{s3_pdf_key}"
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Failed to generate guest invoice PDF: {e}")
-        return JSONResponse({"success": False, "error": "Ошибка генерации документа"}, status_code=500)
-
-    # Note: For guest invoices, the sender is unauthenticated (user_id=0).
-    # The receiver is target_user_id.
     share_uuid = str(uuid.uuid4())
     
+    # Create document synchronously so we secure the ID
     doc = Document(
-        user_id=0, # 0 means created by guest sender.
+        user_id=0,
         receiver_user_id=target_user_id,
         receiver_bin=profile.company_iin or "",
         title=title,
@@ -535,11 +524,11 @@ async def submit_guest_invoice(
         total_sum=str(total_num),
         total_amount=total_num,
         total_sum_in_words=words,
-        pdf_path=s3_pdf_key,
+        pdf_path="",  # will be filled by background task
         docx_path="",
         doc_type="invoice",
         payload_json=json.dumps(template_data, ensure_ascii=False),
-        edo_status="sent",
+        edo_status="processing",
         share_uuid=share_uuid,
         created_at=now
     )
@@ -547,21 +536,62 @@ async def submit_guest_invoice(
     db.commit()
     db.refresh(doc)
 
-    # Notify target user
-    try:
-        bot_msg = (
-            f"📥 <b>Новый гостевой счет!</b>\n\n"
-            f"От: <b>{payload.sender_name}</b>\n"
-            f"Документ: <code>{title}</code>\n"
-            f"Сумма: <b>{total_num} ₸</b>\n\n"
-            f"🔗 Откройте приложение для просмотра."
-        )
-        from app.modules.telegram_bot.service import TelegramBotClient
-        bot = TelegramBotClient()
-        await bot.send_message(chat_id=target_user_id, text=bot_msg)
-        await bot.close()
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Failed to notify guest invoice: %s", e)
+    # Launch background generation
+    background_tasks.add_task(
+        _generate_guest_pdf_and_notify,
+        document_id=doc.id,
+        template_data=template_data,
+        invoice_number=invoice_number,
+        target_user_id=target_user_id,
+        sender_name=payload.sender_name,
+        total_num=total_num,
+        title=title
+    )
 
     return {"success": True, "invoice_number": invoice_number}
+
+async def _generate_guest_pdf_and_notify(
+    document_id: int, 
+    template_data: dict, 
+    invoice_number: str,
+    target_user_id: int,
+    sender_name: str,
+    total_num: float,
+    title: str
+):
+    import logging
+    from app.core.db import SessionLocal, Document
+    from app.modules.render.service import RenderService
+    
+    logger = logging.getLogger(__name__)
+    db = SessionLocal()
+    try:
+        render_service = RenderService()
+        docx_bytes = await render_service.render_document_docx("invoice-kz", template_data)
+        pdf_bytes = await render_service.convert_docx_to_pdf(f"invoice-{invoice_number}.docx", docx_bytes)
+        
+        s3_pdf_key = await render_service.save_file(f"invoice-{invoice_number}.pdf", pdf_bytes, user_id=0)
+        
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if doc:
+            doc.pdf_path = s3_pdf_key
+            doc.edo_status = "sent"
+            db.commit()
+            
+            # Send notification
+            bot_msg = (
+                f"📥 <b>Новый гостевой счет!</b>\n\n"
+                f"От: <b>{sender_name}</b>\n"
+                f"Документ: <code>{title}</code>\n"
+                f"Сумма: <b>{total_num} ₸</b>\n\n"
+                f"🔗 Откройте приложение для просмотра."
+            )
+            from app.modules.telegram_bot.service import TelegramBotClient
+            bot = TelegramBotClient()
+            await bot.send_message(chat_id=target_user_id, text=bot_msg)
+            await bot.close()
+            
+    except Exception as e:
+        logger.error("Failed background guest invoice generation for doc %d: %s", document_id, e)
+    finally:
+        db.close()

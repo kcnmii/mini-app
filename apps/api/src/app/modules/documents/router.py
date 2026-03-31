@@ -49,14 +49,28 @@ async def get_next_invoice_number(
     }
     prefix = prefix_map.get(doc_type, "СФ")
 
-    # Count documents of this specific type for the user
-    count = db.query(Document).filter(
+    # Find the last document of this type for the user to extract its number
+    last_doc = db.query(Document).filter(
         Document.user_id == user_id,
         Document.doc_type == doc_type,
-    ).count()
+    ).order_by(Document.id.desc()).first()
 
-    next_num = str(count + 1).zfill(3)
-    return {"next_number": f"{prefix}-{next_num}"}
+    next_num = 1
+    if last_doc and last_doc.title:
+        import re
+        # matches things like "№ 005", "№ СФ-005", "N АВР-12"
+        match = re.search(r'(?:№|N)\s*(?:[A-Za-zА-Яа-я]+-)?(\d+)', last_doc.title)
+        if match:
+            try:
+                next_num = int(match.group(1)) + 1
+            except ValueError:
+                pass
+        if next_num == 1:
+            # Fallback to count + 1 if regex didn't extract a valid number
+            next_num = db.query(Document).filter(Document.user_id == user_id, Document.doc_type == doc_type).count() + 1
+
+    next_num_str = str(next_num).zfill(3)
+    return {"next_number": f"{prefix}-{next_num_str}"}
 
 
 
@@ -177,11 +191,12 @@ async def get_document_preview(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Convert document PDF pages to PNG images for mobile-friendly viewing."""
+    """Convert document PDF pages to PNG images for mobile-friendly viewing, with caching."""
     import base64
+    import json
     import fitz  # PyMuPDF
-    from fastapi.responses import Response as FastResponse
     from app.core import s3
+    from fastapi.responses import Response
 
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
@@ -195,10 +210,21 @@ async def get_document_preview(
         if doc.receiver_user_id != user_id and (not my_bin or doc.receiver_bin != my_bin):
             raise HTTPException(status_code=403, detail="У вас нет доступа к этому документу")
 
-    pdf_bytes = None
-    if doc.pdf_path:
-        pdf_bytes = await s3.download_file(doc.pdf_path)
+    if not doc.pdf_path:
+        raise HTTPException(status_code=404, detail="PDF не найден")
 
+    cache_key = f"{doc.pdf_path}.preview.json"
+
+    # Fast path: Try to fetch cached JSON from S3 to bypass 100% CPU PyMuPDF rendering
+    try:
+        cached_bytes = await s3.download_file(cache_key)
+        if cached_bytes:
+            return Response(content=cached_bytes, media_type="application/json")
+    except Exception:
+        pass
+
+    # Cache miss: Download PDF and render frame-by-frame
+    pdf_bytes = await s3.download_file(doc.pdf_path)
     if not pdf_bytes:
         raise HTTPException(status_code=404, detail="PDF не найден")
 
@@ -213,7 +239,17 @@ async def get_document_preview(
             b64 = base64.b64encode(img_bytes).decode("ascii")
             pages.append({"page": page_num + 1, "data": f"data:image/png;base64,{b64}"})
         pdf_doc.close()
-        return {"pages": pages, "total": len(pages)}
+        
+        # Save exact JSON payload to S3 to never render this revision again
+        result_data = {"pages": pages, "total": len(pages)}
+        json_bytes = json.dumps(result_data).encode("utf-8")
+        try:
+            await s3.upload_file(cache_key, json_bytes)
+        except Exception as cache_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to cache preview: {cache_err}")
+
+        return Response(content=json_bytes, media_type="application/json")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ошибка конвертации: {exc}") from exc
 

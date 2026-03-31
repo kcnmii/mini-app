@@ -309,17 +309,31 @@ async def save_nca_signature(
         logger.error("NCALayer CMS validation failed: %s", exc)
         return JSONResponse({"success": False, "error": f"Ошибка проверки подписи: {exc}"}, status_code=400)
 
+    # SECURE VALIDATION: Verify the IIN from the certificate matches expected role
+    cert_iin = (cert_info.subject_iin if cert_info else "").strip()
+    profile = db.query(SupplierProfile).filter(SupplierProfile.user_id == user_id).first()
+    expected_iin = (profile.company_iin if profile else "").strip() if profile else ""
+
+    if req.signer_role == "sender":
+        if expected_iin and cert_iin and cert_iin != expected_iin:
+            return JSONResponse({"success": False, "error": f"ИИН сертификата ({cert_iin}) не совпадает с вашим профилем ({expected_iin})"}, status_code=403)
+    else:
+        expected_receiver = (doc.receiver_bin or "").strip()
+        if expected_receiver and cert_iin and cert_iin != expected_receiver:
+            return JSONResponse({"success": False, "error": f"ИИН сертификата ({cert_iin}) не совпадает с получателем документа ({expected_receiver})"}, status_code=403)
+
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     sig = Signature(
         document_id=doc.id,
-        signer_iin=req.signer_iin or (cert_info.subject_iin if cert_info else ""),
-        signer_name=req.signer_name or (cert_info.subject_cn if cert_info else "Пользователь"),
-        signer_org_name=req.signer_org or (cert_info.subject_org if cert_info else ""),
+        signer_iin=cert_iin,
+        signer_name=cert_info.subject_cn if cert_info else "Пользователь",
+        signer_org_name=cert_info.subject_org if cert_info else "",
         signer_role=req.signer_role,
-        certificate_serial=req.certificate_serial or (cert_info.serial_hex if cert_info else ""),
+        signature_data=req.cms_signature_b64,
+        signature_type="cms",
+        certificate_serial=cert_info.serial_hex if cert_info else "",
         certificate_valid_from=cert_info.valid_from.replace(tzinfo=None) if cert_info and cert_info.valid_from else None,
         certificate_valid_to=cert_info.valid_to.replace(tzinfo=None) if cert_info and cert_info.valid_to else None,
-        signature_data=req.cms_signature_b64,
         signed_at=now,
     )
     db.add(sig)
@@ -381,7 +395,13 @@ async def get_incoming_documents(
     for d in docs:
         if d.user_id == 0:
             sender_name = d.client_name or "Гость"
-            sender_bin = ""  # Could store in payload_json if needed
+            sender_bin = ""
+            if d.payload_json:
+                try:
+                    import json
+                    sender_bin = json.loads(d.payload_json).get('SUPPLIER_IIN', "")
+                except Exception:
+                    pass
         else:
             sender_profile = db.query(SupplierProfile).filter(
                 SupplierProfile.user_id == d.user_id
