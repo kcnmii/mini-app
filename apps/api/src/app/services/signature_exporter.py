@@ -28,7 +28,7 @@ class SignatureExporter:
         if not doc:
             raise ValueError(f"Document {document_id} not found")
 
-        pdf_bytes = None
+        pdf_bytes = b""
         if doc.pdf_path:
             pdf_bytes = await s3.download_file(doc.pdf_path)
         
@@ -72,7 +72,52 @@ class SignatureExporter:
         If not, just wrap the last one properly.
         """
         if not sigs: return None
-        # Start with the receiver's signature (usually contains more info if countersigned)
+        return self._create_attached_cms_binary_safe(pdf_bytes, sigs[-1].signature_data)
+        
+    def _create_attached_cms_binary_safe(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
+        if not detached_sig_b64: return None
+        try:
+            from asn1crypto import cms
+            
+            raw_cms = base64.b64decode(detached_sig_b64)
+            content_info = cms.ContentInfo.load(raw_cms)
+            sd = content_info['content']
+            
+            version_bytes = sd['version'].dump()
+            digest_algos_bytes = sd['digest_algorithms'].dump()
+            
+            # Use getattr and .contents to avoid deep parsing KeyError on GOST OIDs
+            certs_bytes = sd['certificates'].dump() if hasattr(sd['certificates'], 'contents') and sd['certificates'].contents else b''
+            crls_bytes = sd['crls'].dump() if hasattr(sd['crls'], 'contents') and sd['crls'].contents else b''
+            signer_infos_bytes = sd['signer_infos'].dump()
+            
+            new_encap = cms.EncapsulatedContentInfo({
+                'content_type': 'data',
+                'content': data_bytes
+            })
+            encap_bytes = new_encap.dump()
+            
+            sd_body = version_bytes + digest_algos_bytes + encap_bytes + certs_bytes + crls_bytes + signer_infos_bytes
+            
+            def _ber_length(length: int) -> bytes:
+                if length < 0x80: return bytes([length])
+                elif length < 0x100: return bytes([0x81, length])
+                elif length < 0x10000: return bytes([0x82, (length >> 8) & 0xff, length & 0xff])
+                elif length < 0x1000000: return bytes([0x83, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff])
+                else: return bytes([0x84, (length >> 24) & 0xff, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff])
+
+            sd_der = b'\x30' + _ber_length(len(sd_body)) + sd_body
+            a0_der = b'\xa0' + _ber_length(len(sd_der)) + sd_der
+            oid_signed_data = b'\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x02'
+            ci_body = oid_signed_data + a0_der
+            final_cms_bytes = b'\x30' + _ber_length(len(ci_body)) + ci_body
+            
+            cms.ContentInfo.load(final_cms_bytes)
+            
+            return final_cms_bytes
+        except Exception as e:
+            logger.error("Binary CMS Creation Error: %s", e)
+            return base64.b64decode(detached_sig_b64)
 
 
 
