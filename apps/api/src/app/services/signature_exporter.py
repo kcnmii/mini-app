@@ -35,8 +35,7 @@ class SignatureExporter:
             # pdf_bytes is the current PDF (which might be stamped with visual signatures)
             pdf_bytes = await s3.download_file(doc.pdf_path)
             
-            # For CMS cryptographic integrity, we MUST use the exact original unstamped PDF bytes
-            # that were actually hashed by NCALayer/SIGEX.
+            # For CMS cryptographic integrity, we MUST use the exact original unstamped PDF bytes.
             original_pdf_key = doc.pdf_path
             if original_pdf_key.endswith("_stamped.pdf"):
                 original_pdf_key = original_pdf_key.replace("_stamped.pdf", ".pdf")
@@ -46,7 +45,7 @@ class SignatureExporter:
                 original_pdf_bytes = pdf_bytes
         
         if not pdf_bytes:
-            raise ValueError("Original PDF content not found in S3")
+            raise ValueError("Document PDF content not found in S3")
 
         sigs = self.db.query(Signature).filter(
             Signature.document_id == document_id
@@ -57,19 +56,17 @@ class SignatureExporter:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             
-            # 1. Original PDF
+            # 1. Stamped PDF for visual preview
             pdf_filename = f"{safe_title}.pdf"
             zf.writestr(pdf_filename, pdf_bytes)
 
-            # 2. CMS Signatures — ONE FILE including ALL signatures (Countersigned)
-            # Use original unstamped bytes for the signature integrity check!
+            # 2. CMS Signature — Attached version with ORIGINAL bytes
             full_cms = self._generate_full_countersigned_cms(original_pdf_bytes, sigs)
             
             cms_filename = f"{safe_title}.pdf.cms"
             if full_cms:
                 zf.writestr(cms_filename, full_cms)
             else:
-                # Extreme fallback, just put the last signature as is
                 if sigs and sigs[-1].signature_data:
                     zf.writestr(f"{safe_title}_raw.cms", base64.b64decode(sigs[-1].signature_data))
 
@@ -79,14 +76,14 @@ class SignatureExporter:
         return zip_bytes, filename
 
     def _generate_full_countersigned_cms(self, original_pdf_bytes: bytes, sigs: list[Signature]) -> bytes | None:
-        """
-        Merge all signatures into a single CMS container if possible.
-        If not, just wrap the last one properly.
-        """
         if not sigs: return None
         return self._create_attached_cms_binary_safe(original_pdf_bytes, sigs[-1].signature_data)
         
     def _create_attached_cms_binary_safe(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
+        """
+        Deep binary reconstruction of CMS ContentInfo with injected payload.
+        Ensures Byte-for-Byte ASN.1 compatibility with ezSigner.kz for Kazakhstan GOST signatures.
+        """
         if not detached_sig_b64: return None
         try:
             from asn1crypto import cms
@@ -95,42 +92,52 @@ class SignatureExporter:
             content_info = cms.ContentInfo.load(raw_cms)
             sd = content_info['content']
             
-            version_bytes = sd['version'].dump()
-            digest_algos_bytes = sd['digest_algorithms'].dump()
-            
+            # 1. Essential SD header parts
+            v_bytes = sd['version'].dump()
+            da_bytes = sd['digest_algorithms'].dump()
             certs_bytes = sd['certificates'].dump() if hasattr(sd['certificates'], 'contents') and sd['certificates'].contents else b''
             crls_bytes = sd['crls'].dump() if hasattr(sd['crls'], 'contents') and sd['crls'].contents else b''
-            signer_infos_bytes = sd['signer_infos'].dump()
             
-            new_encap = cms.EncapsulatedContentInfo({
-                'content_type': 'data',
-                'content': data_bytes
-            })
-            encap_bytes = new_encap.dump()
-            
-            sd_body = version_bytes + digest_algos_bytes + encap_bytes + certs_bytes + crls_bytes + signer_infos_bytes
-            
-            def _ber_length(length: int) -> bytes:
-                if length < 0x80: return bytes([length])
-                elif length < 0x100: return bytes([0x81, length])
-                elif length < 0x10000: return bytes([0x82, (length >> 8) & 0xff, length & 0xff])
-                elif length < 0x1000000: return bytes([0x83, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff])
-                else: return bytes([0x84, (length >> 24) & 0xff, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff])
+            # 2. Rebuild EncapsulatedContentInfo WITH data (Injection)
+            def _ber_len(l: int) -> bytes:
+                if l < 0x80: return bytes([l])
+                elif l < 0x100: return bytes([0x81, l])
+                elif l < 0x10000: return bytes([0x82, (l >> 8) & 0xff, l & 0xff])
+                elif l < 0x1000000: return bytes([0x83, (l >> 16) & 0xff, (l >> 8) & 0xff, l & 0xff])
+                else: return bytes([0x84, (l >> 24) & 0xff, (l >> 16) & 0xff, (l >> 8) & 0xff, l & 0xff])
 
-            sd_der = b'\x30' + _ber_length(len(sd_body)) + sd_body
-            a0_der = b'\xa0' + _ber_length(len(sd_der)) + sd_der
-            oid_signed_data = b'\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x02'
-            ci_body = oid_signed_data + a0_der
-            final_cms_bytes = b'\x30' + _ber_length(len(ci_body)) + ci_body
+            oid_data = b'\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x01' # OID: data
+            content_v = b'\x04' + _ber_len(len(data_bytes)) + data_bytes
+            encap_body = oid_data + b'\xa0' + _ber_len(len(content_v)) + content_v
+            encap_bytes = b'\x30' + _ber_len(len(encap_body)) + encap_body
             
-            cms.ContentInfo.load(final_cms_bytes)
+            # 3. SignerInfos — Keep exact bytes of the detached SignerInfo to preserve attributes (DATE)
+            # Wrapped in SET OF
+            si_list = sd['signer_infos']
+            si_bodies = b''
+            for si in si_list:
+                si_raw = si.dump() # Deep binary copy of everything, including SignedAttributes and Signature
+                si_bodies += si_raw
             
-            return final_cms_bytes
+            si_final = b'\x31' + _ber_len(len(si_bodies)) + si_bodies
+            
+            # 4. Final Assembly
+            sd_body = v_bytes + da_bytes + encap_bytes + certs_bytes + crls_bytes + si_final
+            sd_final = b'\x30' + _ber_len(len(sd_body)) + sd_body
+            
+            # Wrap as ContentInfo
+            oid_sd = b'\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x02' # OID: signedData
+            a0_final = b'\xa0' + _ber_len(len(sd_final)) + sd_final
+            ci_body = oid_sd + a0_final
+            final_cms = b'\x30' + _ber_len(len(ci_body)) + ci_body
+            
+            # Validation
+            cms.ContentInfo.load(final_cms)
+            return final_cms
+            
         except Exception as e:
-            logger.error("Binary CMS Creation Error: %s", e)
+            logger.error("Binary CMS Reconstruction Failure: %s", e)
             return base64.b64decode(detached_sig_b64)
-
-
 
     def _generate_xml_metadata(self, doc: Document, sigs: list[Signature], pdf_bytes: bytes) -> bytes:
         md5_hash = hashlib.md5(pdf_bytes).hexdigest()
@@ -146,14 +153,3 @@ class SignatureExporter:
         xml_lines.append('  </signatures>')
         xml_lines.append('</root>')
         return "\n".join(xml_lines).encode("utf-8")
-
-    def _generate_text_report(self, doc: Document, sigs: list[Signature]) -> str:
-        report = [
-            f"ДОКУМЕНТ №{doc.id}",
-            f"Тема: {doc.title}",
-            "-" * 40,
-            "ИНСТРУКЦИЯ:",
-            "1. Загрузите файл .cms на ezsigner.kz",
-            "-" * 40
-        ]
-        return "\n".join(report)
