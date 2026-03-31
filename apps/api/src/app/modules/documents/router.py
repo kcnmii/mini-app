@@ -345,9 +345,13 @@ async def delete_document(
         from app.core import s3
         if doc.pdf_path:
             await s3.delete_file(doc.pdf_path)
+            await s3.delete_file(f"{doc.pdf_path}.preview.json")
+            
             # Also try stamped version
             stamped = doc.pdf_path.replace(".pdf", "_stamped.pdf")
             await s3.delete_file(stamped)
+            await s3.delete_file(f"{stamped}.preview.json")
+            
         if doc.docx_path:
             await s3.delete_file(doc.docx_path)
     except Exception:
