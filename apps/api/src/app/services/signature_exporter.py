@@ -29,8 +29,21 @@ class SignatureExporter:
             raise ValueError(f"Document {document_id} not found")
 
         pdf_bytes = b""
+        original_pdf_bytes = b""
+        
         if doc.pdf_path:
+            # pdf_bytes is the current PDF (which might be stamped with visual signatures)
             pdf_bytes = await s3.download_file(doc.pdf_path)
+            
+            # For CMS cryptographic integrity, we MUST use the exact original unstamped PDF bytes
+            # that were actually hashed by NCALayer/SIGEX.
+            original_pdf_key = doc.pdf_path
+            if original_pdf_key.endswith("_stamped.pdf"):
+                original_pdf_key = original_pdf_key.replace("_stamped.pdf", ".pdf")
+            
+            original_pdf_bytes = await s3.download_file(original_pdf_key)
+            if not original_pdf_bytes:
+                original_pdf_bytes = pdf_bytes
         
         if not pdf_bytes:
             raise ValueError("Original PDF content not found in S3")
@@ -49,9 +62,8 @@ class SignatureExporter:
             zf.writestr(pdf_filename, pdf_bytes)
 
             # 2. CMS Signatures — ONE FILE including ALL signatures (Countersigned)
-            # ezSigner requires the extension to match exactly what it expects (e.g. .pdf.cms)
-            # and it must be a single attached CMS file containing the data.
-            full_cms = self._generate_full_countersigned_cms(pdf_bytes, sigs)
+            # Use original unstamped bytes for the signature integrity check!
+            full_cms = self._generate_full_countersigned_cms(original_pdf_bytes, sigs)
             
             cms_filename = f"{safe_title}.pdf.cms"
             if full_cms:
@@ -66,13 +78,13 @@ class SignatureExporter:
 
         return zip_bytes, filename
 
-    def _generate_full_countersigned_cms(self, pdf_bytes: bytes, sigs: list[Signature]) -> bytes | None:
+    def _generate_full_countersigned_cms(self, original_pdf_bytes: bytes, sigs: list[Signature]) -> bytes | None:
         """
         Merge all signatures into a single CMS container if possible.
         If not, just wrap the last one properly.
         """
         if not sigs: return None
-        return self._create_attached_cms_binary_safe(pdf_bytes, sigs[-1].signature_data)
+        return self._create_attached_cms_binary_safe(original_pdf_bytes, sigs[-1].signature_data)
         
     def _create_attached_cms_binary_safe(self, data_bytes: bytes, detached_sig_b64: str | None) -> bytes | None:
         if not detached_sig_b64: return None
@@ -86,7 +98,6 @@ class SignatureExporter:
             version_bytes = sd['version'].dump()
             digest_algos_bytes = sd['digest_algorithms'].dump()
             
-            # Use getattr and .contents to avoid deep parsing KeyError on GOST OIDs
             certs_bytes = sd['certificates'].dump() if hasattr(sd['certificates'], 'contents') and sd['certificates'].contents else b''
             crls_bytes = sd['crls'].dump() if hasattr(sd['crls'], 'contents') and sd['crls'].contents else b''
             signer_infos_bytes = sd['signer_infos'].dump()
