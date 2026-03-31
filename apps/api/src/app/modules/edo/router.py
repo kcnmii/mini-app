@@ -130,12 +130,7 @@ async def initiate_signing(
 
     # Get PDF bytes for signing
     from app.core import s3
-    pdf_bytes = None
-    if doc.pdf_path:
-        pdf_bytes = await s3.download_file(doc.pdf_path)
 
-    if not pdf_bytes:
-        raise HTTPException(status_code=400, detail="PDF документа не найден для подписания")
 
     # Compute MD5 hash
     import base64
@@ -267,10 +262,7 @@ async def get_document_pdf_b64(
     if not doc.pdf_path:
         raise HTTPException(status_code=400, detail="PDF не сформирован")
         
-    from app.core import s3
-    pdf_bytes = await s3.download_file(doc.pdf_path)
-    if not pdf_bytes:
-        raise HTTPException(status_code=400, detail="Файл документа отсутствует")
+
         
     import base64
     b64 = base64.b64encode(pdf_bytes).decode("ascii")
